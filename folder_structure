@@ -1,0 +1,23 @@
+Frontend (your calendar UI)
+      ↓ fetch/post requests
+Backend (Node.js Express API)
+      ↓
+Database (MongoDB Atlas)
+
+
+hoa-calendar/
+│
+├── /frontend
+│   ├── index.html
+│   ├── styles.css
+│   └── script.js
+│
+├── /api
+│   └── events.js      ← Express API routes
+│
+├── package.json
+├── vercel.json        ← Deployment config
+└── .env               ← MongoDB credentials (not committed)
+
+
+Firebase authentication
