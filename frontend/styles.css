@@ -274,21 +274,36 @@ body {
 }
 
 /* -----------------------------
-   DESKTOP LAYOUT FIX — centered + 4:3 cells
+   DESKTOP LAYOUT FIX — centered + 3/4 height cells
 -----------------------------*/
 @media (min-width: 900px) {
+    /* Center the calendar and add padding */
+    .wrapper {
+        max-width: 1100px;
+        margin: 20px auto;
+        padding: 0 20px;
+    }
+
+    .container-calendar {
+        padding: 20px;
+        border-radius: 8px;
+    }
+
+    /* Calendar cells 3/4 height of width */
     .table-calendar td,
     .table-calendar th {
-        /* 7 columns, each column ~14.28% of container width */
-        height: calc((100% / 7) * 0.75); /* 3/4 of width */
+        /* Approximate width of one column: 100% / 7 columns */
+        height: calc((100% / 7) * 0.75);
         padding: 8px;
         box-sizing: border-box;
     }
 
+    /* Inner padding for numbers / content */
     .date-picker {
         padding: 6px;
     }
 
+    /* Event dots */
     .event-dot {
         width: 10px;
         height: 10px;
