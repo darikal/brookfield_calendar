@@ -289,11 +289,10 @@ body {
         border-radius: 8px;
     }
 
-    /* Calendar cells 3/4 height of width */
+    /* Make calendar cells taller on desktop */
     .table-calendar td,
     .table-calendar th {
-        /* Approximate width of one column: 100% / 7 columns */
-        height: calc((100% / 7) * 0.75);
+        height: 120px; /* adjust this value until boxes look ~3/4 width */
         padding: 8px;
         box-sizing: border-box;
     }
