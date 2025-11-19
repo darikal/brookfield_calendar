@@ -28,6 +28,8 @@ body {
 
 .container-calendar {
     width: 100%;
+    max-width: 1400px;
+    margin: 0 auto;
     background: white;
     overflow-x: auto;
     box-sizing: border-box;
@@ -68,10 +70,9 @@ body {
 #event-section input[type="date"],
 #event-section input[type="text"],
 #event-section select {
-    margin: 6px 0;
-    padding: 6px;
-    width: 100%;
-    max-width: 100%;
+    margin: 8px 0;
+    padding: 5px;
+    width: 80%;
     box-sizing: border-box;
 }
 
@@ -79,21 +80,21 @@ body {
     background: var(--blue-dark);
     color: white;
     border: none;
-    padding: 6px 10px;
+    padding: 5px 10px;
     cursor: pointer;
-    margin-top: 8px;
+    margin-top: 10px;
 }
 
 /* Group size wrapper */
 .group-size-wrapper {
     display: flex;
     flex-direction: column;
-    gap: 4px;
+    gap: 5px;
 }
 
 #groupSize {
-    width: 70px !important;
-    padding: 4px;
+    width: 40px !important;
+    padding: 3px 5px;
 }
 
 /* DELETE BUTTON */
@@ -103,6 +104,8 @@ body {
     border: none;
     padding: 5px 10px;
     cursor: pointer;
+    margin-left: 10px;
+    align-items: right;
 }
 
 /* -----------------------------
@@ -117,21 +120,27 @@ body {
 
 .table-calendar th,
 .table-calendar td {
-    padding: 4px 2px;
+    padding: 5px;
     border: 1px solid #e2e2e2;
     text-align: center;
     vertical-align: top;
-    height: 40px; /* minimal height for compact day boxes */
-    box-sizing: border-box;
     word-wrap: break-word;
     position: relative;
+}
+
+/* -----------------------------
+   MINIMALLY TALL DAY BOXES
+------------------------------*/
+.table-calendar td,
+.table-calendar th {
+    height: 40px; /* minimal height for day boxes */
 }
 
 .date-picker {
     display: block;
     width: 100%;
-    height: auto;
-    padding: 2px 4px;
+    height: auto;       /* content controls height */
+    padding: 2px 4px;   /* minimal padding inside day */
     font-size: 12px;
     box-sizing: border-box;
 }
@@ -147,6 +156,9 @@ body {
 ------------------------------*/
 .event-marker {
     position: relative;
+    flex-wrap: wrap;
+    gap: 4px;
+    justify-content: left;
 }
 
 .event-dots {
@@ -159,16 +171,16 @@ body {
 }
 
 .event-dot {
-    width: 8px;
-    height: 8px;
+    width: 12px;
+    height: 12px;
     border-radius: 50%;
+    display: inline-block;
 }
 
-/* Dot colors */
-.event-social { background-color: #59fb41; }
-.event-small  { background-color: #340be9; }
-.event-paid   { background-color: #ffaf47; }
-.event-large  { background-color: #e80ce8; }
+.event-social { background-color: #59fb41; }  
+.event-small  { background-color: #340be9; }  
+.event-paid   { background-color: #ffaf47; }  
+.event-large  { background-color: #e80ce8; }  
 .event-default{ background-color: #ff0b36; }
 
 /* -----------------------------
@@ -176,17 +188,17 @@ body {
 ------------------------------*/
 .event-tooltip {
     position: absolute;
-    background-color: rgba(225,230,230,0.9);
+    background-color: rgba(225, 230, 230, 0.763);
     color: black;
-    padding: 6px;
-    font-size: 11px;
+    padding: 10px;
     border-radius: 4px;
     bottom: 20px;
     left: 50%;
     transform: translateX(-50%);
     display: none;
     transition: all 0.3s;
-    z-index: 10;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+    z-index: 1;
     width: 140px;
 }
 
@@ -198,6 +210,7 @@ body {
    NAVIGATION BUTTONS
 ------------------------------*/
 .button-container-calendar {
+    position: relative;
     margin-bottom: 1em;
     overflow: hidden;
     clear: both;
@@ -239,19 +252,19 @@ body {
 @media (max-width: 600px) {
     .table-calendar th,
     .table-calendar td {
-        height: 35px;
-        padding: 2px 2px;
+        height: auto;  /* let mobile cells scale naturally */
         font-size: 11px;
+        padding: 3px 2px;
     }
 
     .event-dot {
-        width: 6px;
-        height: 6px;
+        width: 7px;
+        height: 7px;
     }
 
     .event-tooltip {
         font-size: 10px;
-        padding: 5px;
+        padding: 6px;
         bottom: 12px;
     }
 
@@ -260,7 +273,7 @@ body {
     }
 
     .button-container-calendar button {
-        padding: 3px 6px;
+        padding: 3px 8px;
         font-size: 12px;
     }
 
@@ -278,8 +291,8 @@ body {
 }
 
 /* -----------------------------
-   DESKTOP FIX — center layout
------------------------------*/
+   DESKTOP FIXES
+------------------------------*/
 @media (min-width: 900px) {
     .wrapper {
         max-width: 1100px;
@@ -293,7 +306,7 @@ body {
 
     /* Event dot sizing on desktop */
     .event-dot {
-        width: 8px;
-        height: 8px;
+        width: 10px;
+        height: 10px;
     }
 }
