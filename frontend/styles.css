@@ -31,7 +31,7 @@ body {
     max-width: 100%;
     margin: 0 auto;
     background: white;
-    overflow-x: auto; /* prevents calendar overflow */
+    overflow-x: auto;
     box-sizing: border-box;
     border: 1px solid #ccc;
     padding: 10px;
@@ -112,7 +112,7 @@ body {
 .table-calendar {
     border-collapse: collapse;
     width: 100%;
-    table-layout: fixed; /* CRITICAL for mobile */
+    table-layout: fixed; /* ensures responsive columns */
     background: white;
 }
 
@@ -228,8 +228,6 @@ body {
    MOBILE RESPONSIVE
 ------------------------------*/
 @media (max-width: 600px) {
-
-    /* Table shrinks nicely */
     .table-calendar th,
     .table-calendar td {
         padding: 3px;
@@ -257,7 +255,6 @@ body {
         font-size: 12px;
     }
 
-    /* Make event inputs fully mobile-friendly */
     #event-section input,
     #event-section select {
         font-size: 14px;
@@ -276,19 +273,38 @@ body {
     }
 }
 
+/* -----------------------------
+   DESKTOP LAYOUT FIX — centered + 4:3 cells
+-----------------------------*/
 @media (min-width: 900px) {
-
-    /* Center the whole calendar area */
+    /* Center the calendar and add padding */
     .wrapper {
-        max-width: 1100px;     /* restores your original width */
+        max-width: 1100px;
         margin: 20px auto;
-        padding: 0 20px;       /* adds comfy left/right whitespace */
+        padding: 0 20px;
     }
 
     .container-calendar {
-        max-width: 100%;       /* keeps it responsive but not full screen */
-        padding: 20px;         /* restores breathing room inside */
-        border-radius: 8px;    /* optional: looks cleaner */
+        padding: 20px;
+        border-radius: 8px;
+    }
+
+    /* Calendar cells 4:3 (width : height = 4:3) */
+    .table-calendar td,
+    .table-calendar th {
+        aspect-ratio: 4 / 3;
+        height: auto !important;
+        padding: 0;
+    }
+
+    /* Inner padding for numbers / content */
+    .date-picker {
+        padding: 6px;
+    }
+
+    /* Event dots */
+    .event-dot {
+        width: 10px;
+        height: 10px;
     }
 }
-
