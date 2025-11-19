@@ -321,6 +321,7 @@ function jump() {
 }
 
 // Show calendar
+// Show calendar
 function showCalendar(month, year) {
     let firstDay = new Date(year, month, 1).getDay();
     let tbl = document.getElementById("calendar-body");
@@ -334,6 +335,7 @@ function showCalendar(month, year) {
         let row = document.createElement("tr");
         for (let j = 0; j < 7; j++) {
             let cell = document.createElement("td");
+
             if (i === 0 && j < firstDay) {
                 cell.appendChild(document.createTextNode(""));
                 row.appendChild(cell);
@@ -347,32 +349,50 @@ function showCalendar(month, year) {
                 cell.className = "date-picker";
                 cell.innerHTML = "<span>" + date + "</span>";
 
+                // Highlight today
                 if (date === today.getDate() &&
                     year === today.getFullYear() &&
                     month === today.getMonth()) {
                     cell.classList.add("selected");
                 }
 
+                // Add event dots if events exist
                 if (hasEventOnDate(date, month, year)) {
-				    const eventsOnDate = getEventsOnDate(date, month, year);
+                    const eventsOnDate = getEventsOnDate(date, month, year);
+                    cell.classList.add("event-marker");
 
-				    cell.classList.add("event-marker");
+                    const existingDots = cell.querySelectorAll(".event-dot");
+                    existingDots.forEach(dot => dot.remove());
 
-				    const existingDots = cell.querySelectorAll(".event-dot");
-				    existingDots.forEach(dot => dot.remove());
+                    let dotsContainer = document.createElement("div");
+                    dotsContainer.className = "event-dots";
 
-				    let dotsContainer = document.createElement("div");
-					dotsContainer.className = "event-dots";
+                    eventsOnDate.forEach(ev => {
+                        const dot = document.createElement("span");
+                        dot.className = "event-dot " + getEventColorClass(ev.eType);
+                        dotsContainer.appendChild(dot);
+                    });
 
-					eventsOnDate.forEach(ev => {
-					    const dot = document.createElement("span");
-					    dot.className = "event-dot " + getEventColorClass(ev.eType);
-					    dotsContainer.appendChild(dot);
-					});
+                    cell.appendChild(dotsContainer);
+                    cell.appendChild(createEventTooltip(date, month, year));
+                }
 
-				    cell.appendChild(dotsContainer);
-				    cell.appendChild(createEventTooltip(date, month, year));
-				}
+                // CLICK ON DATE: fill event form and set default type to Paid Reservation
+                cell.addEventListener("click", function () {
+                    // Fill the date input
+                    eventDateInput.value = `${year}-${String(month+1).padStart(2,'0')}-${String(date).padStart(2,'0')}`;
+
+                    // Highlight selected date
+                    document.querySelectorAll(".date-picker").forEach(td => td.classList.remove("selected"));
+                    cell.classList.add("selected");
+
+                    // Set default event type to Paid Reservation
+                    const dropdown = document.getElementById('eventTypeMajor');
+                    dropdown.value = "reservedPaid";
+
+                    // Show event details wrapper according to the selected type
+                    toggleTitleDiv();
+                });
 
                 row.appendChild(cell);
                 date++;
@@ -383,6 +403,7 @@ function showCalendar(month, year) {
 
     displayReminders();
 }
+
 
 // Event tooltip
 function createEventTooltip(date, month, year) {
