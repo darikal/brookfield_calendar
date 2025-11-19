@@ -377,22 +377,26 @@ function showCalendar(month, year) {
                     cell.appendChild(createEventTooltip(date, month, year));
                 }
 
-                // CLICK ON DATE: fill event form and set default type to Paid Reservation
-                cell.addEventListener("click", function () {
-                    // Fill the date input
-                    eventDateInput.value = `${year}-${String(month+1).padStart(2,'0')}-${String(date).padStart(2,'0')}`;
+                // CLICK ON DATE: fill event form
+                ((currentDate) => {
+                    cell.addEventListener("click", function () {
+                        // Fill the date input
+                        eventDateInput.value = `${year}-${String(month + 1).padStart(2, '0')}-${String(currentDate).padStart(2, '0')}`;
 
-                    // Highlight selected date
-                    document.querySelectorAll(".date-picker").forEach(td => td.classList.remove("selected"));
-                    cell.classList.add("selected");
+                        // Highlight selected date
+                        document.querySelectorAll(".date-picker").forEach(td => td.classList.remove("selected"));
+                        cell.classList.add("selected");
 
-                    // Set default event type to Paid Reservation
-                    const dropdown = document.getElementById('eventTypeMajor');
-                    dropdown.value = "reservedPaid";
+                        // If an event type is already selected, do not change it
+                        const dropdown = document.getElementById('eventTypeMajor');
+                        if (!dropdown.value) {
+                            dropdown.value = "reservedPaid"; // default if none selected
+                        }
 
-                    // Show event details wrapper according to the selected type
-                    toggleTitleDiv();
-                });
+                        // Show event details wrapper according to the selected type
+                        toggleTitleDiv();
+                    });
+                })(date);
 
                 row.appendChild(cell);
                 date++;
