@@ -1,6 +1,6 @@
 /* -----------------------------
    COLOR VARIABLES
-------------------------------*/
+-----------------------------*/
 :root {
   --blue-dark: #6c95a6;
   --blue-light: #e1e6e6;
@@ -10,20 +10,18 @@
 
 /* -----------------------------
    GLOBAL STYLES
-------------------------------*/
+-----------------------------*/
 body {
     font-family: Arial, sans-serif;
     background-color: var(--blue-light);
     margin: 0;
-    padding: 0;
     color: var(--text-default);
 }
 
 .wrapper {
     max-width: 1100px;
-    padding: 0 20px;
     margin: 15px auto;
-    box-sizing: border-box;
+    padding: 0 20px;
 }
 
 .container-calendar {
@@ -31,16 +29,14 @@ body {
     max-width: 1400px;
     margin: 0 auto;
     background: white;
-    overflow-x: auto;
-    box-sizing: border-box;
-    border: 1px solid #ccc;
     padding: 10px;
     border-radius: 8px;
+    box-sizing: border-box;
 }
 
 /* -----------------------------
    HEADER / TITLES
-------------------------------*/
+-----------------------------*/
 .container-calendar #left h1 {
     color: var(--blue-dark);
     text-align: center;
@@ -58,7 +54,7 @@ body {
 
 /* -----------------------------
    EVENT SECTION
-------------------------------*/
+-----------------------------*/
 #event-section,
 #reminder-section {
     padding: 10px;
@@ -85,7 +81,6 @@ body {
     margin-top: 10px;
 }
 
-/* Group size wrapper */
 .group-size-wrapper {
     display: flex;
     flex-direction: column;
@@ -97,7 +92,6 @@ body {
     padding: 3px 5px;
 }
 
-/* DELETE BUTTON */
 .delete-event {
     background: rgb(237, 19, 19);
     color: white;
@@ -105,43 +99,45 @@ body {
     padding: 5px 10px;
     cursor: pointer;
     margin-left: 10px;
-    align-items: right;
 }
 
 /* -----------------------------
-   CALENDAR TABLE
-------------------------------*/
-.table-calendar {
-    border-collapse: collapse;
+   CSS GRID CALENDAR
+-----------------------------*/
+#calendar {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 2px;
     width: 100%;
-    table-layout: fixed; /* ensures equal width columns */
-    background: white;
+    background: #fff;
+    border: 1px solid #ccc;
+    box-sizing: border-box;
 }
 
-.table-calendar th,
-.table-calendar td {
-    padding: 5px;
-    border: 1px solid #e2e2e2;
+#calendar .calendar-header {
+    background: #f2f2f2;
     text-align: center;
-    vertical-align: top;
-    word-wrap: break-word;
-    position: relative;
+    font-weight: bold;
+    padding: 5px 0;
+    border: 1px solid #e2e2e2;
 }
 
-/* -----------------------------
-   MINIMALLY TALL DAY BOXES
-------------------------------*/
-.table-calendar td,
-.table-calendar th {
-    height: 40px; /* minimal height for day boxes */
+#calendar .calendar-day {
+    position: relative;
+    border: 1px solid #e2e2e2;
+    padding: 2px;
+    min-height: 35px; /* minimal height for numbers */
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start;
+    box-sizing: border-box;
 }
 
 .date-picker {
     display: block;
-    width: 100%;
-    height: auto;       /* content controls height */
-    padding: 2px 4px;   /* minimal padding inside day */
     font-size: 12px;
+    width: 100%;
+    padding: 2px 4px;
     box-sizing: border-box;
 }
 
@@ -153,12 +149,12 @@ body {
 
 /* -----------------------------
    EVENT DOT MARKERS
-------------------------------*/
+-----------------------------*/
 .event-marker {
     position: relative;
     flex-wrap: wrap;
-    gap: 4px;
-    justify-content: left;
+    gap: 2px;
+    justify-content: flex-start;
 }
 
 .event-dots {
@@ -171,24 +167,23 @@ body {
 }
 
 .event-dot {
-    width: 12px;
-    height: 12px;
+    width: 8px;
+    height: 8px;
     border-radius: 50%;
-    display: inline-block;
 }
 
-.event-social { background-color: #59fb41; }  
-.event-small  { background-color: #340be9; }  
-.event-paid   { background-color: #ffaf47; }  
-.event-large  { background-color: #e80ce8; }  
+.event-social { background-color: #59fb41; }
+.event-small  { background-color: #340be9; }
+.event-paid   { background-color: #ffaf47; }
+.event-large  { background-color: #e80ce8; }
 .event-default{ background-color: #ff0b36; }
 
 /* -----------------------------
    TOOLTIP
-------------------------------*/
+-----------------------------*/
 .event-tooltip {
     position: absolute;
-    background-color: rgba(225, 230, 230, 0.763);
+    background-color: rgba(225,230,230,0.9);
     color: black;
     padding: 10px;
     border-radius: 4px;
@@ -197,7 +192,7 @@ body {
     transform: translateX(-50%);
     display: none;
     transition: all 0.3s;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+    box-shadow: 0 2px 4px rgba(0,0,0,0.2);
     z-index: 1;
     width: 140px;
 }
@@ -208,7 +203,7 @@ body {
 
 /* -----------------------------
    NAVIGATION BUTTONS
-------------------------------*/
+-----------------------------*/
 .button-container-calendar {
     position: relative;
     margin-bottom: 1em;
@@ -230,7 +225,7 @@ body {
 
 /* -----------------------------
    FOOTER SELECTS
-------------------------------*/
+-----------------------------*/
 .footer-container-calendar {
     margin-top: 1em;
     border-top: 1px solid #dadada;
@@ -248,23 +243,22 @@ body {
 
 /* -----------------------------
    MOBILE RESPONSIVE
-------------------------------*/
+-----------------------------*/
 @media (max-width: 600px) {
-    .table-calendar th,
-    .table-calendar td {
-        height: auto;  /* let mobile cells scale naturally */
+    #calendar .calendar-day {
+        min-height: 30px;
         font-size: 11px;
-        padding: 3px 2px;
+        padding: 2px;
     }
 
     .event-dot {
-        width: 7px;
-        height: 7px;
+        width: 6px;
+        height: 6px;
     }
 
     .event-tooltip {
         font-size: 10px;
-        padding: 6px;
+        padding: 5px;
         bottom: 12px;
     }
 
@@ -273,7 +267,7 @@ body {
     }
 
     .button-container-calendar button {
-        padding: 3px 8px;
+        padding: 3px 6px;
         font-size: 12px;
     }
 
@@ -292,7 +286,7 @@ body {
 
 /* -----------------------------
    DESKTOP FIXES
-------------------------------*/
+-----------------------------*/
 @media (min-width: 900px) {
     .wrapper {
         max-width: 1100px;
@@ -304,7 +298,6 @@ body {
         padding: 20px;
     }
 
-    /* Event dot sizing on desktop */
     .event-dot {
         width: 10px;
         height: 10px;
