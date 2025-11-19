@@ -275,3 +275,20 @@ body {
         gap: 4px;
     }
 }
+
+@media (min-width: 900px) {
+
+    /* Center the whole calendar area */
+    .wrapper {
+        max-width: 1100px;     /* restores your original width */
+        margin: 20px auto;
+        padding: 0 20px;       /* adds comfy left/right whitespace */
+    }
+
+    .container-calendar {
+        max-width: 100%;       /* keeps it responsive but not full screen */
+        padding: 20px;         /* restores breathing room inside */
+        border-radius: 8px;    /* optional: looks cleaner */
+    }
+}
+
