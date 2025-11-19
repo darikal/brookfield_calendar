@@ -1,6 +1,6 @@
 /* -----------------------------
    COLOR VARIABLES
------------------------------*/
+------------------------------*/
 :root {
   --blue-dark: #6c95a6;
   --blue-light: #e1e6e6;
@@ -10,33 +10,36 @@
 
 /* -----------------------------
    GLOBAL STYLES
------------------------------*/
+------------------------------*/
 body {
     font-family: Arial, sans-serif;
     background-color: var(--blue-light);
     margin: 0;
+    padding: 0;
     color: var(--text-default);
 }
 
 .wrapper {
-    max-width: 1100px;
+    max-width: 100%;
+    padding: 0 10px;
     margin: 15px auto;
-    padding: 0 20px;
+    box-sizing: border-box;
 }
 
 .container-calendar {
     width: 100%;
-    max-width: 1400px;
+    max-width: 100%;
     margin: 0 auto;
     background: white;
-    padding: 10px;
-    border-radius: 8px;
+    overflow-x: auto; /* prevents calendar overflow */
     box-sizing: border-box;
+    border: 1px solid #ccc;
+    padding: 10px;
 }
 
 /* -----------------------------
    HEADER / TITLES
------------------------------*/
+------------------------------*/
 .container-calendar #left h1 {
     color: var(--blue-dark);
     text-align: center;
@@ -54,7 +57,7 @@ body {
 
 /* -----------------------------
    EVENT SECTION
------------------------------*/
+------------------------------*/
 #event-section,
 #reminder-section {
     padding: 10px;
@@ -67,8 +70,9 @@ body {
 #event-section input[type="text"],
 #event-section select {
     margin: 8px 0;
-    padding: 5px;
-    width: 80%;
+    padding: 7px;
+    width: 100%;
+    max-width: 100%;
     box-sizing: border-box;
 }
 
@@ -76,11 +80,12 @@ body {
     background: var(--blue-dark);
     color: white;
     border: none;
-    padding: 5px 10px;
+    padding: 7px 12px;
     cursor: pointer;
     margin-top: 10px;
 }
 
+/* Group size wrapper */
 .group-size-wrapper {
     display: flex;
     flex-direction: column;
@@ -88,57 +93,38 @@ body {
 }
 
 #groupSize {
-    width: 40px !important;
-    padding: 3px 5px;
+    width: 70px !important;
+    padding: 5px;
 }
 
+/* DELETE BUTTON */
 .delete-event {
     background: rgb(237, 19, 19);
     color: white;
     border: none;
     padding: 5px 10px;
     cursor: pointer;
-    margin-left: 10px;
 }
 
 /* -----------------------------
-   CSS GRID CALENDAR
------------------------------*/
-#calendar {
-    display: grid;
-    grid-template-columns: repeat(7, 1fr);
-    gap: 2px;
+   CALENDAR TABLE
+------------------------------*/
+.table-calendar {
+    border-collapse: collapse;
     width: 100%;
-    background: #fff;
-    border: 1px solid #ccc;
-    box-sizing: border-box;
+    table-layout: fixed; /* CRITICAL for mobile */
+    background: white;
 }
 
-#calendar .calendar-header {
-    background: #f2f2f2;
+.table-calendar th,
+.table-calendar td {
+    padding: 8px;
+    border: 1px solid #e2e2e2;
     text-align: center;
-    font-weight: bold;
-    padding: 5px 0;
-    border: 1px solid #e2e2e2;
-}
-
-#calendar .calendar-day {
-    position: relative;
-    border: 1px solid #e2e2e2;
-    padding: 2px;
-    min-height: 35px; /* minimal height for numbers */
-    display: flex;
-    flex-direction: column;
-    justify-content: flex-start;
+    vertical-align: top;
+    height: 65px;
     box-sizing: border-box;
-}
-
-.date-picker {
-    display: block;
-    font-size: 12px;
-    width: 100%;
-    padding: 2px 4px;
-    box-sizing: border-box;
+    word-wrap: break-word;
 }
 
 .date-picker:hover {
@@ -149,12 +135,9 @@ body {
 
 /* -----------------------------
    EVENT DOT MARKERS
------------------------------*/
+------------------------------*/
 .event-marker {
     position: relative;
-    flex-wrap: wrap;
-    gap: 2px;
-    justify-content: flex-start;
 }
 
 .event-dots {
@@ -167,11 +150,12 @@ body {
 }
 
 .event-dot {
-    width: 8px;
-    height: 8px;
+    width: 12px;
+    height: 12px;
     border-radius: 50%;
 }
 
+/* Dot colors */
 .event-social { background-color: #59fb41; }
 .event-small  { background-color: #340be9; }
 .event-paid   { background-color: #ffaf47; }
@@ -180,20 +164,20 @@ body {
 
 /* -----------------------------
    TOOLTIP
------------------------------*/
+------------------------------*/
 .event-tooltip {
     position: absolute;
     background-color: rgba(225,230,230,0.9);
     color: black;
-    padding: 10px;
+    padding: 8px;
+    font-size: 12px;
     border-radius: 4px;
     bottom: 20px;
     left: 50%;
     transform: translateX(-50%);
     display: none;
     transition: all 0.3s;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.2);
-    z-index: 1;
+    z-index: 10;
     width: 140px;
 }
 
@@ -203,9 +187,8 @@ body {
 
 /* -----------------------------
    NAVIGATION BUTTONS
------------------------------*/
+------------------------------*/
 .button-container-calendar {
-    position: relative;
     margin-bottom: 1em;
     overflow: hidden;
     clear: both;
@@ -225,7 +208,7 @@ body {
 
 /* -----------------------------
    FOOTER SELECTS
------------------------------*/
+------------------------------*/
 .footer-container-calendar {
     margin-top: 1em;
     border-top: 1px solid #dadada;
@@ -243,63 +226,72 @@ body {
 
 /* -----------------------------
    MOBILE RESPONSIVE
------------------------------*/
+------------------------------*/
 @media (max-width: 600px) {
-    #calendar .calendar-day {
-        min-height: 30px;
+
+    /* Table shrinks nicely */
+    .table-calendar th,
+    .table-calendar td {
+        padding: 3px;
+        height: 45px;
         font-size: 11px;
-        padding: 2px;
     }
 
     .event-dot {
-        width: 6px;
-        height: 6px;
+        width: 7px;
+        height: 7px;
     }
 
     .event-tooltip {
         font-size: 10px;
-        padding: 5px;
+        padding: 6px;
         bottom: 12px;
     }
 
     #monthAndYear {
-        font-size: 16px;
+        font-size: 18px;
     }
 
     .button-container-calendar button {
-        padding: 3px 6px;
+        padding: 3px 8px;
         font-size: 12px;
     }
 
+    /* Make event inputs fully mobile-friendly */
     #event-section input,
     #event-section select {
-        font-size: 13px;
-        padding: 5px;
+        font-size: 14px;
+        padding: 6px;
     }
 
-    .time-input,
+    .time-input {
+        display: flex;
+        flex-direction: column;
+        gap: 5px;
+    }
+
     .group-size-wrapper {
         flex-direction: column;
         gap: 4px;
     }
 }
 
-/* -----------------------------
-   DESKTOP FIXES
------------------------------*/
+/* -----------------------------------------
+   DESKTOP LAYOUT FIX — restores white space
+----------------------------------------- */
 @media (min-width: 900px) {
+
+    /* Center the whole calendar area */
     .wrapper {
-        max-width: 1100px;
+        max-width: 1100px;     /* restores your original width */
         margin: 20px auto;
-        padding: 0 20px;
+        padding: 0 20px;       /* adds comfy left/right whitespace */
     }
 
     .container-calendar {
-        padding: 20px;
-    }
-
-    .event-dot {
-        width: 10px;
-        height: 10px;
+        max-width: 100%;       /* keeps it responsive but not full screen */
+        padding: 20px;         /* restores breathing room inside */
+        border-radius: 8px;    /* optional: looks cleaner */
     }
 }
+
