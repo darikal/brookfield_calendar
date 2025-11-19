@@ -20,21 +20,20 @@ body {
 }
 
 .wrapper {
-    max-width: 100%;
-    padding: 0 10px;
+    max-width: 1100px;
+    padding: 0 20px;
     margin: 15px auto;
     box-sizing: border-box;
 }
 
 .container-calendar {
     width: 100%;
-    max-width: 100%;
-    margin: 0 auto;
     background: white;
     overflow-x: auto;
     box-sizing: border-box;
     border: 1px solid #ccc;
     padding: 10px;
+    border-radius: 8px;
 }
 
 /* -----------------------------
@@ -69,8 +68,8 @@ body {
 #event-section input[type="date"],
 #event-section input[type="text"],
 #event-section select {
-    margin: 8px 0;
-    padding: 7px;
+    margin: 6px 0;
+    padding: 6px;
     width: 100%;
     max-width: 100%;
     box-sizing: border-box;
@@ -80,21 +79,21 @@ body {
     background: var(--blue-dark);
     color: white;
     border: none;
-    padding: 7px 12px;
+    padding: 6px 10px;
     cursor: pointer;
-    margin-top: 10px;
+    margin-top: 8px;
 }
 
 /* Group size wrapper */
 .group-size-wrapper {
     display: flex;
     flex-direction: column;
-    gap: 5px;
+    gap: 4px;
 }
 
 #groupSize {
     width: 70px !important;
-    padding: 5px;
+    padding: 4px;
 }
 
 /* DELETE BUTTON */
@@ -112,19 +111,29 @@ body {
 .table-calendar {
     border-collapse: collapse;
     width: 100%;
-    table-layout: fixed; /* ensures responsive columns */
+    table-layout: fixed; /* ensures equal width columns */
     background: white;
 }
 
 .table-calendar th,
 .table-calendar td {
-    padding: 8px;
+    padding: 4px 2px;
     border: 1px solid #e2e2e2;
     text-align: center;
     vertical-align: top;
-    height: 65px;
+    height: 40px; /* minimal height for compact day boxes */
     box-sizing: border-box;
     word-wrap: break-word;
+    position: relative;
+}
+
+.date-picker {
+    display: block;
+    width: 100%;
+    height: auto;
+    padding: 2px 4px;
+    font-size: 12px;
+    box-sizing: border-box;
 }
 
 .date-picker:hover {
@@ -150,8 +159,8 @@ body {
 }
 
 .event-dot {
-    width: 12px;
-    height: 12px;
+    width: 8px;
+    height: 8px;
     border-radius: 50%;
 }
 
@@ -169,8 +178,8 @@ body {
     position: absolute;
     background-color: rgba(225,230,230,0.9);
     color: black;
-    padding: 8px;
-    font-size: 12px;
+    padding: 6px;
+    font-size: 11px;
     border-radius: 4px;
     bottom: 20px;
     left: 50%;
@@ -230,43 +239,38 @@ body {
 @media (max-width: 600px) {
     .table-calendar th,
     .table-calendar td {
-        padding: 3px;
-        height: 45px;
+        height: 35px;
+        padding: 2px 2px;
         font-size: 11px;
     }
 
     .event-dot {
-        width: 7px;
-        height: 7px;
+        width: 6px;
+        height: 6px;
     }
 
     .event-tooltip {
         font-size: 10px;
-        padding: 6px;
+        padding: 5px;
         bottom: 12px;
     }
 
     #monthAndYear {
-        font-size: 18px;
+        font-size: 16px;
     }
 
     .button-container-calendar button {
-        padding: 3px 8px;
+        padding: 3px 6px;
         font-size: 12px;
     }
 
     #event-section input,
     #event-section select {
-        font-size: 14px;
-        padding: 6px;
+        font-size: 13px;
+        padding: 5px;
     }
 
-    .time-input {
-        display: flex;
-        flex-direction: column;
-        gap: 5px;
-    }
-
+    .time-input,
     .group-size-wrapper {
         flex-direction: column;
         gap: 4px;
@@ -274,10 +278,9 @@ body {
 }
 
 /* -----------------------------
-   DESKTOP LAYOUT FIX — centered + 3/4 height cells
+   DESKTOP FIX — center layout
 -----------------------------*/
 @media (min-width: 900px) {
-    /* Center the calendar and add padding */
     .wrapper {
         max-width: 1100px;
         margin: 20px auto;
@@ -286,25 +289,11 @@ body {
 
     .container-calendar {
         padding: 20px;
-        border-radius: 8px;
     }
 
-    /* Make calendar cells taller on desktop */
-    .table-calendar td,
-    .table-calendar th {
-        height: 120px; /* adjust this value until boxes look ~3/4 width */
-        padding: 8px;
-        box-sizing: border-box;
-    }
-
-    /* Inner padding for numbers / content */
-    .date-picker {
-        padding: 6px;
-    }
-
-    /* Event dots */
+    /* Event dot sizing on desktop */
     .event-dot {
-        width: 10px;
-        height: 10px;
+        width: 8px;
+        height: 8px;
     }
 }
