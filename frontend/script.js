@@ -117,12 +117,7 @@ function toggleRecurDiv() {
 // ------------------------------
 function toggleTitleDiv() {
     const dropdown = document.getElementById('eventTypeMajor');
-    const titleDiv = document.getElementById('titleDiv');
-    const walkInSelect = document.getElementById('walkInWelcome');
-    const signUpOption = document.getElementById('signUpRequired');
     const eventWrapper = document.getElementById('eventDetailsWrapper');
-    const recurWhenSelect = document.getElementById('recurWhen');
-    const recurLenSelect = document.getElementById('recurLength');
 
     if (!dropdown.value) {
         eventWrapper.style.display = "none";
@@ -131,91 +126,14 @@ function toggleTitleDiv() {
         eventWrapper.style.display = "block";
     }
 
+    // Always show recurring checkbox (NOT the recurring options)
+    document.getElementById('recurBox').style.display = 'block';
+
     if (dropdown.value === "reservedPaid") {
-        titleDiv.style.display = "none";
-        walkInSelect.style.display = "none";
-        document.getElementById('eventTitle').value = "";
-        document.getElementById('eventOther').style.display = "none";
-        document.getElementById('signUpField').style.display = "none";
-        walkInSelect.value = "";
-        document.getElementById('eventType').value = "";
         document.getElementById('paidInfo').style.display = 'block';
-        document.getElementById('contactDiv').style.display = 'none';
-        document.getElementById('recurBox').style.display = 'none';
-        document.getElementById('acceptTerms').checked = false;
-
-        const recurBox = document.getElementById('recurCheckbox');
-        const recurDiv = document.getElementById('recurring');
-        recurBox.checked = false;
-        recurDiv.style.display = 'none';
-
+        document.getElementById('recurBox').style.display = 'none'; // hide for paid
     } else {
-        titleDiv.style.display = "block";
-        walkInSelect.style.display = "block";
         document.getElementById('paidInfo').style.display = 'none';
-        document.getElementById('contactDiv').style.display = 'block';
-        document.getElementById('recurBox').style.display = 'block';
-
-        if (dropdown.value === "socialCommitteeEvent") {
-            signUpOption.hidden = false;
-            ['week', 'biWeek'].forEach(val => {
-                const opt = recurWhenSelect.querySelector(`option[value="${val}"]`);
-                if (opt) opt.hidden = true;
-            });
-            let yearlyOption = recurWhenSelect.querySelector('option[value="yearly"]');
-            if (!yearlyOption) {
-                yearlyOption = document.createElement('option');
-                yearlyOption.value = 'yearly';
-                yearlyOption.textContent = 'Yearly';
-                recurWhenSelect.appendChild(yearlyOption);
-            }
-            recurWhenSelect.value = 'yearly';
-
-            ['week', 'biWeek'].forEach(val => {
-                const opt = recurLenSelect.querySelector(`option[value="${val}"]`);
-                if (opt) opt.hidden = true;
-            });
-
-            let yearOption = recurLenSelect.querySelector('option[value="year"]');
-            if (!yearOption) {
-                yearOption = document.createElement('option');
-                yearOption.value = 'year';
-                yearOption.textContent = 'Years';
-                recurLenSelect.appendChild(yearOption);
-            }
-            recurLenSelect.value = 'year';
-
-        } else {
-            signUpOption.hidden = true;
-            ['week', 'biWeek'].forEach(val => {
-                let opt = recurWhenSelect.querySelector(`option[value="${val}"]`);
-                if (!opt) {
-                    opt = document.createElement('option');
-                    opt.value = val;
-                    opt.textContent = val === 'week' ? 'Weekly' : 'Bi-Weekly';
-                    recurWhenSelect.appendChild(opt);
-                }
-                opt.hidden = false;
-            });
-            const yearlyOption = recurWhenSelect.querySelector('option[value="yearly"]');
-            if (yearlyOption) yearlyOption.hidden = true;
-
-            ['week', 'biWeek'].forEach(val => {
-                let opt = recurLenSelect.querySelector(`option[value="${val}"]`);
-                if (opt) opt.hidden = false;
-            });
-            const yearOption = recurLenSelect.querySelector('option[value="year"]');
-            if (yearOption) yearOption.hidden = true;
-
-            recurWhenSelect.value = 'week';
-            recurLenSelect.value = 'week';
-
-            if (walkInSelect.value === "signUpRequired") {
-                walkInSelect.value = "";
-                document.getElementById('signUpField').style.display = "none";
-            }
-        }
-        toggleDiv();
     }
 }
 
@@ -476,10 +394,7 @@ window.onload = () => {
     document.getElementById("walkInWelcome").value = "";
     document.getElementById("eventTypeMajor").value = "";
     document.getElementById('eventDetailsWrapper').style.display ='none';
-    document.getElementById("groupSize").value = '';
     document.getElementById('recurCheckbox').checked = false;
-    startTimeInput.value = "";
-    endTimeInput.value = "";
     toggleDiv();
     toggleTitleDiv();
     showCalendar(currentMonth, currentYear);
