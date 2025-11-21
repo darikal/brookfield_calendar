@@ -5,18 +5,19 @@
 
 <head>
 	<meta charset="UTF-8">
-	<meta name="viewport"
-		content="width=device-width, initial-scale=1.0">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
 	<link rel="stylesheet" href="./styles.css">
 	<title>Brookfield Events Calendar [Alpha]</title>
 </head>
 
 <body>
-	<!-- Main wrapper for the calendar application -->
 	<div class="wrapper">
 		<div class="container-calendar">
+
+			<!-- LEFT SIDE -->
 			<div id="left">
 				<h1>Brookfield Events Calendar [Alpha]</h1>
+
 				<div id="event-section">
 					<h3>Add Event</h3>
 
@@ -27,62 +28,65 @@
 						<option value="reservedPaid">Paid Reservation</option>
 						<option value="noSocialnoPaid">Large Group Event (ex: football sunday)</option>
 					</select>
-					
-					<div id="eventDetailsWrapper" style="display: none;">
-						<div id='eventSchedule'>
+
+					<div id="eventDetailsWrapper" style="display:none;">
+						<div id="eventSchedule">
 
 							<input type="date" id="eventDate">
 
 							<div class="time-input">
-							    <label for="startTime">Start Time:</label>
-							    <input type="time" id="startTime" min="07:30" max="19:00" required />
+								<label for="startTime">Start Time:</label>
+								<input type="time" id="startTime" min="07:30" max="19:00" required>
 
-							    <label for="endTime">End Time:</label>
-							    <input type="time" id="endTime" min="08:15" max="19:45" required />
+								<label for="endTime">End Time:</label>
+								<input type="time" id="endTime" min="08:15" max="19:45" required>
 							</div>
 
-							<div class='group-size-wrapper' style="margin-top:8px;">
-								<label for='groupSize'>Approximate size of group [max 180]</label>
-								<input type='text' id='groupSize' placeholder='10-15' maxlength='5'>
+							<div class="group-size-wrapper" style="margin-top:8px;">
+								<label for="groupSize">Approximate size of group [max 180]</label>
+								<input type="text" id="groupSize" placeholder="10-15" maxlength="5">
 							</div>
 
-							<div id='recurBox'>
-								<label for='recurCheckbox'>Recurring Event</label>
-								<input type='checkbox' id='recurCheckbox' onchange="toggleRecurDiv()">
+							<div id="recurBox">
+								<label for="recurCheckbox">Recurring Event</label>
+								<input type="checkbox" id="recurCheckbox" onchange="toggleRecurDiv()">
 							</div>
-							<div id='recurring'>
+
+							<!-- FIXED: hidden by default -->
+							<div id="recurring" style="display:none;">
 								<br>
-								<select id='recurWhen'>
-									<option value='week'>Weekly</option>
-									<option value='month'>Monthly</option>
-									<option value='biWeek'>Bi-Weekly</option>
+								<select id="recurWhen">
+									<option value="week">Weekly</option>
+									<option value="month">Monthly</option>
+									<option value="biWeek">Bi-Weekly</option>
 								</select>
 
-								<label for='dayOfWeek'>Starting on: </label>
-								<select id='dayOfWeek'>
-									<option value='sunday'>Sunday</option>
-									<option value='monday'>Monday</option>
-									<option value='tuesday'>Tuesday</option>
-									<option value='wednesday'>Wednesday</option>
-									<option value='thursday'>Thursday</option>
-									<option value='friday'>Friday</option>
-									<option value='saturday'>Saturday</option>
+								<label for="dayOfWeek">Starting on:</label>
+								<select id="dayOfWeek">
+									<option value="sunday">Sunday</option>
+									<option value="monday">Monday</option>
+									<option value="tuesday">Tuesday</option>
+									<option value="wednesday">Wednesday</option>
+									<option value="thursday">Thursday</option>
+									<option value="friday">Friday</option>
+									<option value="saturday">Saturday</option>
 								</select>
+
 								<br>
-								<label>For the next </label>
-								<input type='number' id='recurLengthNum' placeholder='10' max='52'>
-								<select id='recurLength'>
-									<option value='week'>Weeks</option>
-									<option value='month'>Months</option>
+								<label>For the next</label>
+								<input type="number" id="recurLengthNum" placeholder="10" max="52">
+								<select id="recurLength">
+									<option value="week">Weeks</option>
+									<option value="month">Months</option>
 								</select>
 							</div>
 
-							<div class='contactDiv' id='contactDiv'>
-								<input type='text' id='contactName' placeholder='Name of contact person'>
-								<input type='text' id='contactInfo' placeholder='email or phone #'>
+							<div class="contactDiv" id="contactDiv">
+								<input type="text" id="contactName" placeholder="Name of contact person">
+								<input type="text" id="contactInfo" placeholder="email or phone #">
 							</div>
 
-							<div id='titleDiv'>
+							<div id="titleDiv">
 								<input type="text" id="eventTitle" placeholder="Event Title">
 							</div>
 
@@ -90,18 +94,19 @@
 							<input type="text" id="eventDescription" placeholder="Event Description">
 
 							<div id="paidInfo" style="display:none;">
-							    <input type="text" id="residentName" placeholder="Name of Resident">
-							    <input type="text" id="contactNamePaid" placeholder="Name of Contact (if different)">
-							    <input type="text" id="residentAddress" placeholder="Address of Resident"><br>
+								<input type="text" id="residentName" placeholder="Name of Resident">
+								<input type="text" id="contactNamePaid" placeholder="Name of Contact (if different)">
+								<input type="text" id="residentAddress" placeholder="Address of Resident"><br>
 
-							    <div id="termsWrapper" style="margin-top:10px;">
-							        <label>
-							            <input type="checkbox" id="acceptTerms" required>
-							            I accept the <a href="#" target="_blank">Terms and Conditions</a>
-							        </label>
-							        <textarea readonly rows="5" style="width:100%; margin-top:5px;">Here you can put the full terms and conditions text for the paid reservations. Users must read this before accepting.
-							        </textarea>
-							    </div>
+								<div id="termsWrapper" style="margin-top:10px;">
+									<label>
+										<input type="checkbox" id="acceptTerms" required>
+										I accept the <a href="#" target="_blank">Terms and Conditions</a>
+									</label>
+									<textarea readonly rows="5" style="width:100%; margin-top:5px;">
+Here you can put the full terms and conditions text for the paid reservations. Users must read this before accepting.
+									</textarea>
+								</div>
 							</div>
 
 							<select id="walkInWelcome" onchange="toggleDiv()">
@@ -109,15 +114,15 @@
 								<option value="Open">Open to walk ins</option>
 								<option value="Closed">Closed to walk ins</option>
 								<option value="Other">Other - specify</option>
-								<option id='signUpRequired' value='signUpRequired' hidden>Signup Required</option>
+								<option id="signUpRequired" value="signUpRequired" hidden>Signup Required</option>
 							</select>
 
-							<div id='eventOther' style='display:none;'>
-								<input type="text" id='eventType' placeholder='Email {name} | call {name}'>
+							<div id="eventOther" style="display:none;">
+								<input type="text" id="eventType" placeholder="Email {name} | call {name}">
 							</div>
 
-							<div id='signUpField' style='display:none;'>
-								<input type="text" id='signUp' placeholder='Contact {name} at {email}'>
+							<div id="signUpField" style="display:none;">
+								<input type="text" id="signUp" placeholder="Contact {name} at {email}">
 							</div>
 
 							<button id="addEvent" onclick="addEvent()">Submit</button>
@@ -125,24 +130,29 @@
 					</div>
 				</div>
 
+				<!-- FIXED: No more Reminders visible anywhere -->
 				<div id="reminder-section">
 					<h3>Events & Reservations</h3>
 					<ul id="reminderList"></ul>
 				</div>
 			</div>
 
+			<!-- RIGHT SIDE -->
 			<div id="right">
 				<h3 id="monthAndYear"></h3>
+
 				<div class="button-container-calendar">
 					<button id="previous" onclick="previous()">‹</button>
 					<button id="next" onclick="next()">›</button>
 				</div>
+
 				<table class="table-calendar" id="calendar" data-lang="en">
 					<thead id="thead-month"></thead>
 					<tbody id="calendar-body"></tbody>
 				</table>
+
 				<div class="footer-container-calendar">
-					<label for="month">Jump To: </label>
+					<label for="month">Jump To:</label>
 					<select id="month" onchange="jump()">
 						<option value=0>Jan</option>
 						<option value=1>Feb</option>
@@ -157,6 +167,7 @@
 						<option value=10>Nov</option>
 						<option value=11>Dec</option>
 					</select>
+
 					<select id="year" onchange="jump()"></select>
 				</div>
 			</div>
