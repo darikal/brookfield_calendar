@@ -121,41 +121,73 @@ let today=new Date(), currentMonth=today.getMonth(), currentYear=today.getFullYe
 const selectYear=document.getElementById("year"), selectMonth=document.getElementById("month"), monthAndYear=document.getElementById("monthAndYear");
 document.getElementById("year").innerHTML = generate_year_range(2020,2075);
 
-function showCalendar(month,year){
-    const firstDay=new Date(year,month,1).getDay();
-    const tbl=document.getElementById("calendar-body");
-    tbl.innerHTML=""; monthAndYear.innerHTML=["January","February","March","April","May","June","July","August","September","October","November","December"][month]+" "+year;
-    selectYear.value=year; selectMonth.value=month;
-    let date=1;
-    for(let i=0;i<6;i++){
-        let row=document.createElement("tr");
-        for(let j=0;j<7;j++){
-            let cell=document.createElement("td");
-            if(i===0 && j<firstDay){row.appendChild(cell); continue;}
-            if(date>daysInMonth(month,year)) break;
-            cell.className="date-picker"; cell.innerHTML=`<span>${date}</span>`;
-            if(date===today.getDate() && year===today.getFullYear() && month===today.getMonth()) cell.classList.add("selected");
-            const eventsOnDate=getEventsOnDate(date,month,year);
-            if(eventsOnDate.length){cell.classList.add("event-marker"); const dots=document.createElement("div"); dots.className="event-dots"; eventsOnDate.forEach(ev=>{const dot=document.createElement("span"); dot.className="event-dot "+getEventColorClass(ev.eType); dot.title=getReadableEventType(ev.eType); dots.appendChild(dot);}); cell.appendChild(dots);}
-            ((d)=>{cell.onclick=()=>{eventDateInput.value=`${year}-${String(month+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`; document.querySelectorAll(".date-picker").forEach(td=>td.classList.remove("selected")); cell.classList.add("selected"); if(!document.getElementById('eventTypeMajor').value) document.getElementById('eventTypeMajor').value="reservedPaid"; toggleTitleDiv();};})(date);
-            row.appendChild(cell); date++;
+function showCalendar(month, year) {
+    const firstDay = new Date(year, month, 1).getDay();
+    const tbl = document.getElementById("calendar-body");
+    tbl.innerHTML = "";
+    monthAndYear.innerHTML = [
+        "January","February","March","April","May","June","July","August","September","October","November","December"
+    ][month] + " " + year;
+    selectYear.value = year;
+    selectMonth.value = month;
+    
+    let date = 1;
+    for (let i = 0; i < 6; i++) {
+        let row = document.createElement("tr");
+        for (let j = 0; j < 7; j++) {
+            let cell = document.createElement("td");
+            if (i === 0 && j < firstDay) { 
+                row.appendChild(cell); 
+                continue; 
+            }
+            if (date > daysInMonth(month, year)) break;
+
+            cell.className = "date-picker";
+            cell.innerHTML = `<span>${date}</span>`;
+
+            // Highlight today's date
+            if (date === today.getDate() && year === today.getFullYear() && month === today.getMonth()) {
+                cell.classList.add("selected");
+            }
+
+            // Add event markers
+            const eventsOnDate = getEventsOnDate(date, month, year);
+            if (eventsOnDate.length) {
+                cell.classList.add("event-marker");
+                const dots = document.createElement("div");
+                dots.className = "event-dots";
+                eventsOnDate.forEach(ev => {
+                    const dot = document.createElement("span");
+                    dot.className = "event-dot " + getEventColorClass(ev.eType);
+                    dot.title = getReadableEventType(ev.eType);
+                    dots.appendChild(dot);
+                });
+                cell.appendChild(dots);
+
+                // Tooltip creation
+                const tooltip = document.createElement("div");
+                tooltip.className = "event-tooltip";
+                tooltip.innerHTML = eventsOnDate.map(ev => 
+                    `<strong>${getReadableEventType(ev.eType)}</strong><br>${ev.title || ev.description}<br>${ev.startTime || ''}-${ev.endTime || ''}`
+                ).join("<hr style='margin:3px 0;'>");
+                cell.appendChild(tooltip);
+            }
+
+            // Click on date to fill event input
+            ((d) => {
+                cell.onclick = () => {
+                    eventDateInput.value = `${year}-${String(month + 1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+                    document.querySelectorAll(".date-picker").forEach(td => td.classList.remove("selected"));
+                    cell.classList.add("selected");
+                    if (!document.getElementById('eventTypeMajor').value) document.getElementById('eventTypeMajor').value = "reservedPaid";
+                    toggleTitleDiv();
+                };
+            })(date);
+
+            row.appendChild(cell);
+            date++;
         }
         tbl.appendChild(row);
     }
     displayReminders();
 }
-
-function next(){currentYear=currentMonth===11?currentYear+1:currentYear; currentMonth=(currentMonth+1)%12; showCalendar(currentMonth,currentYear);}
-function previous(){currentYear=currentMonth===0?currentYear-1:currentYear; currentMonth=currentMonth===0?11:currentMonth-1; showCalendar(currentMonth,currentYear);}
-function jump(){currentYear=parseInt(selectYear.value); currentMonth=parseInt(selectMonth.value); showCalendar(currentMonth,currentYear);}
-
-window.onload=()=>{
-    document.getElementById("walkInWelcome").value="";
-    document.getElementById("eventTypeMajor").value="";
-    document.getElementById('eventDetailsWrapper').style.display='none';
-    document.getElementById("groupSize").value="";
-    document.getElementById('recurCheckbox').checked=false;
-    startTimeInput.value=""; endTimeInput.value="";
-    toggleDiv(); toggleTitleDiv();
-    showCalendar(currentMonth,currentYear);
-};
