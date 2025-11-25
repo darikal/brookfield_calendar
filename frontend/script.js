@@ -1,34 +1,21 @@
-// script.js - Full Updated Calendar Script with Recurring Events Support
+// script.js - Full Updated Version Preserving Event Type Dropdown & Recurring Logic
 
 let events = [];
 
-// Load events from localStorage
-function loadEvents() {
-    const saved = localStorage.getItem("events");
-    if (saved) events = JSON.parse(saved);
-}
+// DOM Elements
+let eventDateInput = document.getElementById("eventDate");
+let eventTitleInput = document.getElementById("eventTitle");
+let eventDescriptionInput = document.getElementById("eventDescription");
+let startTimeInput = document.getElementById("startTime");
+let endTimeInput = document.getElementById("endTime");
+let eventTypeInput = document.getElementById("eventTypeMajor");
+let walkInSelect = document.getElementById("walkInWelcome");
+let recurCheckbox = document.getElementById("recurCheckbox");
+let recurLengthNum = document.getElementById("recurLengthNum");
+let recurWhen = document.getElementById("recurWhen");
+let reminderList = document.getElementById("reminderList");
+let addEventButton = document.getElementById("addEvent");
 
-function saveEvents() {
-    localStorage.setItem("events", JSON.stringify(events));
-}
-
-loadEvents();
-
-// DOM ELEMENTS
-const eventDateInput = document.getElementById("eventDate");
-const eventTitleInput = document.getElementById("eventTitle");
-const eventDescriptionInput = document.getElementById("eventDescription");
-const startTimeInput = document.getElementById("startTime");
-const endTimeInput = document.getElementById("endTime");
-const eventTypeInput = document.getElementById("eventTypeMajor");
-const walkInSelect = document.getElementById("walkInWelcome");
-const recurCheckbox = document.getElementById("recurCheckbox");
-const recurLengthNum = document.getElementById("recurLengthNum");
-const recurWhen = document.getElementById("recurWhen");
-const addEventButton = document.getElementById("addEvent");
-const reminderList = document.getElementById("reminderList");
-
-// Calendar variables
 let today = new Date();
 let currentMonth = today.getMonth();
 let currentYear = today.getFullYear();
@@ -36,7 +23,9 @@ const monthAndYear = document.getElementById("monthAndYear");
 const calendarBody = document.getElementById("calendar-body");
 const months = ["January","February","March","April","May","June","July","August","September","October","November","December"];
 
-// ----------- HELPER FUNCTIONS -----------
+let eventIdCounter = 1;
+
+// ------------------------------
 function parseDateFromInput(value) {
     const [y, m, d] = value.split("-").map(Number);
     return new Date(y, m - 1, d);
@@ -84,7 +73,6 @@ function deleteEvent(eventId) {
     events = events.filter(ev => ev.id !== eventId);
     showCalendar(currentMonth, currentYear);
     displayReminders();
-    saveEvents();
 }
 
 function generateRecurringDates(baseDate, type, count) {
@@ -99,7 +87,7 @@ function generateRecurringDates(baseDate, type, count) {
     return dates;
 }
 
-// ----------- ADD EVENT -----------
+// ------------------------------
 addEventButton.onclick = () => {
     const date = eventDateInput.value;
     const title = eventTitleInput.value;
@@ -109,7 +97,7 @@ addEventButton.onclick = () => {
     const endTime = endTimeInput.value;
     const recurCount = parseInt(recurLengthNum.value, 10) || 0;
 
-    if (!date || !title) { alert("Date and Title required"); return; }
+    if (!date || !title || !eType) { alert("Date, Title, and Event Type required"); return; }
 
     let baseDate = parseDateFromInput(date);
     let allDates = [baseDate];
@@ -120,7 +108,7 @@ addEventButton.onclick = () => {
 
     allDates.forEach(d => {
         events.push({
-            id: Date.now() + Math.random(),
+            id: eventIdCounter++,
             date: d.toISOString().split('T')[0],
             title, description, eType, startTime, endTime
         });
@@ -134,12 +122,11 @@ addEventButton.onclick = () => {
     document.getElementById('recurring').style.display = 'none';
 };
 
-// ----------- TOGGLE RECURRING DIV -----------
+// ------------------------------
 recurCheckbox.addEventListener('change', () => {
     document.getElementById('recurring').style.display = recurCheckbox.checked ? 'block' : 'none';
 });
 
-// ----------- CALENDAR -----------
 function daysInMonth(month, year) { return 32 - new Date(year, month, 32).getDate(); }
 
 function getEventsOnDate(date, month, year) {
@@ -152,9 +139,9 @@ function getEventsOnDate(date, month, year) {
 function showCalendar(month, year) {
     calendarBody.innerHTML = '';
     monthAndYear.textContent = `${months[month]} ${year}`;
-
     const firstDay = new Date(year, month, 1).getDay();
     let date = 1;
+
     for (let i = 0; i < 6; i++) {
         const row = document.createElement('tr');
         for (let j = 0; j < 7; j++) {
@@ -179,7 +166,7 @@ function showCalendar(month, year) {
                 cell.appendChild(dots);
             }
 
-            cell.onclick = () => { eventDateInput.value = `${year}-${String(month+1).padStart(2,'0')}-${String(date).padStart(2,'0')}`; };
+            cell.onclick = () => { eventDateInput.value = `${year}-${String(month+1).padStart(2,'0')}-${String(date).padStart(2,'0')}`; toggleTitleDiv(); };
 
             row.appendChild(cell);
             date++;
@@ -188,10 +175,30 @@ function showCalendar(month, year) {
     }
 }
 
-// ----------- NAVIGATION -----------
 function next() { currentYear = currentMonth === 11 ? currentYear + 1 : currentYear; currentMonth = (currentMonth + 1) % 12; showCalendar(currentMonth, currentYear); }
 function previous() { currentYear = currentMonth === 0 ? currentYear - 1 : currentYear; currentMonth = currentMonth === 0 ? 11 : currentMonth - 1; showCalendar(currentMonth, currentYear); }
 function jump() { currentYear = parseInt(document.getElementById('year').value); currentMonth = parseInt(document.getElementById('month').value); showCalendar(currentMonth, currentYear); }
+
+// Preserve original toggleTitleDiv and toggleDiv functions
+function toggleTitleDiv() {
+    const dropdown = document.getElementById('eventTypeMajor');
+    const eventWrapper = document.getElementById('eventDetailsWrapper');
+    if (!dropdown.value) { eventWrapper.style.display = 'none'; return; } else { eventWrapper.style.display = 'block'; }
+    document.getElementById('recurBox').style.display = 'block';
+    if (dropdown.value === "reservedPaid") {
+        document.getElementById('paidInfo').style.display = 'block';
+        document.getElementById('recurBox').style.display = 'none';
+    } else { document.getElementById('paidInfo').style.display = 'none'; }
+}
+
+function toggleDiv() {
+    const walkInSelect = document.getElementById("walkInWelcome");
+    const otherDiv = document.getElementById("eventOther");
+    const signUpDiv = document.getElementById("signUpField");
+    if (walkInSelect.value === "Other") { otherDiv.style.display = "block"; signUpDiv.style.display = "none"; }
+    else if (walkInSelect.value === "signUpRequired") { signUpDiv.style.display = "block"; otherDiv.style.display = "none"; }
+    else { otherDiv.style.display = "none"; signUpDiv.style.display = "none"; }
+}
 
 // INITIAL RENDER
 showCalendar(currentMonth, currentYear);
