@@ -1,4 +1,4 @@
-// script.js - Full Corrected Version with Recurring Events (off-by-one fixed), Click-to-Fill, Event Type Dropdown, and Hover Tooltips
+// script.js - Full Corrected Version with Recurring Events, Click-to-Fill, Hover Tooltips, and Fixed Dropdown
 
 let events = [];
 
@@ -77,7 +77,7 @@ function deleteEvent(eventId) {
 
 function generateRecurringDates(baseDate, type, count) {
     let dates = [];
-    for (let i = 0; i <= count; i++) {  // start at 1 to avoid adding extra day
+    for (let i = 1; i <= count; i++) {
         let nextDate = new Date(baseDate);
         if (type === "week") nextDate.setDate(baseDate.getDate() + 7 * i);
         if (type === "biWeek") nextDate.setDate(baseDate.getDate() + 14 * i);
@@ -173,13 +173,15 @@ function showCalendar(month, year) {
                 cell.appendChild(tooltip);
             }
 
-            cell.onclick = () => {
-                eventDateInput.value = `${year}-${String(month + 1).padStart(2,'0')}-${String(date).padStart(2,'0')}`;
+            // Click-to-fill top input
+            cell.addEventListener('click', () => {
+                const formattedDate = `${year}-${String(month + 1).padStart(2,'0')}-${String(date).padStart(2,'0')}`;
+                eventDateInput.value = formattedDate;
                 document.querySelectorAll('.date-picker').forEach(td => td.classList.remove('selected'));
                 cell.classList.add('selected');
                 if (!eventTypeInput.value) eventTypeInput.value = 'reservedPaid';
                 toggleTitleDiv();
-            };
+            });
 
             row.appendChild(cell);
             date++;
@@ -192,7 +194,6 @@ function next() { currentYear = currentMonth === 11 ? currentYear + 1 : currentY
 function previous() { currentYear = currentMonth === 0 ? currentYear - 1 : currentYear; currentMonth = currentMonth === 0 ? 11 : currentMonth - 1; showCalendar(currentMonth, currentYear); }
 function jump() { currentYear = parseInt(document.getElementById('year').value); currentMonth = parseInt(document.getElementById('month').value); showCalendar(currentMonth, currentYear); }
 
-// ------------------------------
 function toggleTitleDiv() {
     const dropdown = document.getElementById('eventTypeMajor');
     const eventWrapper = document.getElementById('eventDetailsWrapper');
