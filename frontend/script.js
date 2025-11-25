@@ -1,4 +1,4 @@
-// script.js - Full Version with Click-to-Fill and Proper Scope
+// script.js - Full Version with All Fixes
 
 let events = [];
 
@@ -123,11 +123,13 @@ addEventButton.onclick = () => {
     document.getElementById('recurring').style.display = 'none';
 };
 
+// Recurring checkbox toggle (no toggleRecurDiv needed)
 recurCheckbox.addEventListener('change', () => {
     document.getElementById('recurring').style.display = recurCheckbox.checked ? 'block' : 'none';
 });
 
 function daysInMonth(month, year) { return 32 - new Date(year, month, 32).getDate(); }
+
 function getEventsOnDate(date, month, year) {
     return events.filter(ev => {
         const evDate = parseDateFromInput(ev.date);
