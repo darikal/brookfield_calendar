@@ -1,4 +1,4 @@
-// script.js - Full Corrected Version with Recurring Events, Click-to-Fill, Hover Tooltips, and Fixed Dropdown
+// script.js - Full Version with Recurring Events, Click-to-Fill, Hover Tooltips, and Fixed Dropdown
 
 let events = [];
 
@@ -173,14 +173,18 @@ function showCalendar(month, year) {
                 cell.appendChild(tooltip);
             }
 
-            // Click-to-fill top input
+            // Click-to-fill top input and show wrapper
             cell.addEventListener('click', () => {
                 const formattedDate = `${year}-${String(month + 1).padStart(2,'0')}-${String(date).padStart(2,'0')}`;
                 eventDateInput.value = formattedDate;
+
+                // Highlight selected date
                 document.querySelectorAll('.date-picker').forEach(td => td.classList.remove('selected'));
                 cell.classList.add('selected');
+
+                // Default event type if none selected
                 if (!eventTypeInput.value) eventTypeInput.value = 'reservedPaid';
-                toggleTitleDiv();
+                toggleTitleDiv(); // shows event details wrapper
             });
 
             row.appendChild(cell);
