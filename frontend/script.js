@@ -117,6 +117,7 @@ addEventButton.onclick = () => {
     showCalendar(currentMonth, currentYear);
     displayReminders();
 
+    // Clear inputs
     eventDateInput.value = eventTitleInput.value = eventDescriptionInput.value = startTimeInput.value = endTimeInput.value = '';
     recurCheckbox.checked = false;
     document.getElementById('recurring').style.display = 'none';
@@ -173,7 +174,7 @@ function showCalendar(month, year) {
                 cell.appendChild(tooltip);
             }
 
-            // Click-to-fill top input and show wrapper
+            // Click-to-fill top input and open event section if needed
             cell.addEventListener('click', () => {
                 const formattedDate = `${year}-${String(month + 1).padStart(2,'0')}-${String(date).padStart(2,'0')}`;
                 eventDateInput.value = formattedDate;
@@ -182,9 +183,17 @@ function showCalendar(month, year) {
                 document.querySelectorAll('.date-picker').forEach(td => td.classList.remove('selected'));
                 cell.classList.add('selected');
 
-                // Default event type if none selected
-                if (!eventTypeInput.value) eventTypeInput.value = 'reservedPaid';
-                toggleTitleDiv(); // shows event details wrapper
+                const eventWrapper = document.getElementById('eventDetailsWrapper');
+
+                // Open event section if hidden and default type to smallGroup if nothing selected
+                if (eventWrapper.style.display === 'none' || eventWrapper.style.display === '') {
+                    eventWrapper.style.display = 'block';
+                    if (!eventTypeInput.value) {
+                        eventTypeInput.value = 'smallGroup';
+                    }
+                }
+
+                toggleTitleDiv();
             });
 
             row.appendChild(cell);
