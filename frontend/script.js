@@ -77,11 +77,11 @@ function deleteEvent(eventId) {
 
 function generateRecurringDates(baseDate, type, count) {
     let dates = [];
-    for (let i = 0; i <= count; i++) {
+    for (let i = 1; i <= count; i++) {
         let nextDate = new Date(baseDate);
-        if (type === "week") nextDate.setDate(baseDate.getDate() + 7 * i);
-        if (type === "biWeek") nextDate.setDate(baseDate.getDate() + 14 * i);
-        if (type === "month") nextDate.setMonth(baseDate.getMonth() + i);
+        if (type === "week") nextDate.setDate(baseDate.getDate() + 7 * i-1);
+        if (type === "biWeek") nextDate.setDate(baseDate.getDate() + 14 * i-1);
+        if (type === "month") nextDate.setMonth(baseDate.getMonth() + i-1);
         dates.push(nextDate);
     }
     return dates;
