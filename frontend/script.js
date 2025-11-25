@@ -1,4 +1,4 @@
-// script.js - Full Version with Recurring Events, Click-to-Fill, Hover Tooltips, and Fixed Dropdown
+// script.js - Full Version with Click-to-Fill and Proper Scope
 
 let events = [];
 
@@ -176,8 +176,8 @@ function showCalendar(month, year) {
 
             // Click-to-fill top input and open event section if needed
             cell.addEventListener('click', () => {
-                const formattedDate = `${year}-${String(month + 1).padStart(2,'0')}-${String(date).padStart(2,'0')}`;
-                eventDateInput.value = formattedDate;
+                const clickedDate = `${year}-${String(month + 1).padStart(2,'0')}-${String(date).padStart(2,'0')}`;
+                eventDateInput.value = clickedDate;
 
                 // Highlight selected date
                 document.querySelectorAll('.date-picker').forEach(td => td.classList.remove('selected'));
@@ -185,8 +185,8 @@ function showCalendar(month, year) {
 
                 const eventWrapper = document.getElementById('eventDetailsWrapper');
 
-                // Open event section if hidden and default type to smallGroup if nothing selected
-                if (eventWrapper.style.display === 'none' || eventWrapper.style.display === '') {
+                // Open event section if hidden, default type to smallGroup if nothing selected
+                if (!eventWrapper.style.display || eventWrapper.style.display === 'none') {
                     eventWrapper.style.display = 'block';
                     if (!eventTypeInput.value) {
                         eventTypeInput.value = 'smallGroup';
