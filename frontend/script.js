@@ -109,7 +109,8 @@ function deleteEvent(eventId) {
 function toggleRecurDiv() {
     const recurDiv = document.getElementById('recurring');
     const recurBox = document.getElementById('recurCheckbox');
-    recurDiv.style.display = recurBox.checked ? 'block' : 'none';
+    if (!recurDiv || !recurBox) return;
+    recurDiv.style.display = (recurBox.checked === true) ? 'block' : 'none';
 }
 
 // ------------------------------
@@ -386,10 +387,35 @@ function createEventTooltip(date, month, year) {
 // On page load
 // ------------------------------
 window.onload = () => {
-    document.getElementById("walkInWelcome").value = "";
-    document.getElementById("eventTypeMajor").value = "";
-    document.getElementById('eventDetailsWrapper').style.display ='none';
-    document.getElementById('recurCheckbox').checked = false;
+    // Reset form controls to a known state
+    const walkIn = document.getElementById("walkInWelcome");
+    const eventTypeMajor = document.getElementById("eventTypeMajor");
+    const eventDetailsWrapper = document.getElementById('eventDetailsWrapper');
+    const recurBox = document.getElementById('recurCheckbox');
+    const recurDiv = document.getElementById('recurring');
+
+    if (walkIn) walkIn.value = "";
+    if (eventTypeMajor) eventTypeMajor.value = "";
+    if (eventDetailsWrapper) eventDetailsWrapper.style.display = 'none';
+    if (document.getElementById("groupSize")) document.getElementById("groupSize").value = "";
+    if (recurBox) recurBox.checked = false;
+    if (recurDiv) recurDiv.style.display = 'none';
+
+    startTimeInput.value = "";
+    endTimeInput.value = "";
+
+    // Attach listener (prevents conflicts with inline onchange attributes)
+    if (recurBox) {
+        // remove any existing handler to be safe
+        recurBox.removeEventListener('change', toggleRecurDiv);
+        recurBox.addEventListener('change', (e) => {
+            // Prevent parents accidentally toggling things if they listen for clicks
+            e.stopPropagation();
+            toggleRecurDiv();
+        });
+    }
+
+    // Ensure walkIn/select and type toggles are in correct state
     toggleDiv();
     toggleTitleDiv();
     showCalendar(currentMonth, currentYear);
