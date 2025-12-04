@@ -1,4 +1,21 @@
-// script.js - Full Version with All Fixes
+async function sendEventToBackend(eventData) {
+    try {
+        const response = await fetch("/api/addEvent", {   // Change URL later
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(eventData),
+        });
+
+        if (!response.ok) {
+            console.error("Backend error:", await response.text());
+            alert("Error sending event to server.");
+        }
+    } catch (err) {
+        console.error("Network error:", err);
+        alert("Could not reach server.");
+    }
+}
+
 
 let events = [];
 
@@ -107,12 +124,30 @@ addEventButton.onclick = () => {
     }
 
     allDates.forEach(d => {
-        events.push({
-            id: eventIdCounter++,
-            date: d.toISOString().split('T')[0],
-            title, description, eType, startTime, endTime
-        });
-    });
+    const newEvent = {
+        id: eventIdCounter++,
+        date: d.toISOString().split('T')[0],
+        title,
+        description,
+        eType,
+        startTime,
+        endTime,
+        groupSize: document.getElementById("groupSize").value,
+        contactName: document.getElementById("contactName").value,
+        contactInfo: document.getElementById("contactInfo").value,
+        walkIn: walkInSelect.value,
+        walkInOther: document.getElementById("eventOther").value,
+        signUp: document.getElementById("signUp").value,
+        recurring: recurCheckbox.checked,
+        recurType: recurWhen.value,
+        recurLength: recurLengthNum.value
+    };
+
+    events.push(newEvent);
+
+    // ⭐ Send to backend
+    sendEventToBackend(newEvent);
+});
 
     showCalendar(currentMonth, currentYear);
     displayReminders();
