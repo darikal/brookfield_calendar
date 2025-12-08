@@ -21,7 +21,7 @@ async function sendEventToBackend(eventData) {
 
 async function loadEventsFromBackend() {
     try {
-        const response = await fetch("/api/getEvent");
+        const response = await fetch("/api/getEvents");
         if (!response.ok) {
             console.error("Backend fetch error:", await response.text());
             return;
