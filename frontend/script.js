@@ -1,39 +1,4 @@
 // ------------------------------
-// Backend Functions
-// ------------------------------
-async function sendEventToBackend(eventData) {
-    try {
-        const response = await fetch("/api/addEvent", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(eventData),
-        });
-
-        if (!response.ok) {
-            console.error("Backend error:", await response.text());
-            alert("Error sending event to server.");
-        }
-    } catch (err) {
-        console.error("Network error:", err);
-        alert("Could not reach server.");
-    }
-}
-
-async function loadEventsFromBackend() {
-    try {
-        const response = await fetch("/api/getEvents.js");
-        if (!response.ok) {
-            console.error("Backend fetch error:", await response.text());
-            return;
-        }
-        const data = await response.json();
-        events = data;
-    } catch (err) {
-        console.error("Network error:", err);
-    }
-}
-
-// ------------------------------
 // Local Event Storage
 // ------------------------------
 let events = [];
@@ -42,20 +7,20 @@ let eventIdCounter = 1;
 // ------------------------------
 // DOM Elements
 // ------------------------------
-let eventDateInput = document.getElementById("eventDate");
-let eventTitleInput = document.getElementById("eventTitle");
-let eventDescriptionInput = document.getElementById("eventDescription");
-let startTimeInput = document.getElementById("startTime");
-let endTimeInput = document.getElementById("endTime");
-let eventTypeInput = document.getElementById("eventTypeMajor");
-let walkInSelect = document.getElementById("walkInWelcome");
-let recurCheckbox = document.getElementById("recurCheckbox");
-let recurLengthNum = document.getElementById("recurLengthNum");
-let recurWhen = document.getElementById("recurWhen");
-let reminderList = document.getElementById("reminderList");
-let addEventButton = document.getElementById("addEvent");
+const eventDateInput = document.getElementById("eventDate");
+const eventTitleInput = document.getElementById("eventTitle");
+const eventDescriptionInput = document.getElementById("eventDescription");
+const startTimeInput = document.getElementById("startTime");
+const endTimeInput = document.getElementById("endTime");
+const eventTypeInput = document.getElementById("eventTypeMajor");
+const walkInSelect = document.getElementById("walkInWelcome");
+const recurCheckbox = document.getElementById("recurCheckbox");
+const recurLengthNum = document.getElementById("recurLengthNum");
+const recurWhen = document.getElementById("recurWhen");
+const reminderList = document.getElementById("reminderList");
+const addEventButton = document.getElementById("addEvent");
 
-let today = new Date();
+const today = new Date();
 let currentMonth = today.getMonth();
 let currentYear = today.getFullYear();
 const monthAndYear = document.getElementById("monthAndYear");
@@ -95,12 +60,12 @@ function daysInMonth(month, year) {
 }
 
 function generateRecurringDates(baseDate, type, count) {
-    let dates = [];
+    const dates = [];
     for (let i = 1; i <= count; i++) {
-        let nextDate = new Date(baseDate);
-        if (type === "week") nextDate.setDate(baseDate.getDate() + 7 * (i-1));
-        if (type === "biWeek") nextDate.setDate(baseDate.getDate() + 14 * (i-1));
-        if (type === "month") nextDate.setMonth(baseDate.getMonth() + (i-1));
+        const nextDate = new Date(baseDate);
+        if (type === "week") nextDate.setDate(baseDate.getDate() + 7 * i);
+        if (type === "biWeek") nextDate.setDate(baseDate.getDate() + 14 * i);
+        if (type === "month") nextDate.setMonth(baseDate.getMonth() + i);
         dates.push(nextDate);
     }
     return dates;
@@ -121,7 +86,7 @@ function displayReminders() {
     events.forEach(event => {
         const eventDate = parseDateFromInput(event.date);
         if (eventDate.getMonth() === currentMonth && eventDate.getFullYear() === currentYear) {
-            let timeText = (event.startTime || event.endTime) ? ` (${event.startTime || '??:??'} - ${event.endTime || '??:??'})` : '';
+            const timeText = (event.startTime || event.endTime) ? ` (${event.startTime || '??:??'} - ${event.endTime || '??:??'})` : '';
             const li = document.createElement("li");
             li.innerHTML = `<strong>${getReadableEventType(event.eType)}</strong>${timeText}: ${event.title || event.description}`;
             const btn = document.createElement("button");
@@ -156,11 +121,10 @@ function showCalendar(month, year) {
             if (i === 0 && j < firstDay) { row.appendChild(cell); continue; }
             if (date > daysInMonth(month, year)) break;
 
-            const thisDate = date; // capture the correct date for this cell
             cell.className = 'date-picker';
-            cell.innerHTML = `<span>${thisDate}</span>`;
+            cell.innerHTML = `<span>${date}</span>`;
 
-            const todaysEvents = getEventsOnDate(thisDate, month, year);
+            const todaysEvents = getEventsOnDate(date, month, year);
             if (todaysEvents.length) {
                 cell.classList.add('event-marker');
                 const dots = document.createElement('div');
@@ -176,7 +140,7 @@ function showCalendar(month, year) {
                 const tooltip = document.createElement('div');
                 tooltip.className = 'event-tooltip';
                 tooltip.innerHTML = todaysEvents.map(ev => {
-                    let timeText = (ev.startTime || ev.endTime) ? ` (${ev.startTime || '??:??'} - ${ev.endTime || '??:??'})` : '';
+                    const timeText = (ev.startTime || ev.endTime) ? ` (${ev.startTime || '??:??'} - ${ev.endTime || '??:??'})` : '';
                     return `<strong>${getReadableEventType(ev.eType)}</strong>${timeText}: ${ev.title || ev.description}`;
                 }).join('<hr style="margin:3px 0;">');
                 cell.appendChild(tooltip);
@@ -184,7 +148,8 @@ function showCalendar(month, year) {
 
             // Click-to-fill top input
             cell.addEventListener('click', () => {
-                const clickedDate = `${year}-${String(month + 1).padStart(2,'0')}-${String(thisDate).padStart(2,'0')}`;
+                const clickedDate = `${year}-${String(month + 1).padStart(2,'0')}-${String(date).padStart(2,'0')}`;
+
                 eventDateInput.value = clickedDate;
 
                 document.querySelectorAll('.date-picker').forEach(td => td.classList.remove('selected'));
@@ -243,6 +208,35 @@ recurCheckbox.addEventListener('change', () => {
 });
 
 // ------------------------------
+// Backend Functions
+// ------------------------------
+async function sendEventToBackend(eventData) {
+    try {
+        const response = await fetch("/api/addEvent", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(eventData),
+        });
+        if (!response.ok) {
+            console.error("Backend error:", await response.text());
+        }
+    } catch (err) {
+        console.error("Network error:", err);
+    }
+}
+
+async function loadEventsFromBackend() {
+    try {
+        const response = await fetch("/api/getEvents");
+        if (!response.ok) throw new Error("Failed to fetch events");
+        const data = await response.json();
+        events = data;
+    } catch (err) {
+        console.warn("Could not load backend events, showing local only.", err);
+    }
+}
+
+// ------------------------------
 // Add Event Button
 // ------------------------------
 addEventButton.onclick = () => {
@@ -299,7 +293,7 @@ addEventButton.onclick = () => {
 // INITIAL LOAD
 // ------------------------------
 (async () => {
-    await loadEventsFromBackend(); // Fetch from MongoDB first
+    await loadEventsFromBackend();
     showCalendar(currentMonth, currentYear);
     displayReminders();
 })();
