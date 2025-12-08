@@ -42,18 +42,18 @@ let eventIdCounter = 1;
 // ------------------------------
 // DOM Elements
 // ------------------------------
-const eventDateInput = document.getElementById("eventDate");
-const eventTitleInput = document.getElementById("eventTitle");
-const eventDescriptionInput = document.getElementById("eventDescription");
-const startTimeInput = document.getElementById("startTime");
-const endTimeInput = document.getElementById("endTime");
-const eventTypeInput = document.getElementById("eventTypeMajor");
-const walkInSelect = document.getElementById("walkInWelcome");
-const recurCheckbox = document.getElementById("recurCheckbox");
-const recurLengthNum = document.getElementById("recurLengthNum");
-const recurWhen = document.getElementById("recurWhen");
-const reminderList = document.getElementById("reminderList");
-const addEventButton = document.getElementById("addEvent");
+let eventDateInput = document.getElementById("eventDate");
+let eventTitleInput = document.getElementById("eventTitle");
+let eventDescriptionInput = document.getElementById("eventDescription");
+let startTimeInput = document.getElementById("startTime");
+let endTimeInput = document.getElementById("endTime");
+let eventTypeInput = document.getElementById("eventTypeMajor");
+let walkInSelect = document.getElementById("walkInWelcome");
+let recurCheckbox = document.getElementById("recurCheckbox");
+let recurLengthNum = document.getElementById("recurLengthNum");
+let recurWhen = document.getElementById("recurWhen");
+let reminderList = document.getElementById("reminderList");
+let addEventButton = document.getElementById("addEvent");
 
 let today = new Date();
 let currentMonth = today.getMonth();
@@ -98,9 +98,9 @@ function generateRecurringDates(baseDate, type, count) {
     let dates = [];
     for (let i = 1; i <= count; i++) {
         let nextDate = new Date(baseDate);
-        if (type === "week") nextDate.setDate(baseDate.getDate() + 7 * i);
-        if (type === "biWeek") nextDate.setDate(baseDate.getDate() + 14 * i);
-        if (type === "month") nextDate.setMonth(baseDate.getMonth() + i);
+        if (type === "week") nextDate.setDate(baseDate.getDate() + 7 * (i-1));
+        if (type === "biWeek") nextDate.setDate(baseDate.getDate() + 14 * (i-1));
+        if (type === "month") nextDate.setMonth(baseDate.getMonth() + (i-1));
         dates.push(nextDate);
     }
     return dates;
@@ -156,10 +156,11 @@ function showCalendar(month, year) {
             if (i === 0 && j < firstDay) { row.appendChild(cell); continue; }
             if (date > daysInMonth(month, year)) break;
 
+            const thisDate = date; // capture the correct date for this cell
             cell.className = 'date-picker';
-            cell.innerHTML = `<span>${date}</span>`;
+            cell.innerHTML = `<span>${thisDate}</span>`;
 
-            const todaysEvents = getEventsOnDate(date, month, year);
+            const todaysEvents = getEventsOnDate(thisDate, month, year);
             if (todaysEvents.length) {
                 cell.classList.add('event-marker');
                 const dots = document.createElement('div');
@@ -183,7 +184,7 @@ function showCalendar(month, year) {
 
             // Click-to-fill top input
             cell.addEventListener('click', () => {
-                const clickedDate = `${year}-${String(month + 1).padStart(2,'0')}-${String(date).padStart(2,'0')}`;
+                const clickedDate = `${year}-${String(month + 1).padStart(2,'0')}-${String(thisDate).padStart(2,'0')}`;
                 eventDateInput.value = clickedDate;
 
                 document.querySelectorAll('.date-picker').forEach(td => td.classList.remove('selected'));
@@ -224,9 +225,7 @@ function toggleTitleDiv() {
     if (dropdown.value === "reservedPaid") {
         document.getElementById('paidInfo').style.display = 'block';
         document.getElementById('recurBox').style.display = 'none';
-    } else {
-        document.getElementById('paidInfo').style.display = 'none';
-    }
+    } else { document.getElementById('paidInfo').style.display = 'none'; }
 }
 
 function toggleDiv() {
@@ -300,7 +299,7 @@ addEventButton.onclick = () => {
 // INITIAL LOAD
 // ------------------------------
 (async () => {
-    await loadEventsFromBackend();
+    await loadEventsFromBackend(); // Fetch from MongoDB first
     showCalendar(currentMonth, currentYear);
     displayReminders();
 })();
