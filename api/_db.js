@@ -1,19 +1,10 @@
 import { MongoClient } from "mongodb";
 
-const uri = process.env.MONGODB_URI;
-let client;
-let clientPromise;
-
-if (!uri) {
-  throw new Error("Missing MONGODB_URI env variable");
+if (!process.env.MONGODB_URI) {
+  throw new Error("Missing MONGODB_URI");
 }
 
-// Reuse client across function calls (important for Vercel)
-if (!global._mongoClientPromise) {
-  client = new MongoClient(uri);
-  global._mongoClientPromise = client.connect();
-}
-
-clientPromise = global._mongoClientPromise;
+const client = new MongoClient(process.env.MONGODB_URI);
+const clientPromise = client.connect();
 
 export default clientPromise;

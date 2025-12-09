@@ -1,22 +1,23 @@
-import clientPromise from "./_db";
+import clientPromise from "./_db.js";
 
 export default async function handler(req, res) {
-    if (req.method !== "POST") {
-        return res.status(405).json({ error: "POST only" });
-    }
+  if (req.method !== "POST") {
+    return res.status(405).json({ error: "Method not allowed" });
+  }
 
-    try {
-        const client = await clientPromise;
-        const db = client.db("calendarDB");         // auto-creates if missing
-        const events = db.collection("events");     // auto-creates if missing
+  try {
+    const client = await clientPromise;
+    const db = client.db("calendarDB");
+    const events = db.collection("events");
 
-        const eventData = req.body;
+    const body = JSON.parse(req.body);
 
-        const result = await events.insertOne(eventData);
+    const result = await events.insertOne(body);
 
-        res.status(200).json({ success: true, id: result.insertedId });
-    } catch (err) {
-        console.error(err);
-        res.status(500).json({ error: "DB insert failed" });
-    }
+    res.status(200).json({ success: true, id: result.insertedId });
+
+  } catch (err) {
+    console.error("ADD EVENTS ERROR:", err);
+    res.status(500).json({ error: "DB insert failed" });
+  }
 }
