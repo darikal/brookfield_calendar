@@ -1,10 +1,19 @@
 import { MongoClient } from "mongodb";
 
-if (!process.env.MONGODB_URI) {
-  throw new Error("Missing MONGODB_URI");
+const uri = process.env.MONGODB_URI;
+
+if (!uri) throw new Error("❌ Missing MONGODB_URI in environment variables");
+
+let client;
+let clientPromise;
+
+if (!global._mongoClientPromise) {
+    client = new MongoClient(uri, {
+        maxPoolSize: 10
+    });
+    global._mongoClientPromise = client.connect();
 }
 
-const client = new MongoClient(process.env.MONGODB_URI);
-const clientPromise = client.connect();
+clientPromise = global._mongoClientPromise;
 
 export default clientPromise;

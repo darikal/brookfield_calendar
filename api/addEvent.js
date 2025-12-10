@@ -8,11 +8,11 @@ export default async function handler(req, res) {
   try {
     const client = await clientPromise;
     const db = client.db("calendarDB");
-    const events = db.collection("events");
+    const collection = db.collection("events");
 
-    const body = JSON.parse(req.body);
+    const body = typeof req.body === "string" ? JSON.parse(req.body) : req.body;
 
-    const result = await events.insertOne(body);
+    const result = await collection.insertOne(body);
 
     res.status(200).json({ success: true, id: result.insertedId });
 

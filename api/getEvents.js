@@ -4,10 +4,9 @@ export default async function handler(req, res) {
   try {
     const client = await clientPromise;
     const db = client.db("calendarDB");
-    const events = db.collection("events");
+    const events = await db.collection("events").find({}).toArray();
 
-    const allEvents = await events.find({}).toArray();
-    res.status(200).json(allEvents);
+    res.status(200).json(events);
 
   } catch (err) {
     console.error("GET EVENTS ERROR:", err);
