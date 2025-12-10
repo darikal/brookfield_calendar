@@ -6,6 +6,8 @@
     { "src": "*.css", "use": "@vercel/static" }
   ],
   "routes": [
+    { "src": "/api/getEvents", "dest": "getEvents.js" },
     { "src": "/api/(.*)", "dest": "/api/$1.js" }
+
   ]
 }
