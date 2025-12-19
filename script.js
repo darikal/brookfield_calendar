@@ -1,3 +1,4 @@
+// Checking for consistency
 let events = [];
 let currentMonth = new Date().getMonth();
 let currentYear = new Date().getFullYear();
