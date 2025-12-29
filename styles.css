@@ -143,9 +143,9 @@ body {
 .event-dots {
     position: absolute;
     bottom: 2px;
-    left: 2px;
+    left: 50%;
+    transform: translateX(-50%);
     display: flex;
-    flex-wrap: wrap;
     gap: 2px;
 }
 
