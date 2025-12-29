@@ -90,11 +90,39 @@ function daysInMonth(month, year) {
     return 32 - new Date(year, month, 32).getDate();
 }
 
+function generateRecurringDates(baseDate, type, count) {
+    let dates = [];
+    for (let i = 0; i < count; i++) {
+        let d = new Date(baseDate);
+        if (type === "week") d.setDate(baseDate.getDate() + 7 * i);
+        if (type === "biWeek") d.setDate(baseDate.getDate() + 14 * i);
+        if (type === "month") d.setMonth(baseDate.getMonth() + i);
+        dates.push(d);
+    }
+    return dates;
+}
+
 function getEventsOnDate(date, month, year) {
-    return events.filter(ev => {
-        const d = parseDateFromInput(ev.date);
-        return d.getDate() === date && d.getMonth() === month && d.getFullYear() === year;
+    let results = [];
+    events.forEach(ev => {
+        // Single events
+        const evDate = parseDateFromInput(ev.date);
+        if (!ev.recurrence && evDate.getDate() === date && evDate.getMonth() === month && evDate.getFullYear() === year) {
+            results.push(ev);
+        }
+
+        // Recurring events
+        if (ev.recurrence) {
+            const baseDate = parseDateFromInput(ev.recurrence.startDate);
+            const occurrences = generateRecurringDates(baseDate, ev.recurrence.type, ev.recurrence.count);
+            occurrences.forEach(d => {
+                if (d.getDate() === date && d.getMonth() === month && d.getFullYear() === year) {
+                    results.push(ev);
+                }
+            });
+        }
     });
+    return results;
 }
 
 // ==============================
@@ -103,13 +131,19 @@ function getEventsOnDate(date, month, year) {
 function displayReminders() {
     reminderList.innerHTML = "";
     events.forEach(ev => {
-        const d = parseDateFromInput(ev.date);
-        if (d.getMonth() === currentMonth && d.getFullYear() === currentYear) {
-            const li = document.createElement("li");
-            const timeText = ev.startTime || ev.endTime ? ` (${ev.startTime || ""} - ${ev.endTime || ""})` : "";
-            li.innerHTML = `<strong>${getReadableEventType(ev.eType)}</strong>${timeText}: ${ev.title}`;
-            reminderList.appendChild(li);
-        }
+        // Display for current month only
+        const evDates = ev.recurrence
+            ? generateRecurringDates(parseDateFromInput(ev.recurrence.startDate), ev.recurrence.type, ev.recurrence.count)
+            : [parseDateFromInput(ev.date)];
+
+        evDates.forEach(d => {
+            if (d.getMonth() === currentMonth && d.getFullYear() === currentYear) {
+                const li = document.createElement("li");
+                const timeText = ev.startTime || ev.endTime ? ` (${ev.startTime || ""} - ${ev.endTime || ""})` : "";
+                li.innerHTML = `<strong>${getReadableEventType(ev.eType)}</strong>${timeText}: ${ev.title}`;
+                reminderList.appendChild(li);
+            }
+        });
     });
 }
 
@@ -204,10 +238,7 @@ addEventButton.onclick = async () => {
     const date = eventDateInput.value;
     if (!date || !eventTitleInput.value || !eventTypeInput.value) return;
 
-    const recurType = recurCheckbox.checked ? recurWhen.value : null;
-    const recurCount = recurCheckbox.checked ? parseInt(recurLengthNum.value) : null;
-
-    await sendEventToBackend({
+    const eventData = {
         date,
         title: eventTitleInput.value,
         description: eventDescriptionInput.value,
@@ -217,11 +248,19 @@ addEventButton.onclick = async () => {
         groupSize: document.getElementById("groupSize").value,
         contactName: document.getElementById("contactName").value,
         contactInfo: document.getElementById("contactInfo").value,
-        walkIn: walkInSelect.value,
-        recurType,
-        recurCount
-    });
+        walkIn: walkInSelect.value
+    };
 
+    if (recurCheckbox.checked && recurLengthNum.value) {
+        eventData.recurrence = {
+            type: recurWhen.value,
+            count: parseInt(recurLengthNum.value),
+            startDate: date
+        };
+        eventData.exceptions = [];
+    }
+
+    await sendEventToBackend(eventData);
     await loadEventsFromBackend(currentMonth, currentYear);
     showCalendar(currentMonth, currentYear);
     displayReminders();

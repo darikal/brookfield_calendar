@@ -14,7 +14,7 @@ function expandRecurring(event, month, year) {
     if (type === "month") d.setMonth(baseDate.getMonth() + i);
 
     // Skip exceptions
-    if (event.exceptions && event.exceptions.includes(d.toISOString().split("T")[0])) continue;
+    if (event.exceptions?.includes(d.toISOString().split("T")[0])) continue;
 
     if (d.getMonth() === month && d.getFullYear() === year) {
       occurrences.push({ ...event, date: d.toISOString().split("T")[0] });
@@ -38,14 +38,9 @@ export default async function handler(req, res) {
     const db = client.db("calendarDB");
     const allEvents = await db.collection("events").find({}).toArray();
 
-    // Expand recurring events for the requested month
-    let events = [];
-    allEvents.forEach(ev => {
-      events.push(...expandRecurring(ev, monthNum, yearNum));
-    });
+    const events = allEvents.flatMap(ev => expandRecurring(ev, monthNum, yearNum));
 
     res.status(200).json(events);
-
   } catch (err) {
     console.error("GET EVENTS ERROR:", err);
     res.status(500).json({ error: "DB fetch failed" });
