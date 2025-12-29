@@ -14,7 +14,6 @@ async function sendEventToBackend(eventData) {
     }
 }
 
-// Load events for a specific month/year
 async function loadEventsFromBackend(month = currentMonth, year = currentYear) {
     try {
         const response = await fetch(`/api/getEvents?month=${month}&year=${year}`);
@@ -23,10 +22,7 @@ async function loadEventsFromBackend(month = currentMonth, year = currentYear) {
             return;
         }
         const data = await response.json();
-        events = data.map(ev => ({
-            ...ev,
-            id: ev._id || ev.id
-        }));
+        events = data.map(ev => ({ ...ev, id: ev._id || ev.id }));
     } catch (err) {
         console.error(err);
     }
@@ -62,6 +58,7 @@ const months = ["January","February","March","April","May","June","July","August
 // Utility Functions
 // ==============================
 function parseDateFromInput(value) {
+    if (!value) return null;
     const [y, m, d] = value.split("-").map(Number);
     return new Date(y, m - 1, d);
 }
@@ -90,39 +87,20 @@ function daysInMonth(month, year) {
     return 32 - new Date(year, month, 32).getDate();
 }
 
-function generateRecurringDates(baseDate, type, count) {
-    let dates = [];
-    for (let i = 0; i < count; i++) {
-        let d = new Date(baseDate);
-        if (type === "week") d.setDate(baseDate.getDate() + 7 * i);
-        if (type === "biWeek") d.setDate(baseDate.getDate() + 14 * i);
-        if (type === "month") d.setMonth(baseDate.getMonth() + i);
-        dates.push(d);
-    }
-    return dates;
-}
-
+// ==============================
+// Filter and expand recurring events
+// ==============================
 function getEventsOnDate(date, month, year) {
-    let results = [];
-    events.forEach(ev => {
-        // Single events
-        const evDate = parseDateFromInput(ev.date);
-        if (!ev.recurrence && evDate.getDate() === date && evDate.getMonth() === month && evDate.getFullYear() === year) {
-            results.push(ev);
+    return events.filter(ev => {
+        let d = ev.date;
+        if (!d && ev.recurrence) {
+            // fallback, should not happen if backend expands recurring
+            d = ev.recurrence.startDate;
         }
-
-        // Recurring events
-        if (ev.recurrence) {
-            const baseDate = parseDateFromInput(ev.recurrence.startDate);
-            const occurrences = generateRecurringDates(baseDate, ev.recurrence.type, ev.recurrence.count);
-            occurrences.forEach(d => {
-                if (d.getDate() === date && d.getMonth() === month && d.getFullYear() === year) {
-                    results.push(ev);
-                }
-            });
-        }
+        if (!d) return false;
+        const parsed = parseDateFromInput(d);
+        return parsed.getDate() === date && parsed.getMonth() === month && parsed.getFullYear() === year;
     });
-    return results;
 }
 
 // ==============================
@@ -131,25 +109,21 @@ function getEventsOnDate(date, month, year) {
 function displayReminders() {
     reminderList.innerHTML = "";
     events.forEach(ev => {
-        // Display for current month only
-        const evDates = ev.recurrence
-            ? generateRecurringDates(parseDateFromInput(ev.recurrence.startDate), ev.recurrence.type, ev.recurrence.count)
-            : [parseDateFromInput(ev.date)];
-
-        evDates.forEach(d => {
-            if (d.getMonth() === currentMonth && d.getFullYear() === currentYear) {
-                const li = document.createElement("li");
-                const timeText = ev.startTime || ev.endTime ? ` (${ev.startTime || ""} - ${ev.endTime || ""})` : "";
-                li.innerHTML = `<strong>${getReadableEventType(ev.eType)}</strong>${timeText}: ${ev.title}`;
-                reminderList.appendChild(li);
-            }
-        });
+        const d = parseDateFromInput(ev.date);
+        if (!d) return;
+        if (d.getMonth() === currentMonth && d.getFullYear() === currentYear) {
+            const li = document.createElement("li");
+            const timeText = ev.startTime || ev.endTime ? ` (${ev.startTime || ""} - ${ev.endTime || ""})` : "";
+            li.innerHTML = `<strong>${getReadableEventType(ev.eType)}</strong>${timeText}: ${ev.title}`;
+            reminderList.appendChild(li);
+        }
     });
 }
 
 function showCalendar(month, year) {
     calendarBody.innerHTML = "";
     monthAndYear.textContent = `${months[month]} ${year}`;
+
     const firstDay = new Date(year, month, 1).getDay();
     let date = 1;
 
@@ -238,7 +212,7 @@ addEventButton.onclick = async () => {
     const date = eventDateInput.value;
     if (!date || !eventTitleInput.value || !eventTypeInput.value) return;
 
-    const eventData = {
+    const eventPayload = {
         date,
         title: eventTitleInput.value,
         description: eventDescriptionInput.value,
@@ -252,15 +226,15 @@ addEventButton.onclick = async () => {
     };
 
     if (recurCheckbox.checked && recurLengthNum.value) {
-        eventData.recurrence = {
+        eventPayload.recurrence = {
             type: recurWhen.value,
             count: parseInt(recurLengthNum.value),
             startDate: date
         };
-        eventData.exceptions = [];
+        eventPayload.exceptions = [];
     }
 
-    await sendEventToBackend(eventData);
+    await sendEventToBackend(eventPayload);
     await loadEventsFromBackend(currentMonth, currentYear);
     showCalendar(currentMonth, currentYear);
     displayReminders();
