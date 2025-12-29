@@ -13,19 +13,21 @@ export default async function handler(req, res) {
 
     const body = typeof req.body === "string" ? JSON.parse(req.body) : req.body;
 
-    // If recurring, store as one series
+    // If recurring, wrap in recurrence object
     if (body.recurType && body.recurCount) {
       const seriesId = uuidv4();
       const eventDoc = {
         ...body,
         seriesId,
         recurrence: {
-          type: body.recurType, // week, biWeek, month
+          type: body.recurType,
           count: body.recurCount,
           startDate: body.date
         },
         exceptions: []
       };
+      delete eventDoc.recurType;
+      delete eventDoc.recurCount;
       await collection.insertOne(eventDoc);
       res.status(200).json({ success: true, seriesId });
     } else {
