@@ -90,18 +90,6 @@ function daysInMonth(month, year) {
     return 32 - new Date(year, month, 32).getDate();
 }
 
-function generateRecurringDates(baseDate, type, count) {
-    let dates = [];
-    for (let i = 1; i <= count; i++) {
-        let d = new Date(baseDate);
-        if (type === "week") d.setDate(baseDate.getDate() + 7 * i);
-        if (type === "biWeek") d.setDate(baseDate.getDate() + 14 * i);
-        if (type === "month") d.setMonth(baseDate.getMonth() + i);
-        dates.push(d);
-    }
-    return dates;
-}
-
 function getEventsOnDate(date, month, year) {
     return events.filter(ev => {
         const d = parseDateFromInput(ev.date);
@@ -216,27 +204,23 @@ addEventButton.onclick = async () => {
     const date = eventDateInput.value;
     if (!date || !eventTitleInput.value || !eventTypeInput.value) return;
 
-    let baseDate = parseDateFromInput(date);
-    let dates = [baseDate];
+    const recurType = recurCheckbox.checked ? recurWhen.value : null;
+    const recurCount = recurCheckbox.checked ? parseInt(recurLengthNum.value) : null;
 
-    if (recurCheckbox.checked && recurLengthNum.value) {
-        dates = dates.concat(generateRecurringDates(baseDate, recurWhen.value, parseInt(recurLengthNum.value)));
-    }
-
-    for (const d of dates) {
-        await sendEventToBackend({
-            date: d.toISOString().split("T")[0],
-            title: eventTitleInput.value,
-            description: eventDescriptionInput.value,
-            eType: eventTypeInput.value,
-            startTime: startTimeInput.value,
-            endTime: endTimeInput.value,
-            groupSize: document.getElementById("groupSize").value,
-            contactName: document.getElementById("contactName").value,
-            contactInfo: document.getElementById("contactInfo").value,
-            walkIn: walkInSelect.value
-        });
-    }
+    await sendEventToBackend({
+        date,
+        title: eventTitleInput.value,
+        description: eventDescriptionInput.value,
+        eType: eventTypeInput.value,
+        startTime: startTimeInput.value,
+        endTime: endTimeInput.value,
+        groupSize: document.getElementById("groupSize").value,
+        contactName: document.getElementById("contactName").value,
+        contactInfo: document.getElementById("contactInfo").value,
+        walkIn: walkInSelect.value,
+        recurType,
+        recurCount
+    });
 
     await loadEventsFromBackend(currentMonth, currentYear);
     showCalendar(currentMonth, currentYear);
