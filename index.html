@@ -124,8 +124,8 @@ Full terms and conditions text for paid reservations. Users must read this befor
     <div id="right">
       <h3 id="monthAndYear"></h3>
       <div class="button-container-calendar">
-        <button id="previous" onclick="previousMonth()">‹</button>
-        <button id="next" onclick="nextMonth()">›</button>
+        <button id="previous">‹</button>
+        <button id="next">›</button>
       </div>
 
       <table class="table-calendar" id="calendar" data-lang="en">
@@ -135,25 +135,13 @@ Full terms and conditions text for paid reservations. Users must read this befor
 
       <div class="footer-container-calendar">
         <label for="month">Jump To: </label>
-        <select id="month" onchange="jumpToMonthYear()"></select>
-        <select id="year" onchange="jumpToMonthYear()"></select>
+        <select id="month"></select>
+        <select id="year"></select>
       </div>
     </div>
   </div>
 </div>
 
 <script src="script.js" defer></script>
-<script>
-  // Populate month/year selects dynamically using existing variables from script.js
-  const monthSelect = document.getElementById("month");
-  const yearSelect = document.getElementById("year");
-  const monthNames = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
-
-  monthNames.forEach((m,i) => { const opt = document.createElement("option"); opt.value = i; opt.text = m; monthSelect.add(opt); });
-  for(let y = currentYear - 5; y <= currentYear + 5; y++) { const opt = document.createElement("option"); opt.value = y; opt.text = y; yearSelect.add(opt); }
-
-  monthSelect.value = currentMonth;
-  yearSelect.value = currentYear;
-</script>
 </body>
 </html>
