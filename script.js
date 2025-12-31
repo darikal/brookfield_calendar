@@ -198,3 +198,8 @@ window.toggleDiv=toggleDiv;
     showCalendar(currentMonth,currentYear);
     displayReminders();
 })();
+window.toggleTitleDiv = toggleTitleDiv;
+window.toggleDiv = toggleDiv;
+window.previous = previousMonth;
+window.next = nextMonth;
+window.jump = jumpToMonthYear;
