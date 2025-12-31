@@ -180,13 +180,21 @@ function showCalendar(month, year) {
 
 // ---------------- Event Form ----------------
 function toggleTitleDiv(){
-    document.getElementById("eventDetailsWrapper").style.display = "block";
-    if(eventTypeInput.value==="reservedPaid") {
-        document.getElementById("paidInfo").style.display = "block";
-        document.getElementById("recurBox").style.display = "none";
+    const detailsWrapper=document.getElementById("eventDetailsWrapper");
+    const paidInfo=document.getElementById("paidInfo");
+    const recurBox=document.getElementById("recurBox");
+    const recurringDiv=document.getElementById("recurring");
+
+    detailsWrapper.style.display="block";
+    recurCheckbox.checked=false;
+    recurringDiv.style.display="none";
+
+    if(eventTypeInput.value==="reservedPaid"){
+        paidInfo.style.display="block";
+        recurBox.style.display="none";
     } else {
-        document.getElementById("paidInfo").style.display = "none";
-        document.getElementById("recurBox").style.display = "block";
+        paidInfo.style.display="none";
+        recurBox.style.display="block";
     }
 }
 
@@ -202,14 +210,19 @@ recurCheckbox.addEventListener("change", ()=>{
     document.getElementById("recurring").style.display = recurCheckbox.checked ? "block" : "none";
 });
 
+eventTypeInput.addEventListener("change", toggleTitleDiv);
+walkInSelect.addEventListener("change", toggleDiv);
+
 addEventButton.addEventListener("click", async ()=>{
     const date = eventDateInput.value;
     if(!date || !eventTitleInput.value || !eventTypeInput.value) return;
+
     let baseDate = parseDateFromInput(date);
     let dates = [baseDate];
-    if(recurCheckbox.checked && recurLengthNum.value) {
+    if(recurCheckbox.checked && recurLengthNum.value){
         dates = dates.concat(generateRecurringDates(baseDate, recurWhen.value, parseInt(recurLengthNum.value)));
     }
+
     for(const d of dates){
         await sendEventToBackend({
             date: d.toISOString().split("T")[0],
@@ -225,8 +238,7 @@ addEventButton.addEventListener("click", async ()=>{
         });
     }
     await loadEventsFromBackend(currentMonth,currentYear);
-    showCalendar(currentMonth,currentYear);
-    displayReminders();
+    updateCalendar();
 });
 
 // ---------------- Navigation ----------------
