@@ -14,7 +14,7 @@
 
             <div id="event-section">
                 <h3>Add Event</h3>
-                <select id="eventTypeMajor" onchange="toggleTitleDiv()">
+                <select id="eventTypeMajor">
                     <option value="" hidden>--- Event Type ---</option>
                     <option value="socialCommitteeEvent">Social Committee Hosted Event</option>
                     <option value="smallGroup">Small Group Event</option>
@@ -144,15 +144,33 @@ Full terms and conditions text for paid reservations. Users must read this befor
 
 <script src="script.js" defer></script>
 <script>
-    // Populate month and year selects dynamically
-    const monthSelect = document.getElementById("month");
-    const yearSelect = document.getElementById("year");
-    const months = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
-    months.forEach((m,i) => { const opt = document.createElement("option"); opt.value = i; opt.text = m; monthSelect.add(opt); });
-    const currentYear = new Date().getFullYear();
-    for(let y=currentYear-5; y<=currentYear+5; y++) { const opt = document.createElement("option"); opt.value = y; opt.text = y; yearSelect.add(opt); }
-    monthSelect.value = new Date().getMonth();
-    yearSelect.value = new Date().getFullYear();
+  // Populate month and year selects dynamically
+  const monthSelect = document.getElementById("month");
+  const yearSelect = document.getElementById("year");
+
+  const monthNames = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+  
+  // Populate months
+  monthNames.forEach((m, i) => {
+      const option = document.createElement("option");
+      option.value = i;
+      option.text = m;
+      monthSelect.add(option);
+  });
+
+  // Populate years
+  const today = new Date();
+  const currentYear = today.getFullYear();
+  for (let y = currentYear - 5; y <= currentYear + 5; y++) {
+      const option = document.createElement("option");
+      option.value = y;
+      option.text = y;
+      yearSelect.add(option);
+  }
+
+  // Set default selected month and year
+  monthSelect.value = today.getMonth();
+  yearSelect.value = currentYear;
 </script>
 </body>
 </html>
