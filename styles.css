@@ -258,3 +258,26 @@ body {
     border-radius: 8px;
   }
 }
+.reminder-item {
+    margin-bottom: 6px;
+}
+
+.reminder-header {
+    padding: 6px;
+    cursor: pointer;
+    font-weight: bold;
+    border-radius: 4px;
+    color: white;
+}
+
+.reminder-details {
+    background: #f0f0f0;
+    padding: 6px;
+    margin-top: 4px;
+    border-radius: 4px;
+    font-size: 13px;
+}
+
+.hidden {
+    display: none;
+}

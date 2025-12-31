@@ -1,37 +1,18 @@
-// ==============================
-// Backend Integration
-// ==============================
 async function sendEventToBackend(eventData) {
-    try {
-        const response = await fetch("/api/addEvent", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(eventData)
-        });
-        if (!response.ok) console.error(await response.text());
-    } catch (err) {
-        console.error(err);
-    }
+    await fetch("/api/addEvent", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(eventData)
+    });
 }
 
 async function loadEventsFromBackend(month = currentMonth, year = currentYear) {
-    try {
-        const response = await fetch(`/api/getEvents?month=${month}&year=${year}`);
-        if (!response.ok) {
-            console.error(await response.text());
-            return;
-        }
-        const data = await response.json();
-        events = data.map(ev => ({ ...ev, id: ev._id || ev.id }));
-    } catch (err) {
-        console.error(err);
-    }
+    const res = await fetch(`/api/getEvents?month=${month}&year=${year}`);
+    events = await res.json();
 }
 
-// ==============================
-// Global Variables
-// ==============================
 let events = [];
+let openReminder = null;
 
 const eventDateInput = document.getElementById("eventDate");
 const eventTitleInput = document.getElementById("eventTitle");
@@ -54,71 +35,90 @@ const monthAndYear = document.getElementById("monthAndYear");
 const calendarBody = document.getElementById("calendar-body");
 const months = ["January","February","March","April","May","June","July","August","September","October","November","December"];
 
-// ==============================
-// Utility Functions
-// ==============================
 function parseDateFromInput(value) {
     if (!value) return null;
-    const [y, m, d] = value.split("-").map(Number);
+    const [y,m,d] = value.split("-").map(Number);
     return new Date(y, m - 1, d);
 }
 
-function getReadableEventType(eType) {
-    switch (eType) {
-        case "socialCommitteeEvent": return "Social Committee";
-        case "smallGroup": return "Small Group";
-        case "reservedPaid": return "Paid Reservation";
-        case "noSocialnoPaid": return "Large Group";
-        default: return "Event";
-    }
+function getReadableEventType(type) {
+    return {
+        socialCommitteeEvent: "Social Committee",
+        smallGroup: "Small Group",
+        reservedPaid: "Paid Reservation",
+        noSocialnoPaid: "Large Group"
+    }[type] || "Event";
 }
 
-function getEventColorClass(eType) {
-    switch (eType) {
-        case "socialCommitteeEvent": return "event-social";
-        case "smallGroup": return "event-small";
-        case "reservedPaid": return "event-paid";
-        case "noSocialnoPaid": return "event-large";
-        default: return "event-default";
-    }
+function getEventColorClass(type) {
+    return {
+        socialCommitteeEvent: "event-social",
+        smallGroup: "event-small",
+        reservedPaid: "event-paid",
+        noSocialnoPaid: "event-large"
+    }[type] || "event-default";
 }
 
 function daysInMonth(month, year) {
     return 32 - new Date(year, month, 32).getDate();
 }
 
-// ==============================
-// Filter and expand recurring events
-// ==============================
-function getEventsOnDate(date, month, year) {
+function getEventsOnDate(day, month, year) {
     return events.filter(ev => {
-        let d = ev.date;
-        if (!d && ev.recurrence) {
-            // fallback, should not happen if backend expands recurring
-            d = ev.recurrence.startDate;
-        }
-        if (!d) return false;
-        const parsed = parseDateFromInput(d);
-        return parsed.getDate() === date && parsed.getMonth() === month && parsed.getFullYear() === year;
+        const d = parseDateFromInput(ev.date);
+        return d &&
+            d.getDate() === day &&
+            d.getMonth() === month &&
+            d.getFullYear() === year;
     });
 }
 
-// ==============================
-// Display Functions
-// ==============================
 function displayReminders() {
     reminderList.innerHTML = "";
+    openReminder = null;
+
     events.forEach(ev => {
         const d = parseDateFromInput(ev.date);
-        if (!d) return;
-        if (d.getMonth() === currentMonth && d.getFullYear() === currentYear) {
-            const li = document.createElement("li");
-            const timeText = ev.startTime || ev.endTime ? ` (${ev.startTime || ""} - ${ev.endTime || ""})` : "";
-            li.innerHTML = `<strong>${getReadableEventType(ev.eType)}</strong>${timeText}: ${ev.title}`;
-            reminderList.appendChild(li);
-        }
+        if (!d || d.getMonth() !== currentMonth || d.getFullYear() !== currentYear) return;
+
+        const li = document.createElement("li");
+        li.className = "reminder-item";
+
+        const header = document.createElement("div");
+        header.className = "reminder-header " + getEventColorClass(ev.eType);
+        header.textContent = `${getReadableEventType(ev.eType)}: ${ev.title}`;
+
+        const details = document.createElement("div");
+        details.className = "reminder-details hidden";
+        details.innerHTML = `
+            <div><strong>Date:</strong> ${ev.date}</div>
+            <div><strong>Time:</strong> ${ev.startTime || ""} ${ev.endTime ? "- " + ev.endTime : ""}</div>
+            <div><strong>Description:</strong> ${ev.description || "—"}</div>
+            <div><strong>Contact:</strong> ${ev.contactName || ""} ${ev.contactInfo || ""}</div>
+            <div><strong>Walk-ins:</strong> ${ev.walkIn || ""}</div>
+        `;
+
+        header.onclick = e => {
+            e.stopPropagation();
+            if (openReminder && openReminder !== details) {
+                openReminder.classList.add("hidden");
+            }
+            details.classList.toggle("hidden");
+            openReminder = details.classList.contains("hidden") ? null : details;
+        };
+
+        li.appendChild(header);
+        li.appendChild(details);
+        reminderList.appendChild(li);
     });
 }
+
+document.addEventListener("click", () => {
+    if (openReminder) {
+        openReminder.classList.add("hidden");
+        openReminder = null;
+    }
+});
 
 function showCalendar(month, year) {
     calendarBody.innerHTML = "";
@@ -166,53 +166,11 @@ function showCalendar(month, year) {
     }
 }
 
-// ==============================
-// UI Toggles
-// ==============================
-function toggleTitleDiv() {
-    const eventWrapper = document.getElementById("eventDetailsWrapper");
-    if (!eventTypeInput.value) {
-        eventWrapper.style.display = "none";
-        return;
-    }
-    eventWrapper.style.display = "block";
-
-    if (eventTypeInput.value === "reservedPaid") {
-        document.getElementById("paidInfo").style.display = "block";
-        document.getElementById("recurBox").style.display = "none";
-    } else {
-        document.getElementById("paidInfo").style.display = "none";
-        document.getElementById("recurBox").style.display = "block";
-    }
-}
-
-function toggleDiv() {
-    const otherDiv = document.getElementById("eventOther");
-    const signUpDiv = document.getElementById("signUpField");
-    if (walkInSelect.value === "Other") {
-        otherDiv.style.display = "block";
-        signUpDiv.style.display = "none";
-    } else if (walkInSelect.value === "signUpRequired") {
-        signUpDiv.style.display = "block";
-        otherDiv.style.display = "none";
-    } else {
-        otherDiv.style.display = "none";
-        signUpDiv.style.display = "none";
-    }
-}
-
-recurCheckbox.addEventListener("change", () => {
-    document.getElementById("recurring").style.display = recurCheckbox.checked ? "block" : "none";
-});
-
-// ==============================
-// Event Submission
-// ==============================
 addEventButton.onclick = async () => {
     const date = eventDateInput.value;
     if (!date || !eventTitleInput.value || !eventTypeInput.value) return;
 
-    const eventPayload = {
+    const payload = {
         date,
         title: eventTitleInput.value,
         description: eventDescriptionInput.value,
@@ -225,30 +183,15 @@ addEventButton.onclick = async () => {
         walkIn: walkInSelect.value
     };
 
-    if (recurCheckbox.checked && recurLengthNum.value) {
-        eventPayload.recurrence = {
-            type: recurWhen.value,
-            count: parseInt(recurLengthNum.value),
-            startDate: date
-        };
-        eventPayload.exceptions = [];
-    }
-
-    await sendEventToBackend(eventPayload);
+    await sendEventToBackend(payload);
     await loadEventsFromBackend(currentMonth, currentYear);
     showCalendar(currentMonth, currentYear);
     displayReminders();
 };
 
-// ==============================
-// Calendar Navigation
-// ==============================
 async function previous() {
     currentMonth--;
-    if (currentMonth < 0) {
-        currentMonth = 11;
-        currentYear--;
-    }
+    if (currentMonth < 0) { currentMonth = 11; currentYear--; }
     await loadEventsFromBackend(currentMonth, currentYear);
     showCalendar(currentMonth, currentYear);
     displayReminders();
@@ -256,39 +199,21 @@ async function previous() {
 
 async function next() {
     currentMonth++;
-    if (currentMonth > 11) {
-        currentMonth = 0;
-        currentYear++;
-    }
+    if (currentMonth > 11) { currentMonth = 0; currentYear++; }
     await loadEventsFromBackend(currentMonth, currentYear);
     showCalendar(currentMonth, currentYear);
     displayReminders();
 }
 
-async function jump() {
-    const monthSelect = document.getElementById("month");
-    const yearSelect = document.getElementById("year");
-    currentMonth = parseInt(monthSelect.value);
-    currentYear = parseInt(yearSelect.value);
-    await loadEventsFromBackend(currentMonth, currentYear);
-    showCalendar(currentMonth, currentYear);
-    displayReminders();
-}
-
-// ==============================
-// Initialize
-// ==============================
 (async () => {
-    // Populate year selector
     const yearSelect = document.getElementById("year");
     for (let y = today.getFullYear() - 5; y <= today.getFullYear() + 5; y++) {
-        const option = document.createElement("option");
-        option.value = y;
-        option.textContent = y;
-        if (y === currentYear) option.selected = true;
-        yearSelect.appendChild(option);
+        const opt = document.createElement("option");
+        opt.value = y;
+        opt.textContent = y;
+        if (y === currentYear) opt.selected = true;
+        yearSelect.appendChild(opt);
     }
-
     await loadEventsFromBackend(currentMonth, currentYear);
     showCalendar(currentMonth, currentYear);
     displayReminders();
