@@ -21,9 +21,6 @@ const startTimeInput = document.getElementById("startTime");
 const endTimeInput = document.getElementById("endTime");
 const eventTypeInput = document.getElementById("eventTypeMajor");
 const walkInSelect = document.getElementById("walkInWelcome");
-const recurCheckbox = document.getElementById("recurCheckbox");
-const recurLengthNum = document.getElementById("recurLengthNum");
-const recurWhen = document.getElementById("recurWhen");
 const reminderList = document.getElementById("reminderList");
 const addEventButton = document.getElementById("addEvent");
 
@@ -33,11 +30,14 @@ let currentYear = today.getFullYear();
 
 const monthAndYear = document.getElementById("monthAndYear");
 const calendarBody = document.getElementById("calendar-body");
-const months = ["January","February","March","April","May","June","July","August","September","October","November","December"];
+const months = [
+    "January","February","March","April","May","June",
+    "July","August","September","October","November","December"
+];
 
 function parseDateFromInput(value) {
     if (!value) return null;
-    const [y,m,d] = value.split("-").map(Number);
+    const [y, m, d] = value.split("-").map(Number);
     return new Date(y, m - 1, d);
 }
 
@@ -73,6 +73,10 @@ function getEventsOnDate(day, month, year) {
     });
 }
 
+/* ==============================
+   EVENTS & RESERVATIONS LIST
+============================== */
+
 function displayReminders() {
     reminderList.innerHTML = "";
     openReminder = null;
@@ -92,7 +96,7 @@ function displayReminders() {
         details.className = "reminder-details hidden";
         details.innerHTML = `
             <div><strong>Date:</strong> ${ev.date}</div>
-            <div><strong>Time:</strong> ${ev.startTime || ""} ${ev.endTime ? "- " + ev.endTime : ""}</div>
+            <div><strong>Time:</strong> ${ev.startTime || ""}${ev.endTime ? " - " + ev.endTime : ""}</div>
             <div><strong>Description:</strong> ${ev.description || "—"}</div>
             <div><strong>Contact:</strong> ${ev.contactName || ""} ${ev.contactInfo || ""}</div>
             <div><strong>Walk-ins:</strong> ${ev.walkIn || ""}</div>
@@ -113,12 +117,19 @@ function displayReminders() {
     });
 }
 
-document.addEventListener("click", () => {
-    if (openReminder) {
-        openReminder.classList.add("hidden");
-        openReminder = null;
+/* Close open reminder ONLY when clicking outside reminder list */
+document.addEventListener("click", e => {
+    if (!e.target.closest("#reminderList")) {
+        if (openReminder) {
+            openReminder.classList.add("hidden");
+            openReminder = null;
+        }
     }
 });
+
+/* ==============================
+   CALENDAR
+============================== */
 
 function showCalendar(month, year) {
     calendarBody.innerHTML = "";
@@ -129,6 +140,7 @@ function showCalendar(month, year) {
 
     for (let i = 0; i < 6; i++) {
         const row = document.createElement("tr");
+
         for (let j = 0; j < 7; j++) {
             const cell = document.createElement("td");
 
@@ -155,7 +167,8 @@ function showCalendar(month, year) {
 
             const capturedDate = date;
             cell.onclick = () => {
-                eventDateInput.value = `${year}-${String(month + 1).padStart(2,"0")}-${String(capturedDate).padStart(2,"0")}`;
+                eventDateInput.value =
+                    `${year}-${String(month + 1).padStart(2,"0")}-${String(capturedDate).padStart(2,"0")}`;
                 toggleTitleDiv();
             };
 
@@ -165,6 +178,10 @@ function showCalendar(month, year) {
         calendarBody.appendChild(row);
     }
 }
+
+/* ==============================
+   SUBMIT EVENT
+============================== */
 
 addEventButton.onclick = async () => {
     const date = eventDateInput.value;
@@ -189,9 +206,16 @@ addEventButton.onclick = async () => {
     displayReminders();
 };
 
+/* ==============================
+   NAVIGATION
+============================== */
+
 async function previous() {
     currentMonth--;
-    if (currentMonth < 0) { currentMonth = 11; currentYear--; }
+    if (currentMonth < 0) {
+        currentMonth = 11;
+        currentYear--;
+    }
     await loadEventsFromBackend(currentMonth, currentYear);
     showCalendar(currentMonth, currentYear);
     displayReminders();
@@ -199,11 +223,18 @@ async function previous() {
 
 async function next() {
     currentMonth++;
-    if (currentMonth > 11) { currentMonth = 0; currentYear++; }
+    if (currentMonth > 11) {
+        currentMonth = 0;
+        currentYear++;
+    }
     await loadEventsFromBackend(currentMonth, currentYear);
     showCalendar(currentMonth, currentYear);
     displayReminders();
 }
+
+/* ==============================
+   INIT
+============================== */
 
 (async () => {
     const yearSelect = document.getElementById("year");
@@ -214,6 +245,7 @@ async function next() {
         if (y === currentYear) opt.selected = true;
         yearSelect.appendChild(opt);
     }
+
     await loadEventsFromBackend(currentMonth, currentYear);
     showCalendar(currentMonth, currentYear);
     displayReminders();
