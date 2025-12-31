@@ -11,9 +11,9 @@ async function sendEventToBackend(eventData) {
     }
 }
 
-async function loadEventsFromBackend() {
+async function loadEventsFromBackend(month = currentMonth, year = currentYear) {
     try {
-        const response = await fetch("/api/getEvents");
+        const response = await fetch(`/api/getEvents?month=${month}&year=${year}`);
         if (!response.ok) {
             console.error(await response.text());
             return;
@@ -24,6 +24,7 @@ async function loadEventsFromBackend() {
         console.error(err);
     }
 }
+
 
 let events = [];
 
@@ -229,10 +230,12 @@ addEventButton.onclick = async () => {
         });
     }
 
-    await loadEventsFromBackend();
+    (async () => {
+    await loadEventsFromBackend(currentMonth, currentYear);
     showCalendar(currentMonth, currentYear);
     displayReminders();
-};
+})();
+
 
 (async () => {
     await loadEventsFromBackend();
