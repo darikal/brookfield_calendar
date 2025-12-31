@@ -5,7 +5,10 @@ async function sendEventToBackend(eventData) {
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify(eventData)
         });
-        if (!response.ok) console.error(await response.text());
+
+        if (!response.ok) {
+            console.error(await response.text());
+        }
     } catch (err) {
         console.error(err);
     }
@@ -18,6 +21,7 @@ async function loadEventsFromBackend() {
             console.error(await response.text());
             return;
         }
+
         const data = await response.json();
         events = data.map(ev => ({
             ...ev,
@@ -101,8 +105,7 @@ function displayReminders() {
         const d = parseDateFromInput(ev.date);
         if (d.getMonth() === currentMonth && d.getFullYear() === currentYear) {
             const li = document.createElement("li");
-            let timeText = ev.startTime || ev.endTime ? ` (${ev.startTime || ""} - ${ev.endTime || ""})` : "";
-            li.innerHTML = `<strong>${getReadableEventType(ev.eType)}</strong>${timeText}: ${ev.title}`;
+            li.innerHTML = `<strong>${getReadableEventType(ev.eType)}</strong> (${ev.startTime || ""} ${ev.endTime || ""}) ${ev.title}`;
             reminderList.appendChild(li);
         }
     });
@@ -119,7 +122,6 @@ function showCalendar(month, year) {
         const row = document.createElement("tr");
         for (let j = 0; j < 7; j++) {
             const cell = document.createElement("td");
-
             if (i === 0 && j < firstDay) {
                 row.appendChild(cell);
                 continue;
@@ -144,7 +146,6 @@ function showCalendar(month, year) {
             const capturedDate = date;
             cell.onclick = () => {
                 eventDateInput.value = `${year}-${String(month + 1).padStart(2,"0")}-${String(capturedDate).padStart(2,"0")}`;
-                toggleTitleDiv();
             };
 
             row.appendChild(cell);
@@ -154,42 +155,6 @@ function showCalendar(month, year) {
     }
 }
 
-function toggleTitleDiv() {
-    const eventWrapper = document.getElementById("eventDetailsWrapper");
-    if (!eventTypeInput.value) {
-        eventWrapper.style.display = "none";
-        return;
-    }
-    eventWrapper.style.display = "block";
-
-    if (eventTypeInput.value === "reservedPaid") {
-        document.getElementById("paidInfo").style.display = "block";
-        document.getElementById("recurBox").style.display = "none";
-    } else {
-        document.getElementById("paidInfo").style.display = "none";
-        document.getElementById("recurBox").style.display = "block";
-    }
-}
-
-function toggleDiv() {
-    const otherDiv = document.getElementById("eventOther");
-    const signUpDiv = document.getElementById("signUpField");
-    if (walkInSelect.value === "Other") {
-        otherDiv.style.display = "block";
-        signUpDiv.style.display = "none";
-    } else if (walkInSelect.value === "signUpRequired") {
-        signUpDiv.style.display = "block";
-        otherDiv.style.display = "none";
-    } else {
-        otherDiv.style.display = "none";
-        signUpDiv.style.display = "none";
-    }
-}
-
-recurCheckbox.addEventListener("change", () => {
-    document.getElementById("recurring").style.display = recurCheckbox.checked ? "block" : "none";
-});
-
 addEventButton.onclick = async () => {
     const date = eventDateInput.value;
     if (!date || !eventTitleInput.value || !eventTypeInput.value) return;
@@ -197,8 +162,8 @@ addEventButton.onclick = async () => {
     let baseDate = parseDateFromInput(date);
     let dates = [baseDate];
 
-    if (recurCheckbox.checked && recurLengthNum.value) {
-        dates = dates.concat(generateRecurringDates(baseDate, recurWhen.value, parseInt(recurLengthNum.value)));
+    if (recurCheckbox.checked) {
+        dates = dates.concat(generateRecurringDates(baseDate, recurWhen.value, parseInt(recurLengthNum.value || 0)));
     }
 
     for (const d of dates) {
