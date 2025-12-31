@@ -261,4 +261,12 @@ monthSelect.addEventListener("change", async ()=>{
 yearSelect.addEventListener("change", async ()=>{
     currentMonth = parseInt(monthSelect.value);
     currentYear = parseInt(yearSelect.value);
-    await loadEve
+    await loadEventsFromBackend(currentMonth,currentYear);
+    updateCalendar();
+});
+
+// ---------------- Init ----------------
+(async ()=>{
+    await loadEventsFromBackend(currentMonth,currentYear);
+    updateCalendar();
+})();
