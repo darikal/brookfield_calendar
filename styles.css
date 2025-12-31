@@ -22,22 +22,17 @@ body {
 
 .container-calendar {
   width: 100%;
+  max-width: 100%;
+  margin: 0 auto;
   background: white;
   overflow-x: auto;
+  box-sizing: border-box;
   border: 1px solid #ccc;
   padding: 20px;
   border-radius: 8px;
-  display: flex;
-  gap: 20px;
-  flex-wrap: wrap;
 }
 
-#left, #right {
-  flex: 1;
-  min-width: 300px;
-}
-
-#left h1 {
+.container-calendar #left h1 {
   color: var(--blue-dark);
   text-align: center;
   background-color: #f2f2f2;
@@ -45,13 +40,15 @@ body {
   padding: 10px 0;
 }
 
-#event-section h3, #reminder-section h3 {
+#event-section h3,
+#reminder-section h3 {
   color: var(--blue-dark);
   font-size: 18px;
   margin-bottom: 5px;
 }
 
-#event-section, #reminder-section {
+#event-section,
+#reminder-section {
   padding: 10px;
   background: #f5f5f5;
   margin: 20px 0;
@@ -60,10 +57,7 @@ body {
 
 #event-section input[type="date"],
 #event-section input[type="text"],
-#event-section select,
-#event-section input[type="number"],
-#event-section input[type="time"],
-#event-section textarea {
+#event-section select {
   margin: 8px 0;
   padding: 7px;
   width: 100%;
@@ -91,6 +85,14 @@ body {
   padding: 5px;
 }
 
+.delete-event {
+  background: rgb(237, 19, 19);
+  color: white;
+  border: none;
+  padding: 5px 10px;
+  cursor: pointer;
+}
+
 .table-calendar {
   border-collapse: collapse;
   width: 100%;
@@ -109,11 +111,6 @@ body {
   word-wrap: break-word;
 }
 
-.table-calendar th {
-  background: var(--blue-mid);
-  color: white;
-}
-
 .date-picker {
   position: relative;
   cursor: pointer;
@@ -122,6 +119,10 @@ body {
 .date-picker:hover {
   background-color: var(--blue-dark);
   color: white;
+}
+
+.event-marker {
+  position: relative;
 }
 
 .event-dots {
@@ -144,6 +145,26 @@ body {
 .event-paid   { background-color: #ffaf47; }
 .event-large  { background-color: #e80ce8; }
 .event-default{ background-color: #ff0b36; }
+
+.event-tooltip {
+  position: absolute;
+  background-color: rgba(225,230,230,0.9);
+  color: black;
+  padding: 8px;
+  font-size: 12px;
+  border-radius: 4px;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: none;
+  transition: all 0.3s;
+  z-index: 10;
+  width: 140px;
+}
+
+.event-marker:hover .event-tooltip {
+  display: block;
+}
 
 .button-container-calendar {
   margin-bottom: 1em;
@@ -178,6 +199,67 @@ body {
   padding: 5px 10px;
 }
 
+@media (max-width: 600px) {
+  .table-calendar th,
+  .table-calendar td {
+    padding: 3px;
+    height: 45px;
+    font-size: 11px;
+  }
+
+  .event-dot {
+    width: 7px;
+    height: 7px;
+  }
+
+  .event-tooltip {
+    font-size: 10px;
+    padding: 6px;
+    bottom: 12px;
+  }
+
+  #monthAndYear {
+    font-size: 18px;
+  }
+
+  .button-container-calendar button {
+    padding: 3px 8px;
+    font-size: 12px;
+  }
+
+  #event-section input,
+  #event-section select {
+    font-size: 14px;
+    padding: 6px;
+  }
+
+  .time-input {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+  }
+
+  .group-size-wrapper {
+    flex-direction: column;
+    gap: 4px;
+  }
+}
+
+@media (min-width: 900px) {
+  .wrapper {
+    max-width: 1100px;
+    margin: 20px auto;
+    padding: 0 20px;
+  }
+
+  .container-calendar {
+    max-width: 100%;
+    padding: 20px;
+    border-radius: 8px;
+  }
+}
+
+/* ---------------- Reminder Accordion ---------------- */
 .reminder-item {
     margin-bottom: 6px;
 }
@@ -188,8 +270,15 @@ body {
     font-weight: bold;
     border-radius: 4px;
     color: white;
-    background: var(--blue-dark);
+    transition: background 0.3s;
 }
+
+/* match reminder header colors to event-dot colors */
+.reminder-header.event-social { background-color: #59fb41; }
+.reminder-header.event-small  { background-color: #340be9; }
+.reminder-header.event-paid   { background-color: #ffaf47; }
+.reminder-header.event-large  { background-color: #e80ce8; }
+.reminder-header.event-default{ background-color: #ff0b36; }
 
 .reminder-details {
     background: #f0f0f0;
@@ -204,27 +293,6 @@ body {
 }
 
 .reminder-details.show {
-    max-height: 200px;
+    max-height: 200px; /* adjust as needed */
     padding: 6px;
-}
-
-.hidden {
-    display: none;
-}
-
-@media (max-width: 900px) {
-  .container-calendar {
-    flex-direction: column;
-  }
-
-  .table-calendar th, .table-calendar td {
-    font-size: 12px;
-    padding: 5px;
-    height: 50px;
-  }
-
-  .event-dot {
-    width: 8px;
-    height: 8px;
-  }
 }
