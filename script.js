@@ -1,18 +1,31 @@
 async function sendEventToBackend(eventData) {
-    await fetch("/api/addEvent", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(eventData)
-    });
+    try {
+        const response = await fetch("/api/addEvent", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(eventData)
+        });
+        if (!response.ok) console.error(await response.text());
+    } catch (err) {
+        console.error(err);
+    }
 }
 
 async function loadEventsFromBackend(month = currentMonth, year = currentYear) {
-    const res = await fetch(`/api/getEvents?month=${month}&year=${year}`);
-    events = await res.json();
+    try {
+        const response = await fetch(`/api/getEvents?month=${month}&year=${year}`);
+        if (!response.ok) {
+            console.error(await response.text());
+            return;
+        }
+        const data = await response.json();
+        events = data.map(ev => ({ ...ev, id: ev._id || ev.id }));
+    } catch (err) {
+        console.error(err);
+    }
 }
 
 let events = [];
-let openReminder = null;
 
 const eventDateInput = document.getElementById("eventDate");
 const eventTitleInput = document.getElementById("eventTitle");
@@ -21,6 +34,9 @@ const startTimeInput = document.getElementById("startTime");
 const endTimeInput = document.getElementById("endTime");
 const eventTypeInput = document.getElementById("eventTypeMajor");
 const walkInSelect = document.getElementById("walkInWelcome");
+const recurCheckbox = document.getElementById("recurCheckbox");
+const recurLengthNum = document.getElementById("recurLengthNum");
+const recurWhen = document.getElementById("recurWhen");
 const reminderList = document.getElementById("reminderList");
 const addEventButton = document.getElementById("addEvent");
 
@@ -30,10 +46,7 @@ let currentYear = today.getFullYear();
 
 const monthAndYear = document.getElementById("monthAndYear");
 const calendarBody = document.getElementById("calendar-body");
-const months = [
-    "January","February","March","April","May","June",
-    "July","August","September","October","November","December"
-];
+const months = ["January","February","March","April","May","June","July","August","September","October","November","December"];
 
 function parseDateFromInput(value) {
     if (!value) return null;
@@ -41,41 +54,38 @@ function parseDateFromInput(value) {
     return new Date(y, m - 1, d);
 }
 
-function getReadableEventType(type) {
-    return {
-        socialCommitteeEvent: "Social Committee",
-        smallGroup: "Small Group",
-        reservedPaid: "Paid Reservation",
-        noSocialnoPaid: "Large Group"
-    }[type] || "Event";
+function getReadableEventType(eType) {
+    switch (eType) {
+        case "socialCommitteeEvent": return "Social Committee";
+        case "smallGroup": return "Small Group";
+        case "reservedPaid": return "Paid Reservation";
+        case "noSocialnoPaid": return "Large Group";
+        default: return "Event";
+    }
 }
 
-function getEventColorClass(type) {
-    return {
-        socialCommitteeEvent: "event-social",
-        smallGroup: "event-small",
-        reservedPaid: "event-paid",
-        noSocialnoPaid: "event-large"
-    }[type] || "event-default";
+function getEventColorClass(eType) {
+    switch (eType) {
+        case "socialCommitteeEvent": return "event-social";
+        case "smallGroup": return "event-small";
+        case "reservedPaid": return "event-paid";
+        case "noSocialnoPaid": return "event-large";
+        default: return "event-default";
+    }
 }
 
 function daysInMonth(month, year) {
     return 32 - new Date(year, month, 32).getDate();
 }
 
-function getEventsOnDate(day, month, year) {
+function getEventsOnDate(date, month, year) {
     return events.filter(ev => {
         const d = parseDateFromInput(ev.date);
-        return d &&
-            d.getDate() === day &&
-            d.getMonth() === month &&
-            d.getFullYear() === year;
+        return d && d.getDate() === date && d.getMonth() === month && d.getFullYear() === year;
     });
 }
 
-/* ==============================
-   EVENTS & RESERVATIONS LIST
-============================== */
+let openReminder = null;
 
 function displayReminders() {
     reminderList.innerHTML = "";
@@ -83,53 +93,49 @@ function displayReminders() {
 
     events.forEach(ev => {
         const d = parseDateFromInput(ev.date);
-        if (!d || d.getMonth() !== currentMonth || d.getFullYear() !== currentYear) return;
+        if (!d) return;
+        if (d.getMonth() !== currentMonth || d.getFullYear() !== currentYear) return;
 
-        const li = document.createElement("li");
-        li.className = "reminder-item";
+        const wrapper = document.createElement("li");
+        wrapper.className = "reminder-item";
 
         const header = document.createElement("div");
-        header.className = "reminder-header " + getEventColorClass(ev.eType);
-        header.textContent = `${getReadableEventType(ev.eType)}: ${ev.title}`;
+        header.className = "reminder-header";
+        header.innerHTML = `<strong>${getReadableEventType(ev.eType)}</strong>: ${ev.title}`;
 
         const details = document.createElement("div");
-        details.className = "reminder-details hidden";
+        details.className = "reminder-details";
+        details.style.display = "none";
         details.innerHTML = `
             <div><strong>Date:</strong> ${ev.date}</div>
-            <div><strong>Time:</strong> ${ev.startTime || ""}${ev.endTime ? " - " + ev.endTime : ""}</div>
-            <div><strong>Description:</strong> ${ev.description || "—"}</div>
-            <div><strong>Contact:</strong> ${ev.contactName || ""} ${ev.contactInfo || ""}</div>
-            <div><strong>Walk-ins:</strong> ${ev.walkIn || ""}</div>
+            ${ev.startTime || ev.endTime ? `<div><strong>Time:</strong> ${ev.startTime || ""} - ${ev.endTime || ""}</div>` : ""}
+            ${ev.description ? `<div><strong>Description:</strong> ${ev.description}</div>` : ""}
+            ${ev.contactName ? `<div><strong>Contact:</strong> ${ev.contactName}</div>` : ""}
+            ${ev.contactInfo ? `<div><strong>Info:</strong> ${ev.contactInfo}</div>` : ""}
         `;
 
-        header.onclick = e => {
+        header.onclick = (e) => {
             e.stopPropagation();
             if (openReminder && openReminder !== details) {
-                openReminder.classList.add("hidden");
+                openReminder.style.display = "none";
             }
-            details.classList.toggle("hidden");
-            openReminder = details.classList.contains("hidden") ? null : details;
+            const isOpen = details.style.display === "block";
+            details.style.display = isOpen ? "none" : "block";
+            openReminder = details.style.display === "block" ? details : null;
         };
 
-        li.appendChild(header);
-        li.appendChild(details);
-        reminderList.appendChild(li);
+        wrapper.appendChild(header);
+        wrapper.appendChild(details);
+        reminderList.appendChild(wrapper);
     });
 }
 
-/* Close open reminder ONLY when clicking outside reminder list */
-document.addEventListener("click", e => {
-    if (!e.target.closest("#reminderList")) {
-        if (openReminder) {
-            openReminder.classList.add("hidden");
-            openReminder = null;
-        }
+document.addEventListener("click", () => {
+    if (openReminder) {
+        openReminder.style.display = "none";
+        openReminder = null;
     }
 });
-
-/* ==============================
-   CALENDAR
-============================== */
 
 function showCalendar(month, year) {
     calendarBody.innerHTML = "";
@@ -140,7 +146,6 @@ function showCalendar(month, year) {
 
     for (let i = 0; i < 6; i++) {
         const row = document.createElement("tr");
-
         for (let j = 0; j < 7; j++) {
             const cell = document.createElement("td");
 
@@ -167,8 +172,7 @@ function showCalendar(month, year) {
 
             const capturedDate = date;
             cell.onclick = () => {
-                eventDateInput.value =
-                    `${year}-${String(month + 1).padStart(2,"0")}-${String(capturedDate).padStart(2,"0")}`;
+                eventDateInput.value = `${year}-${String(month + 1).padStart(2,"0")}-${String(capturedDate).padStart(2,"0")}`;
                 toggleTitleDiv();
             };
 
@@ -179,9 +183,14 @@ function showCalendar(month, year) {
     }
 }
 
-/* ==============================
-   SUBMIT EVENT
-============================== */
+function toggleTitleDiv() {
+    const eventWrapper = document.getElementById("eventDetailsWrapper");
+    if (!eventTypeInput.value) {
+        eventWrapper.style.display = "none";
+        return;
+    }
+    eventWrapper.style.display = "block";
+}
 
 addEventButton.onclick = async () => {
     const date = eventDateInput.value;
@@ -206,10 +215,6 @@ addEventButton.onclick = async () => {
     displayReminders();
 };
 
-/* ==============================
-   NAVIGATION
-============================== */
-
 async function previous() {
     currentMonth--;
     if (currentMonth < 0) {
@@ -232,20 +237,7 @@ async function next() {
     displayReminders();
 }
 
-/* ==============================
-   INIT
-============================== */
-
 (async () => {
-    const yearSelect = document.getElementById("year");
-    for (let y = today.getFullYear() - 5; y <= today.getFullYear() + 5; y++) {
-        const opt = document.createElement("option");
-        opt.value = y;
-        opt.textContent = y;
-        if (y === currentYear) opt.selected = true;
-        yearSelect.appendChild(opt);
-    }
-
     await loadEventsFromBackend(currentMonth, currentYear);
     showCalendar(currentMonth, currentYear);
     displayReminders();
