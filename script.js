@@ -180,23 +180,21 @@ function showCalendar(month, year) {
 
 // ---------------- Event Form ----------------
 function toggleTitleDiv(){
-    const detailsWrapper=document.getElementById("eventDetailsWrapper");
-    const paidInfo=document.getElementById("paidInfo");
-    const recurBox=document.getElementById("recurBox");
-    const recurringDiv=document.getElementById("recurring");
+    const detailsWrapper = document.getElementById("eventDetailsWrapper");
+    const paidInfo = document.getElementById("paidInfo");
+    const recurBox = document.getElementById("recurBox");
 
-    detailsWrapper.style.display="block";
-    recurCheckbox.checked=false;
-    recurringDiv.style.display="none";
+    detailsWrapper.style.display = "block";
 
-    if(eventTypeInput.value==="reservedPaid"){
-        paidInfo.style.display="block";
-        recurBox.style.display="none";
+    if(eventTypeInput.value === "reservedPaid"){
+        paidInfo.style.display = "block";
+        recurBox.style.display = "none"; // recurring options hidden
     } else {
-        paidInfo.style.display="none";
-        recurBox.style.display="block";
+        paidInfo.style.display = "none";
+        recurBox.style.display = "block"; // recurring options shown
     }
 }
+
 
 function toggleDiv() {
     const otherDiv = document.getElementById("eventOther");
@@ -219,9 +217,31 @@ addEventButton.addEventListener("click", async ()=>{
 
     let baseDate = parseDateFromInput(date);
     let dates = [baseDate];
-    if(recurCheckbox.checked && recurLengthNum.value){
+    
+    // Only generate recurring dates if checkbox is checked AND not hidden
+    if(recurCheckbox.checked && recurBox.style.display !== "none" && recurLengthNum.value){
         dates = dates.concat(generateRecurringDates(baseDate, recurWhen.value, parseInt(recurLengthNum.value)));
     }
+
+    for(const d of dates){
+        await sendEventToBackend({
+            date: d.toISOString().split("T")[0],
+            title: eventTitleInput.value,
+            description: eventDescriptionInput.value,
+            eType: eventTypeInput.value,
+            startTime: startTimeInput.value,
+            endTime: endTimeInput.value,
+            groupSize: document.getElementById("groupSize").value,
+            contactName: document.getElementById("contactName").value,
+            contactInfo: document.getElementById("contactInfo").value,
+            walkIn: walkInSelect.value
+        });
+    }
+
+    await loadEventsFromBackend(currentMonth,currentYear);
+    updateCalendar();
+});
+
 
     for(const d of dates){
         await sendEventToBackend({
