@@ -111,6 +111,22 @@ function getEventsOnDate(date, month, year) {
 }
 
 // ---------------- Display ----------------
+function showWeekdays() {
+    const thead = document.getElementById("thead-month");
+    thead.innerHTML = "";
+
+    const row = document.createElement("tr");
+    const days = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+
+    days.forEach(day => {
+        const th = document.createElement("th");
+        th.textContent = day;
+        row.appendChild(th);
+    });
+
+    thead.appendChild(row);
+}
+
 function displayReminders() {
     reminderList.innerHTML = "";
     events.forEach(ev => {
@@ -180,21 +196,23 @@ function showCalendar(month, year) {
 
 // ---------------- Event Form ----------------
 function toggleTitleDiv(){
-    const detailsWrapper = document.getElementById("eventDetailsWrapper");
-    const paidInfo = document.getElementById("paidInfo");
-    const recurBox = document.getElementById("recurBox");
+    const detailsWrapper=document.getElementById("eventDetailsWrapper");
+    const paidInfo=document.getElementById("paidInfo");
+    const recurBox=document.getElementById("recurBox");
+    const recurringDiv=document.getElementById("recurring");
 
-    detailsWrapper.style.display = "block";
+    detailsWrapper.style.display="block";
+    recurCheckbox.checked=false;
+    recurringDiv.style.display="none";
 
-    if(eventTypeInput.value === "reservedPaid"){
-        paidInfo.style.display = "block";
-        recurBox.style.display = "none"; // recurring options hidden
+    if(eventTypeInput.value==="reservedPaid"){
+        paidInfo.style.display="block";
+        recurBox.style.display="none";
     } else {
-        paidInfo.style.display = "none";
-        recurBox.style.display = "block"; // recurring options shown
+        paidInfo.style.display="none";
+        recurBox.style.display="block";
     }
 }
-
 
 function toggleDiv() {
     const otherDiv = document.getElementById("eventOther");
@@ -217,31 +235,9 @@ addEventButton.addEventListener("click", async ()=>{
 
     let baseDate = parseDateFromInput(date);
     let dates = [baseDate];
-    
-    // Only generate recurring dates if checkbox is checked AND not hidden
-    if(recurCheckbox.checked && recurBox.style.display !== "none" && recurLengthNum.value){
+    if(recurCheckbox.checked && recurLengthNum.value){
         dates = dates.concat(generateRecurringDates(baseDate, recurWhen.value, parseInt(recurLengthNum.value)));
     }
-
-    for(const d of dates){
-        await sendEventToBackend({
-            date: d.toISOString().split("T")[0],
-            title: eventTitleInput.value,
-            description: eventDescriptionInput.value,
-            eType: eventTypeInput.value,
-            startTime: startTimeInput.value,
-            endTime: endTimeInput.value,
-            groupSize: document.getElementById("groupSize").value,
-            contactName: document.getElementById("contactName").value,
-            contactInfo: document.getElementById("contactInfo").value,
-            walkIn: walkInSelect.value
-        });
-    }
-
-    await loadEventsFromBackend(currentMonth,currentYear);
-    updateCalendar();
-});
-
 
     for(const d of dates){
         await sendEventToBackend({
@@ -263,6 +259,7 @@ addEventButton.addEventListener("click", async ()=>{
 
 // ---------------- Navigation ----------------
 function updateCalendar() {
+    showWeekdays();
     showCalendar(currentMonth,currentYear);
     displayReminders();
     monthSelect.value = currentMonth;
