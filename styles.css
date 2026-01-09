@@ -40,6 +40,13 @@ body {
   padding: 10px 0;
 }
 
+.table-calendar thead th {
+  background-color: var(--blue-dark);
+  color: white;
+  font-weight: bold;
+  height: 35px;
+}
+
 #event-section h3,
 #reminder-section h3 {
   color: var(--blue-dark);

@@ -259,7 +259,6 @@ addEventButton.addEventListener("click", async ()=>{
 
 // ---------------- Navigation ----------------
 function updateCalendar() {
-    showWeekdays();
     showCalendar(currentMonth,currentYear);
     displayReminders();
     monthSelect.value = currentMonth;
@@ -296,6 +295,7 @@ yearSelect.addEventListener("change", async ()=>{
 
 // ---------------- Init ----------------
 (async ()=>{
+    showWeekdays();
     await loadEventsFromBackend(currentMonth,currentYear);
     updateCalendar();
 })();
