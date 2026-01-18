@@ -1,0 +1,40 @@
+# =========================
+# Node / npm
+# =========================
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# =========================
+# Environment variables
+# =========================
+.env
+.env.local
+.env.development
+.env.production
+
+# =========================
+# Vercel
+# =========================
+.vercel
+
+# =========================
+# OS / Editor junk
+# =========================
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+
+# =========================
+# Build output (if added later)
+# =========================
+dist/
+build/
+
+# =========================
+# Temporary files
+# =========================
+*.tmp
+*.log
