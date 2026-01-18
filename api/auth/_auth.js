@@ -1,13 +1,8 @@
+import clientPromise from "./_db.js";
 import bcrypt from "bcryptjs";
-import { MongoClient } from "mongodb";
-
-const uri = process.env.MONGODB_URI;
-const client = new MongoClient(uri);
 
 export async function getDB() {
-  if (!client.topology?.isConnected()) {
-    await client.connect();
-  }
+  const client = await clientPromise;
   return client.db();
 }
 
