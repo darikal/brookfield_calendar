@@ -2,16 +2,16 @@ import clientPromise from "./_db.js";
 import bcrypt from "bcryptjs";
 import { ObjectId } from "mongodb";
 
-// Get database instance
+const DB_NAME = "calendar";
+
 export async function getDB() {
   const client = await clientPromise;
-  return client.db("calendarDB"); // <-- make sure your DB name matches
+  return client.db(DB_NAME);
 }
 
-// Verify user credentials
 export async function verifyUser(username, password) {
   const db = await getDB();
-  const user = await db.collection("users").findOne({ username });
+  const user = await db.collection("users").findOne({ username, active: true });
   if (!user) return null;
 
   const valid = await bcrypt.compare(password, user.passwordHash);
@@ -20,8 +20,7 @@ export async function verifyUser(username, password) {
   return user;
 }
 
-// Get user from session cookie
-export async function getUserFromSession(req) {
+export async function getUserFromRequest(req) {
   const cookie = req.headers.cookie || "";
   const session = cookie
     .split(";")
@@ -30,12 +29,12 @@ export async function getUserFromSession(req) {
 
   if (!session) return null;
 
-  const db = await getDB();
   try {
-    const user = await db.collection("users").findOne({ _id: new ObjectId(session) });
-    return user || null;
-  } catch (err) {
-    console.error("Error fetching user from session:", err);
+    const db = await getDB();
+    return await db
+      .collection("users")
+      .findOne({ _id: new ObjectId(session), active: true });
+  } catch {
     return null;
   }
 }

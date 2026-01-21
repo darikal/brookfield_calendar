@@ -1,33 +1,27 @@
 import clientPromise from "./_db.js";
 
-/**
- * Expand recurring events into individual dates for the requested month/year
- */
 function expandRecurring(event, month, year) {
-  const occurrences = [];
-
   if (!event.recurrence) return [event];
 
   const { type, count, startDate } = event.recurrence;
   const baseDate = new Date(startDate);
+  const occurrences = [];
 
   for (let i = 0; i < count; i++) {
     const d = new Date(baseDate);
-
     if (type === "week") d.setDate(baseDate.getDate() + 7 * i);
     if (type === "biWeek") d.setDate(baseDate.getDate() + 14 * i);
     if (type === "month") d.setMonth(baseDate.getMonth() + i);
 
-    const isoDate = d.toISOString().split("T")[0];
-
-    // Skip deleted instances
-    if (event.exceptions?.includes(isoDate)) continue;
+    if (event.exceptions?.includes(d.toISOString().split("T")[0])) continue;
 
     if (d.getMonth() === month && d.getFullYear() === year) {
-      occurrences.push({
-        ...event,
-        date: isoDate
-      });
+      const safeEvent = { ...event };
+      delete safeEvent.contactName;
+      delete safeEvent.contactInfo;
+      delete safeEvent.residentName;
+      delete safeEvent.residentAddress;
+      occurrences.push({ ...safeEvent, date: d.toISOString().split("T")[0] });
     }
   }
 
@@ -37,43 +31,19 @@ function expandRecurring(event, month, year) {
 export default async function handler(req, res) {
   try {
     const { month, year } = req.query;
-
-    if (month === undefined || year === undefined) {
+    if (!month || !year) {
       return res.status(400).json({ error: "Missing month or year" });
     }
 
-    const monthNum = parseInt(month, 10);
-    const yearNum = parseInt(year, 10);
-
     const client = await clientPromise;
-    const db = client.db("calendarDB");
+    const db = client.db("calendar");
+    const events = await db.collection("events").find({}).toArray();
 
-    const allEvents = await db
-      .collection("events")
-      .find({})
-      .toArray();
+    const expanded = events.flatMap(ev =>
+      expandRecurring(ev, parseInt(month), parseInt(year))
+    );
 
-    const events = allEvents
-      .flatMap(ev => expandRecurring(ev, monthNum, yearNum))
-      .map(ev => {
-        // 🔒 PUBLIC SANITIZATION — ALWAYS STRIP SENSITIVE DATA
-        const sanitized = { ...ev };
-
-        delete sanitized.phone;
-        delete sanitized.email;
-        delete sanitized.contactName;
-        delete sanitized.contactInfo;
-        delete sanitized.residentAddress;
-        delete sanitized.residentName;
-        delete sanitized.internalNotes;
-        delete sanitized.createdBy;
-        delete sanitized.createdByRole;
-
-        return sanitized;
-      });
-
-    res.status(200).json(events);
-
+    res.status(200).json(expanded);
   } catch (err) {
     console.error("GET EVENTS ERROR:", err);
     res.status(500).json({ error: "DB fetch failed" });
