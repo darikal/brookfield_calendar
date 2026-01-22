@@ -62,7 +62,7 @@ th, td {
   <h2>Admin Console</h2>
   <button onclick="logout()">Logout</button>
 
-  <h3>Add Event</h3>
+  <h3 id="formTitle">Add Event</h3>
   <select id="eventType"></select>
   <input type="date" id="eventDate">
   <input id="eventTitle" placeholder="Title">
@@ -85,16 +85,17 @@ th, td {
 
 <script>
 let currentRole = null;
+let editingId = null;
 
-/* ================= SESSION CHECK ================= */
+/* ===== INIT ===== */
 (async function init() {
   try {
     const res = await fetch('/api/me');
-    if (!res.ok) throw 'no session';
+    if (!res.ok) throw 0;
     const data = await res.json();
     currentRole = data.role;
     showAdmin();
-    setupEventTypes();
+    setupTypes();
     loadEvents();
   } catch {
     showLogin();
@@ -111,7 +112,7 @@ function showAdmin() {
   adminWrapper.classList.remove('hidden');
 }
 
-/* ================= LOGIN ================= */
+/* ===== LOGIN ===== */
 async function login() {
   const res = await fetch('/api/login', {
     method: 'POST',
@@ -131,19 +132,20 @@ async function login() {
   currentRole = data.role;
 
   showAdmin();
-  setupEventTypes();
+  setupTypes();
   loadEvents();
 }
 
-/* ================= LOGOUT ================= */
+/* ===== LOGOUT ===== */
 async function logout() {
   await fetch('/api/logout');
   currentRole = null;
+  editingId = null;
   showLogin();
 }
 
-/* ================= EVENT TYPES ================= */
-function setupEventTypes() {
+/* ===== EVENT TYPES ===== */
+function setupTypes() {
   eventType.innerHTML = '';
 
   if (['admin','subAdmin','socialCommittee'].includes(currentRole)) {
@@ -160,7 +162,7 @@ function setupEventTypes() {
   }
 }
 
-/* ================= LOAD EVENTS ================= */
+/* ===== LOAD EVENTS ===== */
 async function loadEvents() {
   const res = await fetch('/api/getEvents?admin=true');
   const events = await res.json();
@@ -181,34 +183,51 @@ async function loadEvents() {
       <td>${ev.title}</td>
       <td>${ev.eType}</td>
       <td>
-        ${canEdit
-          ? `<button onclick="deleteEvent('${ev._id}')">Delete</button>`
-          : 'View only'}
+        ${canEdit ? `
+          <button onclick='editEvent(${JSON.stringify(ev)})'>Edit</button>
+          <button class="danger" onclick="deleteEvent('${ev._id}')">Delete</button>
+        ` : 'View'}
       </td>
     `;
     eventsBody.appendChild(tr);
   });
 }
 
-/* ================= SAVE EVENT ================= */
+/* ===== EDIT ===== */
+function editEvent(ev) {
+  editingId = ev._id;
+  formTitle.textContent = 'Edit Event';
+  eventDate.value = ev.date;
+  eventTitle.value = ev.title;
+  eventDescription.value = ev.description || '';
+  eventType.value = ev.eType;
+}
+
+/* ===== SAVE ===== */
 async function saveEvent() {
+  const payload = {
+    id: editingId,
+    date: eventDate.value,
+    title: eventTitle.value,
+    description: eventDescription.value,
+    eType: eventType.value
+  };
+
   await fetch('/api/addEvent', {
     method: 'POST',
     headers: {'Content-Type':'application/json'},
-    body: JSON.stringify({
-      date: eventDate.value,
-      title: eventTitle.value,
-      description: eventDescription.value,
-      eType: eventType.value
-    })
+    body: JSON.stringify(payload)
   });
 
+  editingId = null;
+  formTitle.textContent = 'Add Event';
   eventTitle.value = '';
   eventDescription.value = '';
+
   loadEvents();
 }
 
-/* ================= DELETE ================= */
+/* ===== DELETE ===== */
 async function deleteEvent(id) {
   if (!confirm('Delete this event?')) return;
 
