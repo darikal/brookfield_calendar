@@ -4,6 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Brookfield Admin Console</title>
+
   <style>
     body {
       font-family: Arial, sans-serif;
@@ -61,7 +62,9 @@
       background: #f0f0f0;
     }
 
-    .hidden { display: none; }
+    .hidden {
+      display: none;
+    }
   </style>
 </head>
 <body>
@@ -88,9 +91,11 @@
     <option value="reservedPaid">Paid Reservation</option>
     <option value="noSocialnoPaid">Large Group</option>
   </select>
+
   <input type="date" id="eventDate" />
   <input type="text" id="eventTitle" placeholder="Event Title" />
   <input type="text" id="eventDescription" placeholder="Description" />
+
   <button onclick="saveEvent()">Save Event</button>
 
   <h2>Existing Events</h2>
@@ -110,8 +115,10 @@
 <script>
 let currentUserRole = null;
 
-// ----- LOGIN -----
+/* ================= LOGIN ================= */
 async function login() {
+  document.getElementById('loginError').textContent = '';
+
   const res = await fetch('/api/login', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -122,8 +129,9 @@ async function login() {
   });
 
   if (!res.ok) {
-    const data = await res.json().catch(()=>({}));
-    document.getElementById('loginError').textContent = data.error || 'Invalid login';
+    const data = await res.json().catch(() => ({}));
+    document.getElementById('loginError').textContent =
+      data.error || 'Login failed';
     return;
   }
 
@@ -133,9 +141,9 @@ async function login() {
   document.getElementById('loginWrapper').classList.add('hidden');
   document.getElementById('adminWrapper').classList.remove('hidden');
 
-  // restrict event type selection based on role
+  // restrict event types by role
   const eventTypeSelect = document.getElementById('eventType');
-  if(currentUserRole !== 'admin' && currentUserRole !== 'subAdmin' && currentUserRole !== 'socialCommittee') {
+  if (!['admin', 'subAdmin', 'socialCommittee'].includes(currentUserRole)) {
     eventTypeSelect.innerHTML = `
       <option value="smallGroup">Small Group</option>
       <option value="noSocialnoPaid">Large Group</option>
@@ -146,14 +154,28 @@ async function login() {
 }
 
 async function logout() {
-  await fetch('/api/logout');
+  await fetch('/api/logout').catch(() => {});
   location.reload();
 }
 
-// ----- LOAD EVENTS -----
+/* ================= LOAD EVENTS ================= */
 async function loadEvents() {
-  const res = await fetch('/api/getEvents?admin=true'); // admin query ensures all events returned
-  const events = await res.json();
+  const res = await fetch('/api/getEvents?admin=true');
+
+  if (!res.ok) {
+    console.error('Failed to load events');
+    return;
+  }
+
+  const data = await res.json();
+
+  // ✅ FIX: normalize response
+  const events = Array.isArray(data) ? data : data.events;
+
+  if (!Array.isArray(events)) {
+    console.error('Invalid events response:', data);
+    return;
+  }
 
   const tbody = document.querySelector('#eventsTable tbody');
   tbody.innerHTML = '';
@@ -161,44 +183,49 @@ async function loadEvents() {
   events.forEach(ev => {
     const tr = document.createElement('tr');
     tr.innerHTML = `
-      <td>${ev.date}</td>
-      <td>${ev.title}</td>
-      <td>${ev.eType}</td>
+      <td>${ev.date || ''}</td>
+      <td>${ev.title || ''}</td>
+      <td>${ev.eType || ''}</td>
       <td>
-        ${canEdit(ev) ? `<button onclick='editEvent("${ev._id || ev.id}")'>Edit</button> <button class='danger' onclick='deleteEvent("${ev._id || ev.id}")'>Delete</button>` : 'View Only'}
+        ${canEdit(ev)
+          ? `<button onclick="editEvent('${ev._id || ev.id}')">Edit</button>
+             <button class="danger" onclick="deleteEvent('${ev._id || ev.id}')">Delete</button>`
+          : 'View Only'}
       </td>
     `;
     tbody.appendChild(tr);
   });
 }
 
-// ----- PERMISSIONS -----
+/* ================= PERMISSIONS ================= */
 function canEdit(event) {
-  if(currentUserRole === 'admin' || currentUserRole === 'subAdmin') return true;
-  if(currentUserRole === 'socialCommittee' && event.eType === 'socialCommitteeEvent') return true;
+  if (currentUserRole === 'admin' || currentUserRole === 'subAdmin') return true;
+  if (currentUserRole === 'socialCommittee' && event.eType === 'socialCommitteeEvent') return true;
   return false;
 }
 
-// ----- SAVE EVENT -----
+/* ================= SAVE EVENT ================= */
 async function saveEvent() {
-  const type = document.getElementById('eventType').value;
-  const date = document.getElementById('eventDate').value;
-  const title = document.getElementById('eventTitle').value;
-  const description = document.getElementById('eventDescription').value;
+  const payload = {
+    date: document.getElementById('eventDate').value,
+    title: document.getElementById('eventTitle').value,
+    description: document.getElementById('eventDescription').value,
+    eType: document.getElementById('eventType').value
+  };
 
-  if(!date || !title || !type) {
-    alert('Please fill required fields.');
+  if (!payload.date || !payload.title) {
+    alert('Date and title are required');
     return;
   }
 
   const res = await fetch('/api/addEvent', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ date, title, description, eType: type })
+    body: JSON.stringify(payload)
   });
 
-  if(!res.ok) {
-    const data = await res.json().catch(()=>({}));
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({}));
     alert(data.error || 'Failed to save event');
     return;
   }
@@ -206,28 +233,30 @@ async function saveEvent() {
   loadEvents();
 }
 
-// ----- DELETE EVENT -----
+/* ================= DELETE EVENT ================= */
 async function deleteEvent(id) {
-  if(!confirm('Delete this event?')) return;
+  if (!confirm('Delete this event?')) return;
+
   const res = await fetch('/api/deleteEvent', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ id })
   });
 
-  if(!res.ok) {
-    const data = await res.json().catch(()=>({}));
-    alert(data.error || 'Failed to delete event');
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({}));
+    alert(data.error || 'Delete failed');
     return;
   }
 
   loadEvents();
 }
 
-// ----- EDIT EVENT -----
+/* ================= EDIT EVENT ================= */
 function editEvent(id) {
-  alert('Edit modal coming next step');
+  alert('Edit UI coming next');
 }
 </script>
+
 </body>
 </html>
