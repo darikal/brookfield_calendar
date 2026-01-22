@@ -108,8 +108,11 @@
 </div>
 
 <script>
+let currentUserRole = null;
+
+// ----- LOGIN -----
 async function login() {
-  const res = await fetch('/api/auth/login', {
+  const res = await fetch('/api/login', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
@@ -119,22 +122,37 @@ async function login() {
   });
 
   if (!res.ok) {
-    document.getElementById('loginError').textContent = 'Invalid login';
+    const data = await res.json().catch(()=>({}));
+    document.getElementById('loginError').textContent = data.error || 'Invalid login';
     return;
   }
 
+  const data = await res.json();
+  currentUserRole = data.role;
+
   document.getElementById('loginWrapper').classList.add('hidden');
   document.getElementById('adminWrapper').classList.remove('hidden');
+
+  // restrict event type selection based on role
+  const eventTypeSelect = document.getElementById('eventType');
+  if(currentUserRole !== 'admin' && currentUserRole !== 'subAdmin' && currentUserRole !== 'socialCommittee') {
+    eventTypeSelect.innerHTML = `
+      <option value="smallGroup">Small Group</option>
+      <option value="noSocialnoPaid">Large Group</option>
+    `;
+  }
+
   loadEvents();
 }
 
 async function logout() {
-  await fetch('/api/auth/logout');
+  await fetch('/api/logout');
   location.reload();
 }
 
+// ----- LOAD EVENTS -----
 async function loadEvents() {
-  const res = await fetch('/api/getEvents?admin=true');
+  const res = await fetch('/api/getEvents?admin=true'); // admin query ensures all events returned
   const events = await res.json();
 
   const tbody = document.querySelector('#eventsTable tbody');
@@ -147,42 +165,69 @@ async function loadEvents() {
       <td>${ev.title}</td>
       <td>${ev.eType}</td>
       <td>
-        <button onclick='editEvent("${ev.id}")'>Edit</button>
-        <button class='danger' onclick='deleteEvent("${ev.id}")'>Delete</button>
+        ${canEdit(ev) ? `<button onclick='editEvent("${ev._id || ev.id}")'>Edit</button> <button class='danger' onclick='deleteEvent("${ev._id || ev.id}")'>Delete</button>` : 'View Only'}
       </td>
     `;
     tbody.appendChild(tr);
   });
 }
 
+// ----- PERMISSIONS -----
+function canEdit(event) {
+  if(currentUserRole === 'admin' || currentUserRole === 'subAdmin') return true;
+  if(currentUserRole === 'socialCommittee' && event.eType === 'socialCommitteeEvent') return true;
+  return false;
+}
+
+// ----- SAVE EVENT -----
 async function saveEvent() {
-  await fetch('/api/admin/addEvent', {
+  const type = document.getElementById('eventType').value;
+  const date = document.getElementById('eventDate').value;
+  const title = document.getElementById('eventTitle').value;
+  const description = document.getElementById('eventDescription').value;
+
+  if(!date || !title || !type) {
+    alert('Please fill required fields.');
+    return;
+  }
+
+  const res = await fetch('/api/addEvent', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      date: eventDate.value,
-      title: eventTitle.value,
-      description: eventDescription.value,
-      eType: eventType.value
-    })
+    body: JSON.stringify({ date, title, description, eType: type })
   });
+
+  if(!res.ok) {
+    const data = await res.json().catch(()=>({}));
+    alert(data.error || 'Failed to save event');
+    return;
+  }
+
   loadEvents();
 }
 
+// ----- DELETE EVENT -----
 async function deleteEvent(id) {
-  if (!confirm('Delete this event?')) return;
-  await fetch('/api/admin/deleteEvent', {
+  if(!confirm('Delete this event?')) return;
+  const res = await fetch('/api/deleteEvent', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ id })
   });
+
+  if(!res.ok) {
+    const data = await res.json().catch(()=>({}));
+    alert(data.error || 'Failed to delete event');
+    return;
+  }
+
   loadEvents();
 }
 
+// ----- EDIT EVENT -----
 function editEvent(id) {
   alert('Edit modal coming next step');
 }
 </script>
-
 </body>
 </html>
