@@ -1,75 +1,104 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<title>Brookfield Admin</title>
-<meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Brookfield Admin Console</title>
 
-<style>
-body {
-  font-family: Arial, sans-serif;
-  background: #f4f6f8;
-  margin: 0;
-}
-.wrapper {
-  max-width: 900px;
-  margin: 40px auto;
-  background: #fff;
-  padding: 20px;
-  border-radius: 8px;
-}
-.hidden { display: none; }
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #f4f6f8;
+      margin: 0;
+      padding: 0;
+    }
 
-input, select, button {
-  width: 100%;
-  padding: 8px;
-  margin: 6px 0;
-}
+    .login-wrapper, .admin-wrapper {
+      max-width: 900px;
+      margin: 40px auto;
+      background: #fff;
+      padding: 20px;
+      border-radius: 8px;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+    }
 
-button {
-  background: #6c95a6;
-  color: white;
-  border: none;
-  cursor: pointer;
-}
-button.danger { background: #d9534f; }
+    h1, h2 {
+      margin-top: 0;
+      color: #333;
+    }
 
-table {
-  width: 100%;
-  border-collapse: collapse;
-  margin-top: 15px;
-}
-th, td {
-  border: 1px solid #ddd;
-  padding: 8px;
-}
-</style>
+    input, select, button {
+      padding: 8px;
+      margin: 6px 0;
+      width: 100%;
+      box-sizing: border-box;
+    }
+
+    button {
+      background: #6c95a6;
+      color: white;
+      border: none;
+      cursor: pointer;
+      border-radius: 4px;
+    }
+
+    button.danger {
+      background: #d9534f;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 15px;
+    }
+
+    th, td {
+      border: 1px solid #ddd;
+      padding: 8px;
+    }
+
+    th {
+      background: #f0f0f0;
+    }
+
+    .hidden {
+      display: none;
+    }
+  </style>
 </head>
-
 <body>
 
 <!-- LOGIN -->
-<div class="wrapper hidden" id="loginWrapper">
-  <h2>Admin Login</h2>
-  <input id="username" placeholder="Username">
-  <input id="password" type="password" placeholder="Password">
+<div class="login-wrapper" id="loginWrapper">
+  <h1>Admin Login</h1>
+  <input id="username" placeholder="Username" />
+  <input id="password" type="password" placeholder="Password" />
   <button onclick="login()">Login</button>
   <p id="loginError" style="color:red"></p>
 </div>
 
 <!-- ADMIN -->
-<div class="wrapper hidden" id="adminWrapper">
-  <h2>Admin Console</h2>
+<div class="admin-wrapper hidden" id="adminWrapper">
+  <h1>Admin Console</h1>
   <button onclick="logout()">Logout</button>
 
-  <h3 id="formTitle">Add Event</h3>
-  <select id="eventType"></select>
-  <input type="date" id="eventDate">
-  <input id="eventTitle" placeholder="Title">
-  <input id="eventDescription" placeholder="Description">
+  <h2>Create / Edit Event</h2>
+
+  <select id="eventType">
+    <option value="socialCommitteeEvent">Social Committee</option>
+    <option value="smallGroup">Small Group</option>
+    <option value="reservedPaid">Paid Reservation</option>
+    <option value="noSocialnoPaid">Large Group</option>
+  </select>
+
+  <input type="date" id="eventDate" />
+  <input id="eventTitle" placeholder="Event Title" />
+  <input id="eventDescription" placeholder="Description" />
+
   <button onclick="saveEvent()">Save Event</button>
 
-  <h3>Events</h3>
+  <h2>Existing Events</h2>
+
   <table>
     <thead>
       <tr>
@@ -85,38 +114,13 @@ th, td {
 
 <script>
 let currentRole = null;
-let editingId = null;
+let editingEventId = null;
 
-/* ===== INIT ===== */
-(async function init() {
-  try {
-    const res = await fetch('/api/me');
-    if (!res.ok) throw 0;
-    const data = await res.json();
-    currentRole = data.role;
-    showAdmin();
-    setupTypes();
-    loadEvents();
-  } catch {
-    showLogin();
-  }
-})();
-
-function showLogin() {
-  loginWrapper.classList.remove('hidden');
-  adminWrapper.classList.add('hidden');
-}
-
-function showAdmin() {
-  loginWrapper.classList.add('hidden');
-  adminWrapper.classList.remove('hidden');
-}
-
-/* ===== LOGIN ===== */
+// ---------------- LOGIN ----------------
 async function login() {
   const res = await fetch('/api/login', {
     method: 'POST',
-    headers: {'Content-Type':'application/json'},
+    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
       username: username.value,
       password: password.value
@@ -131,40 +135,20 @@ async function login() {
   const data = await res.json();
   currentRole = data.role;
 
-  showAdmin();
-  setupTypes();
+  loginWrapper.classList.add('hidden');
+  adminWrapper.classList.remove('hidden');
+
   loadEvents();
 }
 
-/* ===== LOGOUT ===== */
 async function logout() {
   await fetch('/api/logout');
-  currentRole = null;
-  editingId = null;
-  showLogin();
+  location.reload();
 }
 
-/* ===== EVENT TYPES ===== */
-function setupTypes() {
-  eventType.innerHTML = '';
-
-  if (['admin','subAdmin','socialCommittee'].includes(currentRole)) {
-    eventType.innerHTML += `<option value="socialCommitteeEvent">Social Committee</option>`;
-  }
-
-  eventType.innerHTML += `
-    <option value="smallGroup">Small Group</option>
-    <option value="noSocialnoPaid">Large Group</option>
-  `;
-
-  if (['admin','subAdmin'].includes(currentRole)) {
-    eventType.innerHTML += `<option value="reservedPaid">Paid Reservation</option>`;
-  }
-}
-
-/* ===== LOAD EVENTS ===== */
+// ---------------- LOAD EVENTS ----------------
 async function loadEvents() {
-  const res = await fetch('/api/getEvents?admin=true');
+  const res = await fetch('/api/getEvents?admin=true', { cache: 'no-store' });
   const events = await res.json();
 
   eventsBody.innerHTML = '';
@@ -193,51 +177,61 @@ async function loadEvents() {
   });
 }
 
-/* ===== EDIT ===== */
+// ---------------- EDIT ----------------
 function editEvent(ev) {
-  editingId = ev._id;
-  formTitle.textContent = 'Edit Event';
+  editingEventId = ev._id;
+  eventType.value = ev.eType;
   eventDate.value = ev.date;
   eventTitle.value = ev.title;
   eventDescription.value = ev.description || '';
-  eventType.value = ev.eType;
+  window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
-/* ===== SAVE ===== */
+// ---------------- SAVE ----------------
 async function saveEvent() {
   const payload = {
-    id: editingId,
+    eType: eventType.value,
     date: eventDate.value,
     title: eventTitle.value,
-    description: eventDescription.value,
-    eType: eventType.value
+    description: eventDescription.value
   };
 
-  await fetch('/api/addEvent', {
+  let url = '/api/addEvent';
+
+  if (editingEventId) {
+    payload.id = editingEventId;
+    url = '/api/updateEvent';
+  }
+
+  const res = await fetch(url, {
     method: 'POST',
-    headers: {'Content-Type':'application/json'},
+    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload)
   });
 
-  editingId = null;
-  formTitle.textContent = 'Add Event';
+  if (!res.ok) {
+    alert('Save failed');
+    return;
+  }
+
+  editingEventId = null;
   eventTitle.value = '';
   eventDescription.value = '';
 
-  loadEvents();
+  await loadEvents();
 }
 
-/* ===== DELETE ===== */
+// ---------------- DELETE ----------------
 async function deleteEvent(id) {
   if (!confirm('Delete this event?')) return;
 
   await fetch('/api/deleteEvent', {
     method: 'POST',
-    headers: {'Content-Type':'application/json'},
+    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ id })
   });
 
-  loadEvents();
+  await loadEvents();
 }
 </script>
 </body>
