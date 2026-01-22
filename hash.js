@@ -1,4 +1,4 @@
 import bcrypt from "bcryptjs";
 
-const hash = await bcrypt.hash("FebbraioValettaAlex", 10);
+const hash = await bcrypt.hash("DanielleEmiColon", 10);
 console.log(hash);

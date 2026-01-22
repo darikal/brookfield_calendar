@@ -1,262 +1,198 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Brookfield Admin Console</title>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Brookfield Admin Console</title>
 
-  <style>
-    body {
-      font-family: Arial, sans-serif;
-      background: #f4f6f8;
-      margin: 0;
-      padding: 0;
-    }
-
-    .login-wrapper, .admin-wrapper {
-      max-width: 900px;
-      margin: 40px auto;
-      background: #fff;
-      padding: 20px;
-      border-radius: 8px;
-      box-shadow: 0 2px 6px rgba(0,0,0,0.1);
-    }
-
-    h1, h2 {
-      margin-top: 0;
-      color: #333;
-    }
-
-    input, select, button {
-      padding: 8px;
-      margin: 6px 0;
-      width: 100%;
-      box-sizing: border-box;
-    }
-
-    button {
-      background: #6c95a6;
-      color: white;
-      border: none;
-      cursor: pointer;
-      border-radius: 4px;
-    }
-
-    button.danger {
-      background: #d9534f;
-    }
-
-    table {
-      width: 100%;
-      border-collapse: collapse;
-      margin-top: 15px;
-    }
-
-    th, td {
-      border: 1px solid #ddd;
-      padding: 8px;
-      text-align: left;
-    }
-
-    th {
-      background: #f0f0f0;
-    }
-
-    .hidden {
-      display: none;
-    }
-  </style>
+<style>
+body {
+  font-family: Arial, sans-serif;
+  background: #f4f6f8;
+  margin: 0;
+}
+.login-wrapper, .admin-wrapper {
+  max-width: 900px;
+  margin: 40px auto;
+  background: #fff;
+  padding: 20px;
+  border-radius: 8px;
+}
+.hidden { display: none; }
+button {
+  background: #6c95a6;
+  color: white;
+  border: none;
+  padding: 8px;
+  cursor: pointer;
+}
+button.danger { background: #d9534f; }
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 15px;
+}
+th, td {
+  border: 1px solid #ddd;
+  padding: 8px;
+}
+</style>
 </head>
+
 <body>
 
 <!-- LOGIN -->
-<div class="login-wrapper" id="loginWrapper">
+<div class="login-wrapper hidden" id="loginWrapper">
   <h1>Admin Login</h1>
-  <input type="text" id="username" placeholder="Username" />
-  <input type="password" id="password" placeholder="Password" />
+  <input id="username" placeholder="Username" />
+  <input id="password" type="password" placeholder="Password" />
   <button onclick="login()">Login</button>
   <p id="loginError" style="color:red"></p>
 </div>
 
-<!-- ADMIN CONSOLE -->
+<!-- ADMIN -->
 <div class="admin-wrapper hidden" id="adminWrapper">
   <h1>Admin Console</h1>
-
   <button onclick="logout()">Logout</button>
 
-  <h2>Create / Edit Event</h2>
+  <h2>Create Event</h2>
   <select id="eventType">
     <option value="socialCommitteeEvent">Social Committee</option>
     <option value="smallGroup">Small Group</option>
     <option value="reservedPaid">Paid Reservation</option>
     <option value="noSocialnoPaid">Large Group</option>
   </select>
-
   <input type="date" id="eventDate" />
-  <input type="text" id="eventTitle" placeholder="Event Title" />
-  <input type="text" id="eventDescription" placeholder="Description" />
-
+  <input id="eventTitle" placeholder="Title" />
+  <input id="eventDescription" placeholder="Description" />
   <button onclick="saveEvent()">Save Event</button>
 
-  <h2>Existing Events</h2>
-  <table id="eventsTable">
+  <h2>Events</h2>
+  <table>
     <thead>
       <tr>
-        <th>Date</th>
-        <th>Title</th>
-        <th>Type</th>
-        <th>Actions</th>
+        <th>Date</th><th>Title</th><th>Type</th><th>Actions</th>
       </tr>
     </thead>
-    <tbody></tbody>
+    <tbody id="eventsBody"></tbody>
   </table>
 </div>
 
 <script>
 let currentUserRole = null;
 
+/* ================= SESSION CHECK ================= */
+(async function checkSession() {
+  try {
+    const res = await fetch('/api/me');
+    if (!res.ok) throw new Error();
+    const data = await res.json();
+    currentUserRole = data.role;
+    showAdmin();
+    loadEvents();
+  } catch {
+    showLogin();
+  }
+})();
+
+function showLogin() {
+  loginWrapper.classList.remove('hidden');
+  adminWrapper.classList.add('hidden');
+}
+
+function showAdmin() {
+  loginWrapper.classList.add('hidden');
+  adminWrapper.classList.remove('hidden');
+}
+
 /* ================= LOGIN ================= */
 async function login() {
-  document.getElementById('loginError').textContent = '';
-
+  loginError.textContent = '';
   const res = await fetch('/api/login', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: {'Content-Type':'application/json'},
     body: JSON.stringify({
-      username: document.getElementById('username').value,
-      password: document.getElementById('password').value
+      username: username.value,
+      password: password.value
     })
   });
 
   if (!res.ok) {
-    const data = await res.json().catch(() => ({}));
-    document.getElementById('loginError').textContent =
-      data.error || 'Login failed';
+    loginError.textContent = 'Invalid login';
     return;
   }
 
   const data = await res.json();
   currentUserRole = data.role;
-
-  document.getElementById('loginWrapper').classList.add('hidden');
-  document.getElementById('adminWrapper').classList.remove('hidden');
-
-  // restrict event types by role
-  const eventTypeSelect = document.getElementById('eventType');
-  if (!['admin', 'subAdmin', 'socialCommittee'].includes(currentUserRole)) {
-    eventTypeSelect.innerHTML = `
-      <option value="smallGroup">Small Group</option>
-      <option value="noSocialnoPaid">Large Group</option>
-    `;
-  }
-
+  showAdmin();
   loadEvents();
 }
 
+/* ================= LOGOUT ================= */
 async function logout() {
-  await fetch('/api/logout').catch(() => {});
+  await fetch('/api/logout').catch(()=>{});
   location.reload();
 }
 
 /* ================= LOAD EVENTS ================= */
 async function loadEvents() {
   const res = await fetch('/api/getEvents?admin=true');
-
-  if (!res.ok) {
-    console.error('Failed to load events');
-    return;
-  }
-
   const data = await res.json();
-
-  // ✅ FIX: normalize response
   const events = Array.isArray(data) ? data : data.events;
 
-  if (!Array.isArray(events)) {
-    console.error('Invalid events response:', data);
-    return;
-  }
-
-  const tbody = document.querySelector('#eventsTable tbody');
-  tbody.innerHTML = '';
+  eventsBody.innerHTML = '';
+  if (!Array.isArray(events)) return;
 
   events.forEach(ev => {
     const tr = document.createElement('tr');
     tr.innerHTML = `
-      <td>${ev.date || ''}</td>
-      <td>${ev.title || ''}</td>
-      <td>${ev.eType || ''}</td>
+      <td>${ev.date}</td>
+      <td>${ev.title}</td>
+      <td>${ev.eType}</td>
       <td>
         ${canEdit(ev)
-          ? `<button onclick="editEvent('${ev._id || ev.id}')">Edit</button>
-             <button class="danger" onclick="deleteEvent('${ev._id || ev.id}')">Delete</button>`
-          : 'View Only'}
-      </td>
-    `;
-    tbody.appendChild(tr);
+          ? `<button onclick="deleteEvent('${ev._id}')">Delete</button>`
+          : 'View'}
+      </td>`;
+    eventsBody.appendChild(tr);
   });
 }
 
 /* ================= PERMISSIONS ================= */
-function canEdit(event) {
-  if (currentUserRole === 'admin' || currentUserRole === 'subAdmin') return true;
-  if (currentUserRole === 'socialCommittee' && event.eType === 'socialCommitteeEvent') return true;
+function canEdit(ev) {
+  if (['admin','subAdmin'].includes(currentUserRole)) return true;
+  if (currentUserRole === 'socialCommittee' && ev.eType === 'socialCommitteeEvent') return true;
   return false;
 }
 
-/* ================= SAVE EVENT ================= */
+/* ================= SAVE ================= */
 async function saveEvent() {
   const payload = {
-    date: document.getElementById('eventDate').value,
-    title: document.getElementById('eventTitle').value,
-    description: document.getElementById('eventDescription').value,
-    eType: document.getElementById('eventType').value
+    date: eventDate.value,
+    title: eventTitle.value,
+    description: eventDescription.value,
+    eType: eventType.value
   };
-
-  if (!payload.date || !payload.title) {
-    alert('Date and title are required');
-    return;
-  }
 
   const res = await fetch('/api/addEvent', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: {'Content-Type':'application/json'},
     body: JSON.stringify(payload)
   });
 
-  if (!res.ok) {
-    const data = await res.json().catch(() => ({}));
-    alert(data.error || 'Failed to save event');
-    return;
-  }
-
-  loadEvents();
+  if (res.ok) loadEvents();
 }
 
-/* ================= DELETE EVENT ================= */
+/* ================= DELETE ================= */
 async function deleteEvent(id) {
-  if (!confirm('Delete this event?')) return;
-
-  const res = await fetch('/api/deleteEvent', {
+  if (!confirm('Delete event?')) return;
+  await fetch('/api/deleteEvent', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: {'Content-Type':'application/json'},
     body: JSON.stringify({ id })
   });
-
-  if (!res.ok) {
-    const data = await res.json().catch(() => ({}));
-    alert(data.error || 'Delete failed');
-    return;
-  }
-
   loadEvents();
 }
-
-/* ================= EDIT EVENT ================= */
-function editEvent(id) {
-  alert('Edit UI coming next');
-}
 </script>
-
 </body>
 </html>
