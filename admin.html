@@ -3,8 +3,8 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>Brookfield Calendar – Admin</title>
-<link rel="stylesheet" href="styles.css" />
+<title>Brookfield Events – Admin</title>
+<link rel="stylesheet" href="styles.css">
 </head>
 
 <body>
@@ -13,16 +13,15 @@
   <!-- LOGIN -->
   <div id="loginBox">
     <h2>Admin Login</h2>
-    <input type="text" id="username" placeholder="Username" />
-    <input type="password" id="password" placeholder="Password" />
+    <input id="username" placeholder="Username">
+    <input id="password" type="password" placeholder="Password">
     <button onclick="login()">Login</button>
   </div>
 
-  <!-- ADMIN PANEL -->
+  <!-- ADMIN -->
   <div id="adminPanel" style="display:none;">
     <h1>Brookfield Events – Admin</h1>
-
-    <button onclick="logout()">Logout</button>
+    <button class="danger" onclick="logout()">Logout</button>
 
     <h3>Add / Edit Event</h3>
 
@@ -34,19 +33,19 @@
       <option value="large">Large Group Event</option>
     </select>
 
-    <input type="date" id="eventDate" />
+    <input type="date" id="eventDate">
 
     <div class="time-input">
-      <label>Start</label>
-      <input type="time" id="startTime" />
-      <label>End</label>
-      <input type="time" id="endTime" />
+      <label>Start Time</label>
+      <input type="time" id="startTime">
+      <label>End Time</label>
+      <input type="time" id="endTime">
     </div>
 
-    <input type="text" id="groupSize" placeholder="Group size (optional)" />
+    <input id="groupSize" placeholder="Group size (optional)">
 
     <label>
-      <input type="checkbox" id="recurCheckbox" /> Recurring Event
+      <input type="checkbox" id="recurCheckbox"> Recurring Event
     </label>
 
     <div id="recurring" style="display:none;">
@@ -57,18 +56,18 @@
       </select>
 
       <label>Repeat for</label>
-      <input type="number" id="recurLengthNum" placeholder="10" />
+      <input type="number" id="recurLengthNum" placeholder="10">
       <select id="recurLength">
         <option value="week">Weeks</option>
         <option value="month">Months</option>
       </select>
     </div>
 
-    <input type="text" id="contactName" placeholder="Contact Name" />
-    <input type="text" id="contactInfo" placeholder="Email or phone" />
+    <input id="contactName" placeholder="Contact name">
+    <input id="contactInfo" placeholder="Email or phone">
 
-    <input type="text" id="eventTitle" placeholder="Event Title" />
-    <input type="text" id="eventDescription" placeholder="Event Description" />
+    <input id="eventTitle" placeholder="Event title">
+    <input id="eventDescription" placeholder="Event description">
 
     <select id="walkInWelcome">
       <option value="" hidden>--- Walk Ins ---</option>
@@ -77,12 +76,12 @@
       <option value="signUpRequired">Signup Required</option>
     </select>
 
-    <input type="text" id="signUp" placeholder="Signup instructions" />
+    <input id="signUp" placeholder="Signup instructions">
 
     <button id="saveBtn" onclick="saveEvent()">Save Event</button>
-    <button id="cancelEditBtn" onclick="cancelEdit()" style="display:none;">Cancel Edit</button>
+    <button onclick="cancelEdit()" style="display:none;" id="cancelEditBtn">Cancel Edit</button>
 
-    <hr/>
+    <hr>
 
     <h3>Existing Events</h3>
     <ul id="eventList"></ul>
@@ -92,8 +91,6 @@
 <script>
 let currentAdmin = null;
 let editingId = null;
-
-/* ---------------- LOGIN ---------------- */
 
 async function login() {
   const res = await fetch("/api/login", {
@@ -110,9 +107,7 @@ async function login() {
     return;
   }
 
-  const data = await res.json();
   currentAdmin = username.value;
-
   loginBox.style.display = "none";
   adminPanel.style.display = "block";
   loadEvents();
@@ -123,42 +118,34 @@ function logout() {
   location.reload();
 }
 
-/* ---------------- EVENTS ---------------- */
-
 async function loadEvents() {
   const res = await fetch("/api/getEvents");
   const events = await res.json();
-
   eventList.innerHTML = "";
 
   events.forEach(ev => {
     const li = document.createElement("li");
-
     li.innerHTML = `
       <strong>${ev.title}</strong>
-      (${ev.eventType}) ${ev.date} ${ev.startTime}-${ev.endTime}
-      <br/>
-      <small>Created by: ${ev.createdByAdmin || "N/A"}</small><br/>
+      ${ev.date} ${ev.startTime}-${ev.endTime}<br>
+      <small>Type: ${ev.eventType} | Created by: ${ev.createdByAdmin || "N/A"}</small><br>
       <button onclick="editEvent('${ev._id}')">Edit</button>
-      <button onclick="deleteEvent('${ev._id}')">Delete</button>
+      <button class="danger" onclick="deleteEvent('${ev._id}')">Delete</button>
     `;
-
     eventList.appendChild(li);
   });
 }
 
-/* ---------------- SAVE / EDIT ---------------- */
-
 async function saveEvent() {
   const payload = {
     _id: editingId,
-    title: eventTitle.value,
+    eventType: eventTypeMajor.value,
     date: eventDate.value,
     startTime: startTime.value,
     endTime: endTime.value,
-    eventType: eventTypeMajor.value,
-    description: eventDescription.value,
     groupSize: groupSize.value,
+    title: eventTitle.value,
+    description: eventDescription.value,
     recurring: recurCheckbox.checked,
     recurWhen: recurWhen.value,
     recurLengthNum: recurLengthNum.value,
@@ -167,31 +154,18 @@ async function saveEvent() {
     contactInfo: contactInfo.value,
     walkIns: walkInWelcome.value,
     signUp: signUp.value,
-    createdByAdmin: currentAdmin,
-    overrideApproved: false
+    createdByAdmin: currentAdmin
   };
 
-  const url = editingId ? "/api/updateEvent" : "/api/addEvent";
-  const method = editingId ? "PUT" : "POST";
-
-  const res = await fetch(url, {
-    method,
+  const res = await fetch(editingId ? "/api/updateEvent" : "/api/addEvent", {
+    method: editingId ? "PUT" : "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(payload)
   });
 
-  if (res.status === 409) {
-    const data = await res.json();
-    const msg = data.conflicts.map(c =>
-      `${c.eventType.toUpperCase()} ${c.startTime}-${c.endTime}`
-    ).join("\n");
-
-    if (!confirm(
-      `⚠ CONFLICT DETECTED\n\n${msg}\n\nThis event may override lower priority events.\nContinue?`
-    )) return;
-
-    payload.overrideApproved = true;
-    return saveEvent(payload);
+  if (!res.ok) {
+    alert("Save failed");
+    return;
   }
 
   cancelEdit();
@@ -206,14 +180,13 @@ function editEvent(id) {
       if (!ev) return;
 
       editingId = ev._id;
-
-      eventTitle.value = ev.title;
+      eventTypeMajor.value = ev.eventType;
       eventDate.value = ev.date;
       startTime.value = ev.startTime;
       endTime.value = ev.endTime;
-      eventTypeMajor.value = ev.eventType;
-      eventDescription.value = ev.description;
       groupSize.value = ev.groupSize || "";
+      eventTitle.value = ev.title;
+      eventDescription.value = ev.description;
 
       saveBtn.textContent = "Update Event";
       cancelEditBtn.style.display = "inline";
@@ -224,24 +197,19 @@ function cancelEdit() {
   editingId = null;
   saveBtn.textContent = "Save Event";
   cancelEditBtn.style.display = "none";
-  document.querySelectorAll("input, select").forEach(i => i.value = "");
+  document.querySelectorAll("#adminPanel input, #adminPanel select")
+    .forEach(el => el.value = "");
 }
-
-/* ---------------- DELETE ---------------- */
 
 async function deleteEvent(id) {
   if (!confirm("Delete this event?")) return;
-
   await fetch("/api/deleteEvent", {
     method: "DELETE",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ id })
   });
-
   loadEvents();
 }
-
-/* ---------------- UI ---------------- */
 
 recurCheckbox.addEventListener("change", () => {
   recurring.style.display = recurCheckbox.checked ? "block" : "none";

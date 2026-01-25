@@ -303,3 +303,107 @@ body {
     max-height: 200px; /* adjust as needed */
     padding: 6px;
 }
+/* ================= ADMIN PANEL ================= */
+
+#loginBox,
+#adminPanel {
+  background: white;
+  border: 1px solid #ccc;
+  border-radius: 8px;
+  padding: 20px;
+  margin-top: 20px;
+}
+
+#loginBox {
+  max-width: 400px;
+  margin: 60px auto;
+}
+
+#loginBox h2 {
+  color: var(--blue-dark);
+  text-align: center;
+}
+
+#loginBox input {
+  width: 100%;
+  padding: 8px;
+  margin: 6px 0;
+  box-sizing: border-box;
+}
+
+#loginBox button {
+  width: 100%;
+  margin-top: 10px;
+}
+
+#adminPanel h1 {
+  color: var(--blue-dark);
+  text-align: center;
+}
+
+#adminPanel h3 {
+  color: var(--blue-dark);
+  margin-top: 25px;
+}
+
+#adminPanel input,
+#adminPanel select {
+  width: 100%;
+  padding: 7px;
+  margin: 6px 0;
+  box-sizing: border-box;
+}
+
+#adminPanel button {
+  background: var(--blue-dark);
+  color: white;
+  border: none;
+  padding: 7px 12px;
+  cursor: pointer;
+  border-radius: 4px;
+}
+
+#adminPanel button:hover {
+  opacity: 0.9;
+}
+
+#adminPanel .danger {
+  background: #d9534f;
+}
+
+#adminPanel hr {
+  margin: 30px 0;
+}
+
+/* event list */
+#eventList {
+  list-style: none;
+  padding: 0;
+}
+
+#eventList li {
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  padding: 10px;
+  margin-bottom: 10px;
+  background: #f9f9f9;
+}
+
+#eventList li strong {
+  display: block;
+  color: var(--blue-dark);
+}
+
+#eventList button {
+  margin-right: 6px;
+  margin-top: 6px;
+}
+
+/* recurring box */
+#recurring {
+  padding: 10px;
+  border: 1px dashed #ccc;
+  border-radius: 6px;
+  background: #f5f5f5;
+  margin-top: 6px;
+}
