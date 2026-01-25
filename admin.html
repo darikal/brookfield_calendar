@@ -1,219 +1,289 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>Brookfield Events – Admin</title>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Brookfield Admin Console</title>
 <link rel="stylesheet" href="styles.css">
 </head>
-
 <body>
-<div class="wrapper">
 
-  <!-- LOGIN -->
-  <div id="loginBox">
-    <h2>Admin Login</h2>
-    <input id="username" placeholder="Username">
-    <input id="password" type="password" placeholder="Password">
-    <button onclick="login()">Login</button>
+<!-- LOGIN -->
+<div class="login-wrapper" id="loginWrapper">
+  <h1>Admin Login</h1>
+  <input type="text" id="username" placeholder="Username" />
+  <input type="password" id="password" placeholder="Password" />
+  <button onclick="login()">Login</button>
+  <p id="loginError" style="color:red"></p>
+</div>
+
+<!-- ADMIN CONSOLE -->
+<div class="admin-wrapper hidden" id="adminWrapper">
+  <h1>Admin Console</h1>
+  <button onclick="logout()">Logout</button>
+
+  <h2>Create / Edit Event</h2>
+
+  <div id="searchSortWrapper">
+    <input type="text" id="searchEvent" placeholder="Search events...">
+    <select id="sortEvent">
+      <option value="dateAsc">Sort by Date ↑</option>
+      <option value="dateDesc">Sort by Date ↓</option>
+      <option value="type">Sort by Type</option>
+      <option value="title">Sort by Title</option>
+    </select>
   </div>
 
-  <!-- ADMIN -->
-  <div id="adminPanel" style="display:none;">
-    <h1>Brookfield Events – Admin</h1>
-    <button class="danger" onclick="logout()">Logout</button>
+  <select id="eventType">
+    <option value="" hidden>--- Event Type ---</option>
+    <option value="socialCommitteeEvent">Social Committee Hosted Event</option>
+    <option value="smallGroup">Small Group Event</option>
+    <option value="reservedPaid">Paid Reservation</option>
+    <option value="noSocialnoPaid">Large Group Event</option>
+  </select>
 
-    <h3>Add / Edit Event</h3>
-
-    <select id="eventTypeMajor">
-      <option value="" hidden>--- Event Type ---</option>
-      <option value="social">Social Committee Hosted Event</option>
-      <option value="small">Small Group Event</option>
-      <option value="paid">Paid Reservation</option>
-      <option value="large">Large Group Event</option>
-    </select>
-
-    <input type="date" id="eventDate">
-
-    <div class="time-input">
-      <label>Start Time</label>
-      <input type="time" id="startTime">
-      <label>End Time</label>
-      <input type="time" id="endTime">
-    </div>
-
-    <input id="groupSize" placeholder="Group size (optional)">
-
-    <label>
-      <input type="checkbox" id="recurCheckbox"> Recurring Event
-    </label>
-
-    <div id="recurring" style="display:none;">
-      <select id="recurWhen">
-        <option value="week">Weekly</option>
-        <option value="biWeek">Bi-Weekly</option>
-        <option value="month">Monthly</option>
-      </select>
-
-      <label>Repeat for</label>
-      <input type="number" id="recurLengthNum" placeholder="10">
-      <select id="recurLength">
-        <option value="week">Weeks</option>
-        <option value="month">Months</option>
-      </select>
-    </div>
-
-    <input id="contactName" placeholder="Contact name">
-    <input id="contactInfo" placeholder="Email or phone">
-
-    <input id="eventTitle" placeholder="Event title">
-    <input id="eventDescription" placeholder="Event description">
-
-    <select id="walkInWelcome">
-      <option value="" hidden>--- Walk Ins ---</option>
-      <option value="Open">Open to walk ins</option>
-      <option value="Closed">Closed</option>
-      <option value="signUpRequired">Signup Required</option>
-    </select>
-
-    <input id="signUp" placeholder="Signup instructions">
-
-    <button id="saveBtn" onclick="saveEvent()">Save Event</button>
-    <button onclick="cancelEdit()" style="display:none;" id="cancelEditBtn">Cancel Edit</button>
-
-    <hr>
-
-    <h3>Existing Events</h3>
-    <ul id="eventList"></ul>
+  <input type="date" id="eventDate">
+  <div class="time-input">
+    <label for="startTime">Start Time:</label>
+    <input type="time" id="startTime" min="07:30" max="19:00">
+    <label for="endTime">End Time:</label>
+    <input type="time" id="endTime" min="08:15" max="19:45">
   </div>
+
+  <div class="group-size-wrapper">
+    <label for="groupSize">Approximate size of group [max 180]</label>
+    <input type="text" id="groupSize" placeholder="10-15" maxlength="5">
+  </div>
+
+  <div id="recurBoxWrapper">
+    <label for="recurCheckbox">Recurring Event</label>
+    <input type="checkbox" id="recurCheckbox">
+  </div>
+
+  <div id="recurring" style="display:none;">
+    <select id="recurWhen">
+      <option value="week">Weekly</option>
+      <option value="month">Monthly</option>
+      <option value="biWeek">Bi-Weekly</option>
+    </select>
+
+    <label>For the next</label>
+    <input type="number" id="recurLengthNum" placeholder="10" max="52">
+    <select id="recurLength">
+      <option value="week">Weeks</option>
+      <option value="month">Months</option>
+    </select>
+  </div>
+
+  <div class="contactDiv">
+    <input type="text" id="contactName" placeholder="Name of contact person">
+    <input type="text" id="contactInfo" placeholder="email or phone #">
+  </div>
+
+  <div id="titleDiv">
+    <input type="text" id="eventTitle" placeholder="Event Title">
+  </div>
+
+  <input type="text" id="eventDescription" placeholder="Event Description">
+
+  <div id="paidInfo" style="display:none;">
+    <input type="text" id="residentName" placeholder="Name of Resident">
+    <input type="text" id="contactNamePaid" placeholder="Contact Name (if different)">
+    <input type="text" id="residentAddress" placeholder="Address of Resident">
+    <div id="termsWrapper" style="margin-top:10px;">
+      <label>
+        <input type="checkbox" id="acceptTerms">
+        I accept the <a href="#" target="_blank">Terms and Conditions</a>
+      </label>
+      <textarea readonly rows="5" style="width:100%; margin-top:5px;">
+Full terms and conditions text for paid reservations. Users must read this before accepting.
+      </textarea>
+    </div>
+  </div>
+
+  <select id="walkInWelcome">
+    <option value="" hidden>--- Are Walk Ins Welcome ---</option>
+    <option value="Open">Open to walk ins</option>
+    <option value="Closed">Closed to walk ins</option>
+    <option value="Other">Other - specify</option>
+    <option id="signUpRequired" value="signUpRequired" hidden>Signup Required</option>
+  </select>
+
+  <div id="eventOther" style="display:none;">
+    <input type="text" id="eventTypeOther" placeholder="Email {name} | call {name}">
+  </div>
+  <div id="signUpField" style="display:none;">
+    <input type="text" id="signUp" placeholder="Contact {name} at {email}">
+  </div>
+
+  <button id="addEvent" onclick="saveEvent()">Submit Event</button>
+
+  <h2>Existing Events</h2>
+  <table id="eventsTable">
+    <thead>
+      <tr>
+        <th>Date</th>
+        <th>Title</th>
+        <th>Type</th>
+        <th>Added By</th>
+        <th>Actions</th>
+      </tr>
+    </thead>
+    <tbody></tbody>
+  </table>
 </div>
 
 <script>
-let currentAdmin = null;
-let editingId = null;
+let currentUserRole = null;
+let currentUsername = null;
 
-async function login() {
-  const res = await fetch("/api/login", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
+// ----- SESSION CHECK -----
+window.addEventListener("DOMContentLoaded", async () => {
+  try {
+    const res = await fetch('/api/session');
+    if(res.ok){
+      const data = await res.json();
+      currentUserRole = data.role;
+      currentUsername = data.username;
+      document.getElementById('loginWrapper').classList.add('hidden');
+      document.getElementById('adminWrapper').classList.remove('hidden');
+      loadEvents();
+    }
+  } catch(e){ console.log("Not logged in"); }
+});
+
+// ----- LOGIN -----
+async function login(){
+  const res = await fetch('/api/login',{
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
     body: JSON.stringify({
-      username: username.value,
-      password: password.value
+      username: document.getElementById('username').value,
+      password: document.getElementById('password').value
     })
   });
-
-  if (!res.ok) {
-    alert("Login failed");
+  const data = await res.json();
+  if(!res.ok){
+    document.getElementById('loginError').textContent = data.error || 'Invalid login';
     return;
   }
-
-  currentAdmin = username.value;
-  loginBox.style.display = "none";
-  adminPanel.style.display = "block";
+  currentUserRole = data.role;
+  currentUsername = document.getElementById('username').value;
+  document.getElementById('loginWrapper').classList.add('hidden');
+  document.getElementById('adminWrapper').classList.remove('hidden');
   loadEvents();
 }
 
-function logout() {
-  document.cookie = "session=; Max-Age=0; path=/";
+// ----- LOGOUT -----
+async function logout(){
+  await fetch('/api/logout');
   location.reload();
 }
 
-async function loadEvents() {
-  const res = await fetch("/api/getEvents");
-  const events = await res.json();
-  eventList.innerHTML = "";
+// ----- LOAD EVENTS -----
+async function loadEvents(){
+  const res = await fetch('/api/getEvents?admin=true');
+  let events = await res.json();
 
-  events.forEach(ev => {
-    const li = document.createElement("li");
-    li.innerHTML = `
-      <strong>${ev.title}</strong>
-      ${ev.date} ${ev.startTime}-${ev.endTime}<br>
-      <small>Type: ${ev.eventType} | Created by: ${ev.createdByAdmin || "N/A"}</small><br>
-      <button onclick="editEvent('${ev._id}')">Edit</button>
-      <button class="danger" onclick="deleteEvent('${ev._id}')">Delete</button>
+  // SEARCH & SORT
+  const searchTerm = document.getElementById('searchEvent')?.value?.toLowerCase() || '';
+  events = events.filter(ev => !searchTerm || ev.title.toLowerCase().includes(searchTerm));
+
+  const sortVal = document.getElementById('sortEvent')?.value || 'dateAsc';
+  events.sort((a,b)=>{
+    if(sortVal==='dateAsc') return new Date(a.date)-new Date(b.date);
+    if(sortVal==='dateDesc') return new Date(b.date)-new Date(a.date);
+    if(sortVal==='type') return a.eType.localeCompare(b.eType);
+    if(sortVal==='title') return a.title.localeCompare(b.title);
+    return 0;
+  });
+
+  const tbody = document.querySelector('#eventsTable tbody');
+  tbody.innerHTML='';
+  events.forEach(ev=>{
+    const tr = document.createElement('tr');
+    tr.innerHTML=`
+      <td>${ev.date}</td>
+      <td>${ev.title}</td>
+      <td>${ev.eType}</td>
+      <td>${ev.addedBy||'N/A'}</td>
+      <td>
+        ${canEdit(ev)? `<button onclick='editEvent("${ev._id||ev.id}")'>Edit</button> 
+                        <button class='delete-event' onclick='deleteEvent("${ev._id||ev.id}")'>Delete</button>`:'View Only'}
+      </td>
     `;
-    eventList.appendChild(li);
+    tbody.appendChild(tr);
   });
 }
 
-async function saveEvent() {
-  const payload = {
-    _id: editingId,
-    eventType: eventTypeMajor.value,
-    date: eventDate.value,
-    startTime: startTime.value,
-    endTime: endTime.value,
-    groupSize: groupSize.value,
-    title: eventTitle.value,
-    description: eventDescription.value,
-    recurring: recurCheckbox.checked,
-    recurWhen: recurWhen.value,
-    recurLengthNum: recurLengthNum.value,
-    recurLength: recurLength.value,
-    contactName: contactName.value,
-    contactInfo: contactInfo.value,
-    walkIns: walkInWelcome.value,
-    signUp: signUp.value,
-    createdByAdmin: currentAdmin
-  };
+// ----- PERMISSIONS -----
+function canEdit(event){
+  if(currentUserRole==='admin'||currentUserRole==='subAdmin') return true;
+  if(currentUserRole==='socialCommittee' && event.eType==='socialCommitteeEvent') return true;
+  return false;
+}
 
-  const res = await fetch(editingId ? "/api/updateEvent" : "/api/addEvent", {
-    method: editingId ? "PUT" : "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(payload)
-  });
+// ----- SAVE EVENT WITH OVERRIDE LOGIC -----
+async function saveEvent(){
+  const type = document.getElementById('eventType').value;
+  const date = document.getElementById('eventDate').value;
+  const title = document.getElementById('eventTitle').value;
+  const description = document.getElementById('eventDescription').value;
 
-  if (!res.ok) {
-    alert("Save failed");
+  if(!date || !title || !type){
+    alert('Please fill required fields.');
     return;
   }
 
-  cancelEdit();
+  // Check for conflicts
+  const conflictRes = await fetch('/api/checkConflict',{
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({date,type})
+  });
+  const conflictData = await conflictRes.json();
+  if(conflictData.conflict){
+    if(!confirm('This event conflicts with an existing small/large group event. Override?')){
+      return;
+    }
+  }
+
+  // Save event
+  const res = await fetch('/api/addEvent',{
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({ date,title,description,eType:type,addedBy: currentUsername })
+  });
+
+  if(!res.ok){
+    const data = await res.json().catch(()=>({}));
+    alert(data.error || 'Failed to save event');
+    return;
+  }
+
   loadEvents();
 }
 
-function editEvent(id) {
-  fetch("/api/getEvents")
-    .then(r => r.json())
-    .then(events => {
-      const ev = events.find(e => e._id === id);
-      if (!ev) return;
-
-      editingId = ev._id;
-      eventTypeMajor.value = ev.eventType;
-      eventDate.value = ev.date;
-      startTime.value = ev.startTime;
-      endTime.value = ev.endTime;
-      groupSize.value = ev.groupSize || "";
-      eventTitle.value = ev.title;
-      eventDescription.value = ev.description;
-
-      saveBtn.textContent = "Update Event";
-      cancelEditBtn.style.display = "inline";
-    });
-}
-
-function cancelEdit() {
-  editingId = null;
-  saveBtn.textContent = "Save Event";
-  cancelEditBtn.style.display = "none";
-  document.querySelectorAll("#adminPanel input, #adminPanel select")
-    .forEach(el => el.value = "");
-}
-
-async function deleteEvent(id) {
-  if (!confirm("Delete this event?")) return;
-  await fetch("/api/deleteEvent", {
-    method: "DELETE",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ id })
+// ----- DELETE EVENT -----
+async function deleteEvent(id){
+  if(!confirm('Delete this event?')) return;
+  await fetch('/api/deleteEvent',{
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({id})
   });
   loadEvents();
 }
 
-recurCheckbox.addEventListener("change", () => {
-  recurring.style.display = recurCheckbox.checked ? "block" : "none";
-});
+// ----- EDIT EVENT -----
+function editEvent(id){
+  alert('Edit modal coming next step');
+}
+
+// ----- SEARCH & SORT -----
+document.getElementById('searchEvent')?.addEventListener('input', loadEvents);
+document.getElementById('sortEvent')?.addEventListener('change', loadEvents);
+
 </script>
 </body>
 </html>

@@ -6,36 +6,25 @@ export default async function handler(req, res) {
   }
 
   try {
-    // Vercel sometimes sends body as a string
-    const body =
-      typeof req.body === "string" ? JSON.parse(req.body) : req.body;
-
-    const { username, password } = body;
-
+    const { username, password } = req.body;
     if (!username || !password) {
       return res.status(400).json({ error: "Missing credentials" });
     }
 
     const user = await verifyUser(username, password);
-    if (!user) {
-      return res.status(401).json({ error: "Invalid credentials" });
-    }
+    if (!user) return res.status(401).json({ error: "Invalid credentials" });
 
-    // IMPORTANT: cookie value must be a string
-    const sessionId = user._id.toString();
+    // persistent cookie for 30 days
+    const maxAge = 30 * 24 * 60 * 60; // 30 days in seconds
 
     res.setHeader(
       "Set-Cookie",
-      `session=${sessionId}; HttpOnly; Path=/; SameSite=Lax; Max-Age=${60 * 60 * 24 * 7}`
+      `session=${user._id}; HttpOnly; Path=/; SameSite=Lax; Max-Age=${maxAge}`
     );
 
-    return res.status(200).json({
-      success: true,
-      role: user.role
-    });
-
+    res.json({ role: user.role });
   } catch (err) {
     console.error("LOGIN ERROR:", err);
-    return res.status(500).json({ error: "Login failed" });
+    res.status(500).json({ error: "Login failed" });
   }
 }

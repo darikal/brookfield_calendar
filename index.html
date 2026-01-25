@@ -8,11 +8,13 @@
 </head>
 <body>
 <div class="wrapper">
+
   <div class="container-calendar">
     <div id="left">
       <h1>Brookfield Events Calendar [Alpha]</h1>
 
-      <div id="event-section">
+      <!-- Public Add Event Section (Hidden for now) -->
+      <div id="event-section" class="public-add-event" style="display:none;">
         <h3>Add Event</h3>
         <select id="eventTypeMajor">
           <option value="" hidden>--- Event Type ---</option>
@@ -43,24 +45,12 @@
           </div>
 
           <div id="recurring" style="display:none;">
-            <br>
             <select id="recurWhen">
               <option value="week">Weekly</option>
               <option value="month">Monthly</option>
               <option value="biWeek">Bi-Weekly</option>
             </select>
 
-            <label for="dayOfWeek">Starting on: </label>
-            <select id="dayOfWeek">
-              <option value="sunday">Sunday</option>
-              <option value="monday">Monday</option>
-              <option value="tuesday">Tuesday</option>
-              <option value="wednesday">Wednesday</option>
-              <option value="thursday">Thursday</option>
-              <option value="friday">Friday</option>
-              <option value="saturday">Saturday</option>
-            </select>
-            <br>
             <label>For the next </label>
             <input type="number" id="recurLengthNum" placeholder="10" max="52">
             <select id="recurLength">
