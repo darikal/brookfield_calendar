@@ -3,7 +3,15 @@
   --blue-light: #e1e6e6;
   --blue-mid:  #4fa3c6;
   --text-default: #333;
+
+  --admin-bg: #ffffff;
+  --admin-border: #d0d6da;
+  --admin-muted: #f4f6f8;
 }
+
+/* =========================
+   GLOBAL
+========================= */
 
 body {
   font-family: Arial, sans-serif;
@@ -13,6 +21,12 @@ body {
   color: var(--text-default);
 }
 
+.hidden { display: none; }
+
+/* =========================
+   PUBLIC CALENDAR
+========================= */
+
 .wrapper {
   max-width: 1100px;
   padding: 0 20px;
@@ -21,12 +35,7 @@ body {
 }
 
 .container-calendar {
-  width: 100%;
-  max-width: 100%;
-  margin: 0 auto;
   background: white;
-  overflow-x: auto;
-  box-sizing: border-box;
   border: 1px solid #ccc;
   padding: 20px;
   border-radius: 8px;
@@ -38,66 +47,6 @@ body {
   background-color: #f2f2f2;
   margin: 0 0 10px 0;
   padding: 10px 0;
-}
-
-.table-calendar thead th {
-  background-color: var(--blue-dark);
-  color: white;
-  font-weight: bold;
-  height: 35px;
-}
-
-#event-section h3,
-#reminder-section h3 {
-  color: var(--blue-dark);
-  font-size: 18px;
-  margin-bottom: 5px;
-}
-
-#event-section,
-#reminder-section {
-  padding: 10px;
-  background: #f5f5f5;
-  margin: 20px 0;
-  border: 1px solid #ccc;
-}
-
-#event-section input[type="date"],
-#event-section input[type="text"],
-#event-section select {
-  margin: 8px 0;
-  padding: 7px;
-  width: 100%;
-  max-width: 100%;
-  box-sizing: border-box;
-}
-
-#event-section button {
-  background: var(--blue-dark);
-  color: white;
-  border: none;
-  padding: 7px 12px;
-  cursor: pointer;
-  margin-top: 10px;
-}
-
-.group-size-wrapper {
-  display: flex;
-  flex-direction: column;
-  gap: 5px;
-}
-
-#groupSize {
-  width: 70px !important;
-  padding: 5px;
-}
-
-.delete-event {
-  background: rgb(237, 19, 19);
-  color: white;
-  border: none;
-  padding: 5px 10px;
-  cursor: pointer;
 }
 
 .table-calendar {
@@ -115,12 +64,11 @@ body {
   vertical-align: top;
   height: 65px;
   box-sizing: border-box;
-  word-wrap: break-word;
 }
 
-.date-picker {
-  position: relative;
-  cursor: pointer;
+.table-calendar thead th {
+  background-color: var(--blue-dark);
+  color: white;
 }
 
 .date-picker:hover {
@@ -128,282 +76,189 @@ body {
   color: white;
 }
 
-.event-marker {
-  position: relative;
-}
-
+/* Event dots */
 .event-dots {
   position: absolute;
   bottom: 2px;
   left: 2px;
   display: flex;
-  flex-direction: column;
-  gap: 2px;
+  gap: 3px;
 }
 
 .event-dot {
-  width: 12px;
-  height: 12px;
+  width: 10px;
+  height: 10px;
   border-radius: 50%;
 }
 
-.event-social { background-color: #59fb41; }
-.event-small  { background-color: #340be9; }
-.event-paid   { background-color: #ffaf47; }
-.event-large  { background-color: #e80ce8; }
-.event-default{ background-color: #ff0b36; }
+.event-social { background:#59fb41; }
+.event-small  { background:#340be9; }
+.event-paid   { background:#ffaf47; }
+.event-large  { background:#e80ce8; }
+.event-default{ background:#ff0b36; }
 
-.event-tooltip {
-  position: absolute;
-  background-color: rgba(225,230,230,0.9);
-  color: black;
-  padding: 8px;
-  font-size: 12px;
-  border-radius: 4px;
-  bottom: 20px;
-  left: 50%;
-  transform: translateX(-50%);
-  display: none;
-  transition: all 0.3s;
-  z-index: 10;
-  width: 140px;
-}
+/* =========================
+   REMINDER ACCORDION
+========================= */
 
-.event-marker:hover .event-tooltip {
-  display: block;
-}
-
-.button-container-calendar {
-  margin-bottom: 1em;
-  overflow: hidden;
-  clear: both;
-}
-
-.button-container-calendar button {
-  cursor: pointer;
-  background: var(--blue-dark);
-  color: #fff;
-  border: 1px solid var(--blue-dark);
-  border-radius: 4px;
-  padding: 5px 10px;
-}
-
-#previous { float: left; }
-#next     { float: right; }
-
-.footer-container-calendar {
-  margin-top: 1em;
-  border-top: 1px solid #dadada;
-  padding: 10px 0;
-}
-
-.footer-container-calendar select {
-  cursor: pointer;
-  background: #ffffff;
-  color: #585858;
-  border: 1px solid #bfc5c5;
-  border-radius: 3px;
-  padding: 5px 10px;
-}
-
-@media (max-width: 600px) {
-  .table-calendar th,
-  .table-calendar td {
-    padding: 3px;
-    height: 45px;
-    font-size: 11px;
-  }
-
-  .event-dot {
-    width: 7px;
-    height: 7px;
-  }
-
-  .event-tooltip {
-    font-size: 10px;
-    padding: 6px;
-    bottom: 12px;
-  }
-
-  #monthAndYear {
-    font-size: 18px;
-  }
-
-  .button-container-calendar button {
-    padding: 3px 8px;
-    font-size: 12px;
-  }
-
-  #event-section input,
-  #event-section select {
-    font-size: 14px;
-    padding: 6px;
-  }
-
-  .time-input {
-    display: flex;
-    flex-direction: column;
-    gap: 5px;
-  }
-
-  .group-size-wrapper {
-    flex-direction: column;
-    gap: 4px;
-  }
-}
-
-@media (min-width: 900px) {
-  .wrapper {
-    max-width: 1100px;
-    margin: 20px auto;
-    padding: 0 20px;
-  }
-
-  .container-calendar {
-    max-width: 100%;
-    padding: 20px;
-    border-radius: 8px;
-  }
-}
-
-/* ---------------- Reminder Accordion ---------------- */
 .reminder-item {
-    margin-bottom: 6px;
+  margin-bottom: 6px;
 }
 
 .reminder-header {
-    padding: 6px;
-    cursor: pointer;
-    font-weight: bold;
-    border-radius: 4px;
-    color: white;
-    transition: background 0.3s;
+  padding: 6px;
+  font-weight: bold;
+  border-radius: 4px;
+  color: white;
+  cursor: pointer;
 }
 
-/* match reminder header colors to event-dot colors */
-.reminder-header.event-social { background-color: #59fb41; }
-.reminder-header.event-small  { background-color: #340be9; }
-.reminder-header.event-paid   { background-color: #ffaf47; }
-.reminder-header.event-large  { background-color: #e80ce8; }
-.reminder-header.event-default{ background-color: #ff0b36; }
-
 .reminder-details {
-    background: #f0f0f0;
-    border: 1px solid #ccc;
-    padding: 0 6px;
-    margin-top: 4px;
-    border-radius: 4px;
-    font-size: 13px;
-    max-height: 0;
-    overflow: hidden;
-    transition: max-height 0.3s ease, padding 0.3s ease;
+  background: #f0f0f0;
+  border: 1px solid #ccc;
+  padding: 0 6px;
+  margin-top: 4px;
+  border-radius: 4px;
+  font-size: 13px;
+  max-height: 0;
+  overflow: hidden;
+  transition: max-height 0.3s ease;
 }
 
 .reminder-details.show {
-    max-height: 200px; /* adjust as needed */
-    padding: 6px;
+  max-height: 200px;
+  padding: 6px;
 }
-/* ================= ADMIN PANEL ================= */
 
-#loginBox,
+/* =========================
+   ADMIN PANEL
+========================= */
+
 #adminPanel {
-  background: white;
-  border: 1px solid #ccc;
-  border-radius: 8px;
+  max-width: 1100px;
+  margin: 40px auto;
+  background: var(--admin-bg);
   padding: 20px;
-  margin-top: 20px;
+  border-radius: 8px;
+  border: 1px solid var(--admin-border);
 }
 
-#loginBox {
-  max-width: 400px;
-  margin: 60px auto;
-}
-
-#loginBox h2 {
+#adminPanel h1,
+#adminPanel h2 {
+  margin-top: 0;
   color: var(--blue-dark);
-  text-align: center;
 }
 
-#loginBox input {
-  width: 100%;
+/* Admin inputs */
+#adminPanel input,
+#adminPanel select,
+#adminPanel button,
+#adminPanel textarea {
   padding: 8px;
   margin: 6px 0;
+  width: 100%;
   box-sizing: border-box;
 }
 
-#loginBox button {
-  width: 100%;
-  margin-top: 10px;
+/* Checkbox alignment */
+#adminPanel label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 10px 0;
 }
 
-#adminPanel h1 {
-  color: var(--blue-dark);
-  text-align: center;
+#adminPanel input[type="checkbox"] {
+  width: auto;
+  margin: 0;
+  transform: scale(1.1);
 }
 
-#adminPanel h3 {
-  color: var(--blue-dark);
-  margin-top: 25px;
+/* Group size fix */
+#adminPanel #groupSize {
+  width: 220px;
+  max-width: 100%;
 }
 
-#adminPanel input,
-#adminPanel select {
-  width: 100%;
-  padding: 7px;
-  margin: 6px 0;
-  box-sizing: border-box;
-}
-
+/* Admin buttons */
 #adminPanel button {
   background: var(--blue-dark);
   color: white;
   border: none;
-  padding: 7px 12px;
-  cursor: pointer;
   border-radius: 4px;
+  cursor: pointer;
 }
 
-#adminPanel button:hover {
-  opacity: 0.9;
-}
-
-#adminPanel .danger {
+#adminPanel button.danger {
   background: #d9534f;
 }
 
-#adminPanel hr {
-  margin: 30px 0;
+/* =========================
+   ADMIN EVENT LIST
+========================= */
+
+.admin-toolbar {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
 }
 
-/* event list */
-#eventList {
-  list-style: none;
-  padding: 0;
+.admin-toolbar input,
+.admin-toolbar select {
+  flex: 1;
+  min-width: 200px;
 }
 
-#eventList li {
-  border: 1px solid #ccc;
-  border-radius: 6px;
-  padding: 10px;
-  margin-bottom: 10px;
+.admin-events-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 10px;
+}
+
+.admin-events-table th,
+.admin-events-table td {
+  border: 1px solid #ddd;
+  padding: 8px;
+  text-align: left;
+}
+
+.admin-events-table th {
+  background: var(--admin-muted);
+  cursor: pointer;
+  user-select: none;
+}
+
+.admin-events-table tr:nth-child(even) {
   background: #f9f9f9;
 }
 
-#eventList li strong {
-  display: block;
-  color: var(--blue-dark);
+.admin-events-table tr:hover {
+  background: #eef3f6;
 }
 
-#eventList button {
-  margin-right: 6px;
-  margin-top: 6px;
+/* Action buttons */
+.admin-actions {
+  display: flex;
+  gap: 6px;
 }
 
-/* recurring box */
-#recurring {
-  padding: 10px;
-  border: 1px dashed #ccc;
-  border-radius: 6px;
-  background: #f5f5f5;
-  margin-top: 6px;
+.admin-actions button {
+  padding: 4px 8px;
+  font-size: 12px;
+}
+
+/* =========================
+   MOBILE
+========================= */
+
+@media (max-width: 600px) {
+  .admin-toolbar {
+    flex-direction: column;
+  }
+
+  .admin-events-table th,
+  .admin-events-table td {
+    font-size: 12px;
+  }
 }
