@@ -1,126 +1,104 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Brookfield Admin Console</title>
-
-  <style>
-    body {
-      font-family: Arial, sans-serif;
-      background: #f4f6f8;
-      margin: 0;
-      padding: 0;
-    }
-
-    .login-wrapper, .admin-wrapper {
-      max-width: 900px;
-      margin: 40px auto;
-      background: #fff;
-      padding: 20px;
-      border-radius: 8px;
-      box-shadow: 0 2px 6px rgba(0,0,0,0.1);
-    }
-
-    h1, h2 {
-      margin-top: 0;
-      color: #333;
-    }
-
-    input, select, button {
-      padding: 8px;
-      margin: 6px 0;
-      width: 100%;
-      box-sizing: border-box;
-    }
-
-    button {
-      background: #6c95a6;
-      color: white;
-      border: none;
-      cursor: pointer;
-      border-radius: 4px;
-    }
-
-    button.danger {
-      background: #d9534f;
-    }
-
-    table {
-      width: 100%;
-      border-collapse: collapse;
-      margin-top: 15px;
-    }
-
-    th, td {
-      border: 1px solid #ddd;
-      padding: 8px;
-    }
-
-    th {
-      background: #f0f0f0;
-    }
-
-    .hidden {
-      display: none;
-    }
-  </style>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Brookfield Calendar – Admin</title>
+<link rel="stylesheet" href="styles.css" />
 </head>
+
 <body>
+<div class="wrapper">
 
-<!-- LOGIN -->
-<div class="login-wrapper" id="loginWrapper">
-  <h1>Admin Login</h1>
-  <input id="username" placeholder="Username" />
-  <input id="password" type="password" placeholder="Password" />
-  <button onclick="login()">Login</button>
-  <p id="loginError" style="color:red"></p>
-</div>
+  <!-- LOGIN -->
+  <div id="loginBox">
+    <h2>Admin Login</h2>
+    <input type="text" id="username" placeholder="Username" />
+    <input type="password" id="password" placeholder="Password" />
+    <button onclick="login()">Login</button>
+  </div>
 
-<!-- ADMIN -->
-<div class="admin-wrapper hidden" id="adminWrapper">
-  <h1>Admin Console</h1>
-  <button onclick="logout()">Logout</button>
+  <!-- ADMIN PANEL -->
+  <div id="adminPanel" style="display:none;">
+    <h1>Brookfield Events – Admin</h1>
 
-  <h2>Create / Edit Event</h2>
+    <button onclick="logout()">Logout</button>
 
-  <select id="eventType">
-    <option value="socialCommitteeEvent">Social Committee</option>
-    <option value="smallGroup">Small Group</option>
-    <option value="reservedPaid">Paid Reservation</option>
-    <option value="noSocialnoPaid">Large Group</option>
-  </select>
+    <h3>Add / Edit Event</h3>
 
-  <input type="date" id="eventDate" />
-  <input id="eventTitle" placeholder="Event Title" />
-  <input id="eventDescription" placeholder="Description" />
+    <select id="eventTypeMajor">
+      <option value="" hidden>--- Event Type ---</option>
+      <option value="social">Social Committee Hosted Event</option>
+      <option value="small">Small Group Event</option>
+      <option value="paid">Paid Reservation</option>
+      <option value="large">Large Group Event</option>
+    </select>
 
-  <button onclick="saveEvent()">Save Event</button>
+    <input type="date" id="eventDate" />
 
-  <h2>Existing Events</h2>
+    <div class="time-input">
+      <label>Start</label>
+      <input type="time" id="startTime" />
+      <label>End</label>
+      <input type="time" id="endTime" />
+    </div>
 
-  <table>
-    <thead>
-      <tr>
-        <th>Date</th>
-        <th>Title</th>
-        <th>Type</th>
-        <th>Actions</th>
-      </tr>
-    </thead>
-    <tbody id="eventsBody"></tbody>
-  </table>
+    <input type="text" id="groupSize" placeholder="Group size (optional)" />
+
+    <label>
+      <input type="checkbox" id="recurCheckbox" /> Recurring Event
+    </label>
+
+    <div id="recurring" style="display:none;">
+      <select id="recurWhen">
+        <option value="week">Weekly</option>
+        <option value="biWeek">Bi-Weekly</option>
+        <option value="month">Monthly</option>
+      </select>
+
+      <label>Repeat for</label>
+      <input type="number" id="recurLengthNum" placeholder="10" />
+      <select id="recurLength">
+        <option value="week">Weeks</option>
+        <option value="month">Months</option>
+      </select>
+    </div>
+
+    <input type="text" id="contactName" placeholder="Contact Name" />
+    <input type="text" id="contactInfo" placeholder="Email or phone" />
+
+    <input type="text" id="eventTitle" placeholder="Event Title" />
+    <input type="text" id="eventDescription" placeholder="Event Description" />
+
+    <select id="walkInWelcome">
+      <option value="" hidden>--- Walk Ins ---</option>
+      <option value="Open">Open to walk ins</option>
+      <option value="Closed">Closed</option>
+      <option value="signUpRequired">Signup Required</option>
+    </select>
+
+    <input type="text" id="signUp" placeholder="Signup instructions" />
+
+    <button id="saveBtn" onclick="saveEvent()">Save Event</button>
+    <button id="cancelEditBtn" onclick="cancelEdit()" style="display:none;">Cancel Edit</button>
+
+    <hr/>
+
+    <h3>Existing Events</h3>
+    <ul id="eventList"></ul>
+  </div>
 </div>
 
 <script>
-let currentRole = null;
-let editingEventId = null;
+let currentAdmin = null;
+let editingId = null;
 
-// ---------------- LOGIN ----------------
+/* ---------------- LOGIN ---------------- */
+
 async function login() {
-  const res = await fetch('/api/login', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+  const res = await fetch("/api/login", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
       username: username.value,
       password: password.value
@@ -128,111 +106,146 @@ async function login() {
   });
 
   if (!res.ok) {
-    loginError.textContent = 'Invalid login';
+    alert("Login failed");
     return;
   }
 
   const data = await res.json();
-  currentRole = data.role;
+  currentAdmin = username.value;
 
-  loginWrapper.classList.add('hidden');
-  adminWrapper.classList.remove('hidden');
+  loginBox.style.display = "none";
+  adminPanel.style.display = "block";
+  loadEvents();
+}
+
+function logout() {
+  document.cookie = "session=; Max-Age=0; path=/";
+  location.reload();
+}
+
+/* ---------------- EVENTS ---------------- */
+
+async function loadEvents() {
+  const res = await fetch("/api/getEvents");
+  const events = await res.json();
+
+  eventList.innerHTML = "";
+
+  events.forEach(ev => {
+    const li = document.createElement("li");
+
+    li.innerHTML = `
+      <strong>${ev.title}</strong>
+      (${ev.eventType}) ${ev.date} ${ev.startTime}-${ev.endTime}
+      <br/>
+      <small>Created by: ${ev.createdByAdmin || "N/A"}</small><br/>
+      <button onclick="editEvent('${ev._id}')">Edit</button>
+      <button onclick="deleteEvent('${ev._id}')">Delete</button>
+    `;
+
+    eventList.appendChild(li);
+  });
+}
+
+/* ---------------- SAVE / EDIT ---------------- */
+
+async function saveEvent() {
+  const payload = {
+    _id: editingId,
+    title: eventTitle.value,
+    date: eventDate.value,
+    startTime: startTime.value,
+    endTime: endTime.value,
+    eventType: eventTypeMajor.value,
+    description: eventDescription.value,
+    groupSize: groupSize.value,
+    recurring: recurCheckbox.checked,
+    recurWhen: recurWhen.value,
+    recurLengthNum: recurLengthNum.value,
+    recurLength: recurLength.value,
+    contactName: contactName.value,
+    contactInfo: contactInfo.value,
+    walkIns: walkInWelcome.value,
+    signUp: signUp.value,
+    createdByAdmin: currentAdmin,
+    overrideApproved: false
+  };
+
+  const url = editingId ? "/api/updateEvent" : "/api/addEvent";
+  const method = editingId ? "PUT" : "POST";
+
+  const res = await fetch(url, {
+    method,
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload)
+  });
+
+  if (res.status === 409) {
+    const data = await res.json();
+    const msg = data.conflicts.map(c =>
+      `${c.eventType.toUpperCase()} ${c.startTime}-${c.endTime}`
+    ).join("\n");
+
+    if (!confirm(
+      `⚠ CONFLICT DETECTED\n\n${msg}\n\nThis event may override lower priority events.\nContinue?`
+    )) return;
+
+    payload.overrideApproved = true;
+    return saveEvent(payload);
+  }
+
+  cancelEdit();
+  loadEvents();
+}
+
+function editEvent(id) {
+  fetch("/api/getEvents")
+    .then(r => r.json())
+    .then(events => {
+      const ev = events.find(e => e._id === id);
+      if (!ev) return;
+
+      editingId = ev._id;
+
+      eventTitle.value = ev.title;
+      eventDate.value = ev.date;
+      startTime.value = ev.startTime;
+      endTime.value = ev.endTime;
+      eventTypeMajor.value = ev.eventType;
+      eventDescription.value = ev.description;
+      groupSize.value = ev.groupSize || "";
+
+      saveBtn.textContent = "Update Event";
+      cancelEditBtn.style.display = "inline";
+    });
+}
+
+function cancelEdit() {
+  editingId = null;
+  saveBtn.textContent = "Save Event";
+  cancelEditBtn.style.display = "none";
+  document.querySelectorAll("input, select").forEach(i => i.value = "");
+}
+
+/* ---------------- DELETE ---------------- */
+
+async function deleteEvent(id) {
+  if (!confirm("Delete this event?")) return;
+
+  await fetch("/api/deleteEvent", {
+    method: "DELETE",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ id })
+  });
 
   loadEvents();
 }
 
-async function logout() {
-  await fetch('/api/logout');
-  location.reload();
-}
+/* ---------------- UI ---------------- */
 
-// ---------------- LOAD EVENTS ----------------
-async function loadEvents() {
-  const res = await fetch('/api/getEvents?admin=true', { cache: 'no-store' });
-  const events = await res.json();
-
-  eventsBody.innerHTML = '';
-
-  if (!Array.isArray(events)) return;
-
-  events.forEach(ev => {
-    const canEdit =
-      currentRole === 'admin' ||
-      currentRole === 'subAdmin' ||
-      (currentRole === 'socialCommittee' && ev.eType === 'socialCommitteeEvent');
-
-    const tr = document.createElement('tr');
-    tr.innerHTML = `
-      <td>${ev.date}</td>
-      <td>${ev.title}</td>
-      <td>${ev.eType}</td>
-      <td>
-        ${canEdit ? `
-          <button onclick='editEvent(${JSON.stringify(ev)})'>Edit</button>
-          <button class="danger" onclick="deleteEvent('${ev._id}')">Delete</button>
-        ` : 'View'}
-      </td>
-    `;
-    eventsBody.appendChild(tr);
-  });
-}
-
-// ---------------- EDIT ----------------
-function editEvent(ev) {
-  editingEventId = ev._id;
-  eventType.value = ev.eType;
-  eventDate.value = ev.date;
-  eventTitle.value = ev.title;
-  eventDescription.value = ev.description || '';
-  window.scrollTo({ top: 0, behavior: 'smooth' });
-}
-
-// ---------------- SAVE ----------------
-async function saveEvent() {
-  const payload = {
-    eType: eventType.value,
-    date: eventDate.value,
-    title: eventTitle.value,
-    description: eventDescription.value
-  };
-
-  let url = '/api/addEvent';
-
-  if (editingEventId) {
-    payload.id = editingEventId;
-    url = '/api/updateEvent';
-  }
-
-  const res = await fetch(url, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(payload)
-  });
-
-  if (!res.ok) {
-    alert('Save failed');
-    return;
-  }
-
-  editingEventId = null;
-  eventTitle.value = '';
-  eventDescription.value = '';
-
-  await loadEvents();
-}
-
-// ---------------- DELETE ----------------
-async function deleteEvent(id) {
-  if (!confirm('Delete this event?')) return;
-
-  await fetch('/api/deleteEvent', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ id })
-  });
-
-  await loadEvents();
-}
+recurCheckbox.addEventListener("change", () => {
+  recurring.style.display = recurCheckbox.checked ? "block" : "none";
+});
 </script>
 </body>
 </html>
