@@ -11,9 +11,11 @@
 <!-- LOGIN -->
 <div class="login-wrapper" id="loginWrapper">
   <h1>Admin Login</h1>
-  <input type="text" id="username" placeholder="Username">
-  <input type="password" id="password" placeholder="Password">
-  <button id="loginBtn">Login</button>
+  <form id="loginForm">
+    <input type="text" id="username" placeholder="Username" required />
+    <input type="password" id="password" placeholder="Password" required />
+    <button type="submit">Login</button>
+  </form>
   <p id="loginError" style="color:red"></p>
 </div>
 
@@ -22,30 +24,30 @@
   <h1>Admin Console</h1>
   <button onclick="logout()">Logout</button>
 
-  <h2>Events</h2>
+  <h2>Create / Edit Event</h2>
 
+  <!-- SEARCH / SORT -->
   <div class="admin-toolbar">
-    <input type="text" id="searchEvent" placeholder="Search events">
+    <input type="text" id="searchEvent" placeholder="Search events…">
     <select id="sortEvent">
       <option value="dateAsc">Date ↑</option>
       <option value="dateDesc">Date ↓</option>
-      <option value="type">Type</option>
       <option value="title">Title</option>
+      <option value="type">Type</option>
     </select>
-    <button onclick="startNewEvent()">+ New Event</button>
   </div>
 
-  <!-- FORM -->
-  <div id="eventForm" class="hidden">
-    <h2 id="formTitle">Create Event</h2>
+  <!-- EVENT TYPE -->
+  <select id="eventType">
+    <option value="" hidden>--- Select Event Type ---</option>
+    <option value="socialCommitteeEvent">Social Committee</option>
+    <option value="smallGroup">Small Group</option>
+    <option value="noSocialnoPaid">Large Group</option>
+    <option value="reservedPaid">Paid Reservation</option>
+  </select>
 
-    <select id="eventType">
-      <option value="" hidden>--- Event Type ---</option>
-      <option value="socialCommitteeEvent">Social Committee</option>
-      <option value="smallGroup">Small Group</option>
-      <option value="reservedPaid">Paid Reservation</option>
-      <option value="noSocialnoPaid">Large Group</option>
-    </select>
+  <!-- EVENT FORM (HIDDEN UNTIL TYPE SELECTED) -->
+  <div id="eventForm" class="hidden">
 
     <input type="date" id="eventDate">
 
@@ -56,16 +58,56 @@
       <input type="time" id="endTime">
     </div>
 
-    <input type="text" id="groupSize" placeholder="Group size">
+    <div class="group-size-wrapper">
+      <label>Group Size</label>
+      <input type="text" id="groupSize" placeholder="10–15">
+    </div>
+
+    <!-- CONTACT INFO -->
+    <h4>Contact Information</h4>
+    <input type="text" id="contactName" placeholder="Contact Name">
+    <input type="text" id="contactInfo" placeholder="Phone or Email">
+
+    <!-- RECURRING -->
+    <label>
+      <input type="checkbox" id="recurCheckbox">
+      Recurring Event
+    </label>
+
+    <div id="recurringOptions" class="hidden">
+      <select id="recurWhen">
+        <option value="week">Weekly</option>
+        <option value="biWeek">Bi-Weekly</option>
+        <option value="month">Monthly</option>
+      </select>
+
+      <label>For the next</label>
+      <input type="number" id="recurLengthNum" min="1" max="52">
+      <select id="recurLength">
+        <option value="week">Weeks</option>
+        <option value="month">Months</option>
+      </select>
+    </div>
 
     <input type="text" id="eventTitle" placeholder="Event Title">
-    <input type="text" id="eventDescription" placeholder="Description">
+    <input type="text" id="eventDescription" placeholder="Event Description">
+
+    <!-- PAID -->
+    <div id="paidInfo" class="hidden">
+      <h4>Paid Reservation</h4>
+      <input type="text" id="residentName" placeholder="Resident Name">
+      <input type="text" id="residentAddress" placeholder="Resident Address">
+      <label>
+        <input type="checkbox" id="acceptTerms">
+        Accept Terms
+      </label>
+    </div>
 
     <button id="saveBtn" onclick="saveEvent()">Save Event</button>
-    <button class="danger" onclick="cancelEdit()">Cancel</button>
   </div>
 
-  <!-- TABLE -->
+  <!-- EVENTS LIST -->
+  <h2>Existing Events</h2>
   <table class="admin-events-table">
     <thead>
       <tr>
@@ -76,169 +118,155 @@
         <th>Actions</th>
       </tr>
     </thead>
-    <tbody id="eventsBody"></tbody>
+    <tbody id="eventsTable"></tbody>
   </table>
 </div>
 
 <script>
-let currentUserRole = null;
-let currentUsername = null;
-let editingEventId = null;
-let allEvents = [];
+let currentUser = null;
+let editId = null;
 
-/* ---------------- SESSION ---------------- */
+/* SESSION */
 window.addEventListener("DOMContentLoaded", async () => {
-  try {
-    const res = await fetch("/api/session");
-    if (res.ok) {
-      const data = await res.json();
-      currentUserRole = data.role;
-      currentUsername = data.username;
-      showAdmin();
-      loadEvents();
-    }
-  } catch {}
+  const res = await fetch("/api/session");
+  if(res.ok){
+    const data = await res.json();
+    currentUser = data;
+    loginWrapper.classList.add("hidden");
+    adminWrapper.classList.remove("hidden");
+    loadEvents();
+  }
 });
 
-/* ---------------- LOGIN ---------------- */
-document.getElementById("loginBtn").onclick = login;
-document.getElementById("password").addEventListener("keydown", e => {
-  if (e.key === "Enter") login();
-});
-
-async function login() {
-  const res = await fetch("/api/login", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
+/* LOGIN */
+loginForm.addEventListener("submit", async e => {
+  e.preventDefault();
+  const res = await fetch("/api/login",{
+    method:"POST",
+    headers:{ "Content-Type":"application/json" },
     body: JSON.stringify({
       username: username.value,
       password: password.value
     })
   });
-
   const data = await res.json();
-  if (!res.ok) {
+  if(!res.ok){
     loginError.textContent = data.error || "Login failed";
     return;
   }
+  location.reload();
+});
 
-  currentUserRole = data.role;
-  currentUsername = username.value;
-  showAdmin();
-  loadEvents();
+/* LOGOUT */
+async function logout(){
+  await fetch("/api/logout");
+  location.reload();
 }
 
-function logout() {
-  fetch("/api/logout").then(() => location.reload());
-}
+/* FORM VISIBILITY */
+eventType.addEventListener("change",()=>{
+  eventForm.classList.toggle("hidden", !eventType.value);
+  paidInfo.classList.toggle("hidden", eventType.value !== "reservedPaid");
+});
 
-function showAdmin() {
-  loginWrapper.classList.add("hidden");
-  adminWrapper.classList.remove("hidden");
-}
+recurCheckbox.addEventListener("change",()=>{
+  recurringOptions.classList.toggle("hidden", !recurCheckbox.checked);
+});
 
-/* ---------------- EVENTS ---------------- */
-async function loadEvents() {
+/* LOAD EVENTS */
+async function loadEvents(){
   const res = await fetch("/api/getEvents?admin=true");
-  allEvents = await res.json();
-  renderEvents();
-}
+  let events = await res.json();
 
-function renderEvents() {
-  const term = searchEvent.value.toLowerCase();
-  const sort = sortEvent.value;
-
-  let events = allEvents.filter(e =>
-    e.title.toLowerCase().includes(term)
-  );
+  const search = searchEvent.value.toLowerCase();
+  events = events.filter(e => e.title.toLowerCase().includes(search));
 
   events.sort((a,b)=>{
-    if(sort==="dateAsc") return new Date(a.date)-new Date(b.date);
-    if(sort==="dateDesc") return new Date(b.date)-new Date(a.date);
-    if(sort==="type") return a.eType.localeCompare(b.eType);
-    if(sort==="title") return a.title.localeCompare(b.title);
+    if(sortEvent.value==="dateAsc") return new Date(a.date)-new Date(b.date);
+    if(sortEvent.value==="dateDesc") return new Date(b.date)-new Date(a.date);
+    if(sortEvent.value==="title") return a.title.localeCompare(b.title);
+    return a.eType.localeCompare(b.eType);
   });
 
-  eventsBody.innerHTML = "";
+  eventsTable.innerHTML="";
   events.forEach(ev=>{
-    const tr = document.createElement("tr");
-    tr.innerHTML = `
-      <td>${ev.date}</td>
-      <td>${ev.title}</td>
-      <td>${ev.eType}</td>
-      <td>${ev.addedBy||""}</td>
-      <td>
-        <button onclick="editEvent('${ev._id}')">Edit</button>
-        <button class="danger" onclick="deleteEvent('${ev._id}')">Delete</button>
-      </td>
-    `;
-    eventsBody.appendChild(tr);
+    eventsTable.innerHTML += `
+      <tr>
+        <td>${ev.date}</td>
+        <td>${ev.title}</td>
+        <td>${ev.eType}</td>
+        <td>${ev.addedBy||"—"}</td>
+        <td>
+          <button onclick="editEvent('${ev._id}')">Edit</button>
+          <button onclick="deleteEvent('${ev._id}')">Delete</button>
+        </td>
+      </tr>`;
   });
 }
 
-/* ---------------- FORM ---------------- */
-function startNewEvent() {
-  editingEventId = null;
-  eventForm.classList.remove("hidden");
-  formTitle.textContent = "Create Event";
-  saveBtn.textContent = "Save Event";
-  eventForm.querySelectorAll("input,select").forEach(i=>i.value="");
+/* EDIT */
+function editEvent(id){
+  fetch("/api/getEvents?admin=true")
+    .then(r=>r.json())
+    .then(events=>{
+      const ev = events.find(e=>e._id===id);
+      editId=id;
+
+      eventType.value=ev.eType;
+      eventForm.classList.remove("hidden");
+
+      eventDate.value=ev.date;
+      startTime.value=ev.startTime||"";
+      endTime.value=ev.endTime||"";
+      groupSize.value=ev.groupSize||"";
+      contactName.value=ev.contactName||"";
+      contactInfo.value=ev.contactInfo||"";
+      eventTitle.value=ev.title;
+      eventDescription.value=ev.description||"";
+
+      recurCheckbox.checked=!!ev.recurring;
+      recurringOptions.classList.toggle("hidden", !ev.recurring);
+      recurWhen.value=ev.recurWhen||"week";
+      recurLengthNum.value=ev.recurLengthNum||"";
+      recurLength.value=ev.recurLength||"week";
+
+      paidInfo.classList.toggle("hidden", ev.eType!=="reservedPaid");
+      residentName.value=ev.residentName||"";
+      residentAddress.value=ev.residentAddress||"";
+    });
 }
 
-function editEvent(id) {
-  const ev = allEvents.find(e=>e._id===id);
-  if(!ev) return;
-
-  editingEventId = id;
-  eventForm.classList.remove("hidden");
-  formTitle.textContent = "Edit Event";
-  saveBtn.textContent = "Update Event";
-
-  eventType.value = ev.eType;
-  eventDate.value = ev.date;
-  startTime.value = ev.startTime||"";
-  endTime.value = ev.endTime||"";
-  groupSize.value = ev.groupSize||"";
-  eventTitle.value = ev.title;
-  eventDescription.value = ev.description||"";
-
-  window.scrollTo({top:0,behavior:"smooth"});
-}
-
-function cancelEdit() {
-  eventForm.classList.add("hidden");
-  editingEventId = null;
-}
-
-/* ---------------- SAVE ---------------- */
-async function saveEvent() {
+/* SAVE */
+async function saveEvent(){
   const payload = {
-    id: editingEventId,
+    id: editId,
     eType: eventType.value,
     date: eventDate.value,
-    title: eventTitle.value,
-    description: eventDescription.value,
     startTime: startTime.value,
     endTime: endTime.value,
     groupSize: groupSize.value,
-    addedBy: currentUsername
+    title: eventTitle.value,
+    description: eventDescription.value,
+    contactName: contactName.value,
+    contactInfo: contactInfo.value,
+    recurring: recurCheckbox.checked,
+    recurWhen: recurWhen.value,
+    recurLengthNum: recurLengthNum.value,
+    recurLength: recurLength.value,
+    addedBy: currentUser.username
   };
 
-  const res = await fetch(editingEventId?"/api/updateEvent":"/api/addEvent",{
+  await fetch("/api/addEvent",{
     method:"POST",
     headers:{ "Content-Type":"application/json" },
     body: JSON.stringify(payload)
   });
 
-  if(!res.ok){
-    alert("Save failed");
-    return;
-  }
-
-  cancelEdit();
+  editId=null;
   loadEvents();
 }
 
+/* DELETE */
 async function deleteEvent(id){
   if(!confirm("Delete this event?")) return;
   await fetch("/api/deleteEvent",{
@@ -249,10 +277,8 @@ async function deleteEvent(id){
   loadEvents();
 }
 
-/* ---------------- UI ---------------- */
-searchEvent.oninput = renderEvents;
-sortEvent.onchange = renderEvents;
+searchEvent.addEventListener("input", loadEvents);
+sortEvent.addEventListener("change", loadEvents);
 </script>
-
 </body>
 </html>
