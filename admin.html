@@ -5,6 +5,21 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Brookfield Admin Console</title>
 <link rel="stylesheet" href="styles.css">
+<style>
+/* Quick inline styles for conflicts */
+.conflict {
+  background-color: #ffcccc;
+}
+#conflictContainer {
+  color: red;
+  margin-top: 10px;
+  display: none;
+}
+.hidden { display: none; }
+.admin-wrapper { padding: 20px; }
+.admin-events-table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+.admin-events-table th, .admin-events-table td { border: 1px solid #ccc; padding: 8px; text-align: left; }
+</style>
 </head>
 <body>
 
@@ -48,9 +63,7 @@
 
   <!-- EVENT FORM (HIDDEN UNTIL TYPE SELECTED) -->
   <div id="eventForm" class="hidden">
-
     <input type="date" id="eventDate">
-
     <div class="time-input">
       <label>Start</label>
       <input type="time" id="startTime">
@@ -80,7 +93,6 @@
         <option value="biWeek">Bi-Weekly</option>
         <option value="month">Monthly</option>
       </select>
-
       <label>For the next</label>
       <input type="number" id="recurLengthNum" min="1" max="52">
       <select id="recurLength">
@@ -104,6 +116,7 @@
     </div>
 
     <button id="saveBtn" onclick="saveEvent()">Save Event</button>
+    <div id="conflictContainer"></div>
   </div>
 
   <!-- EVENTS LIST -->
@@ -190,8 +203,9 @@ async function loadEvents(){
 
   eventsTable.innerHTML="";
   events.forEach(ev=>{
+    const conflictClass = ev.hasConflict ? "conflict" : "";
     eventsTable.innerHTML += `
-      <tr>
+      <tr class="${conflictClass}">
         <td>${ev.date}</td>
         <td>${ev.title}</td>
         <td>${ev.eType}</td>
@@ -237,7 +251,11 @@ function editEvent(id){
 }
 
 /* SAVE */
-async function saveEvent(){
+async function saveEvent() {
+  const conflictContainer = document.getElementById("conflictContainer");
+  conflictContainer.style.display = "none";
+  conflictContainer.innerHTML = "";
+
   const payload = {
     id: editId,
     eType: eventType.value,
@@ -256,14 +274,43 @@ async function saveEvent(){
     addedBy: currentUser.username
   };
 
-  await fetch("/api/addEvent",{
-    method:"POST",
-    headers:{ "Content-Type":"application/json" },
-    body: JSON.stringify(payload)
-  });
+  try {
+    const res = await fetch("/api/addEvent", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload)
+    });
 
-  editId=null;
-  loadEvents();
+    const data = await res.json();
+
+    if (!res.ok) {
+      if (res.status === 409 && data.conflicts) {
+        conflictContainer.style.display = "block";
+        conflictContainer.innerHTML = "<strong>Conflicts detected:</strong><br>";
+        for (const date in data.conflicts) {
+          conflictContainer.innerHTML += `<u>${date}</u>:<br>`;
+          data.conflicts[date].forEach(e => {
+            conflictContainer.innerHTML += `&nbsp;${e.startTime}-${e.endTime} | ${e.title} (${e.type})<br>`;
+          });
+        }
+      } else {
+        conflictContainer.style.display = "block";
+        conflictContainer.textContent = data.error || "Failed to save event";
+      }
+      return;
+    }
+
+    // Success
+    editId = null;
+    conflictContainer.style.display = "none";
+    conflictContainer.innerHTML = "";
+    loadEvents();
+
+  } catch (err) {
+    console.error("Save event error:", err);
+    conflictContainer.style.display = "block";
+    conflictContainer.textContent = "Server error: " + err.message;
+  }
 }
 
 /* DELETE */
