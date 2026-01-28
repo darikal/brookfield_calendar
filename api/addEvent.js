@@ -4,7 +4,7 @@ import { ObjectId } from "mongodb";
 const PRIORITY = {
   reservedPaid: 4,
   socialCommitteeEvent: 3,
- noSocialnoPaid: 2,
+  noSocialnoPaid: 2,
   smallGroup: 1
 };
 
@@ -15,8 +15,9 @@ function generateRecurringDates(startDate, type, lengthNum) {
   let current = new Date(startDate);
 
   for (let i = 0; i < count; i++) {
-    dates.push(current.toISOString().split("T")[0]);
-
+    if (!isNaN(current.getTime())) {
+      dates.push(current.toISOString().split("T")[0]);
+    }
     if (type === "week") current.setDate(current.getDate() + 7);
     else if (type === "biWeek") current.setDate(current.getDate() + 14);
     else if (type === "month") current.setMonth(current.getMonth() + 1);
@@ -27,27 +28,20 @@ function generateRecurringDates(startDate, type, lengthNum) {
 
 export default async function handler(req, res) {
   try {
-    if (req.method !== "POST") {
-      return res.status(405).json({ error: "Method not allowed" });
-    }
+    if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed" });
 
-    // Safe parsing for Vercel
-    let event;
+    // Vercel sometimes sends string body
+    let bodyData;
     try {
-      event = typeof req.body === "string" ? JSON.parse(req.body) : req.body;
+      bodyData = typeof req.body === "string" ? JSON.parse(req.body) : req.body;
     } catch (err) {
       return res.status(400).json({ error: "Invalid JSON body", details: err.message });
     }
 
-    if (!event || typeof event !== "object") {
-      return res.status(400).json({ error: "Empty or invalid body" });
-    }
+    const event = bodyData || {};
+    if (!event || typeof event !== "object") return res.status(400).json({ error: "Empty or invalid body" });
 
-    if (event.id && !ObjectId.isValid(event.id)) {
-      return res.status(400).json({ error: "Invalid event ID" });
-    }
-
-    // Required fields
+    // Validate required fields
     const required = ["eType", "date", "startTime", "endTime", "title"];
     for (const f of required) {
       if (!event[f]) return res.status(400).json({ error: `Missing field: ${f}` });
@@ -56,7 +50,7 @@ export default async function handler(req, res) {
     if (!PRIORITY[event.eType]) return res.status(400).json({ error: `Unknown event type: ${event.eType}` });
 
     const db = await getDB();
-    const events = db.collection("events");
+    const eventsCollection = db.collection("events");
 
     const dates = event.recurring
       ? generateRecurringDates(event.date, event.recurWhen, event.recurLengthNum)
@@ -64,15 +58,13 @@ export default async function handler(req, res) {
 
     const conflictBreakdown = {};
 
-    // Check for conflicts
     for (const date of dates) {
-      const conflicts = await events.find({ date }).toArray();
+      const conflicts = await eventsCollection.find({ date }).toArray();
       const blocking = conflicts.filter(e =>
         PRIORITY[e.eType] >= PRIORITY[event.eType] &&
         e.startTime < event.endTime &&
         e.endTime > event.startTime
       );
-
       if (blocking.length) {
         conflictBreakdown[date] = blocking.map(e => ({
           title: e.title,
@@ -110,24 +102,24 @@ export default async function handler(req, res) {
         createdAt: new Date()
       };
 
-      if (event.id) {
-        // Update existing event
-        await events.updateOne(
-          { _id: new ObjectId(event.id) },
-          { $set: eventData }
-        );
-        insertedIds.push(event.id);
-      } else {
-        // Insert new event
-        const result = await events.insertOne(eventData);
-        insertedIds.push(result.insertedId);
+      try {
+        if (event.id && ObjectId.isValid(event.id)) {
+          await eventsCollection.updateOne({ _id: new ObjectId(event.id) }, { $set: eventData });
+          insertedIds.push(event.id);
+        } else {
+          const result = await eventsCollection.insertOne(eventData);
+          insertedIds.push(result.insertedId);
+        }
+      } catch (insertErr) {
+        console.error("Insert error:", insertErr);
+        return res.status(500).json({ error: "Database insert failed", details: insertErr.message });
       }
     }
 
     return res.status(200).json({ success: true, inserted: insertedIds, conflicts: conflictBreakdown });
 
   } catch (err) {
-    console.error("addEvent error:", err);
+    console.error("addEvent fatal error:", err);
     return res.status(500).json({ error: "Server error", details: err.message });
   }
 }
