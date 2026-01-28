@@ -53,7 +53,7 @@
 let currentDate = new Date();
 let events = [];
 
-// Load events from API
+// Load all events from API
 async function loadEvents(){
   try {
     const res = await fetch("/api/getEvents");
@@ -65,14 +65,25 @@ async function loadEvents(){
   }
 }
 
-// Render event list below calendar
+// Render only events for the currently displayed month
 function renderEventList(){
   const ul = document.getElementById("reminderList");
   ul.innerHTML = "";
-  events.sort((a,b)=>new Date(a.date)-new Date(b.date));
-  events.forEach(e=>{
+
+  const month = currentDate.getMonth();
+  const year = currentDate.getFullYear();
+
+  const eventsForMonth = events.filter(ev=>{
+    const d = new Date(ev.date);
+    return d.getMonth() === month && d.getFullYear() === year;
+  });
+
+  eventsForMonth.sort((a,b)=>new Date(a.date)-new Date(b.date));
+
+  eventsForMonth.forEach(e=>{
     const li = document.createElement("li");
     li.dataset.eventId = e._id; // for linking
+
     let typeClass = "event-default";
     if(e.eType==="socialCommitteeEvent") typeClass="event-social";
     else if(e.eType==="smallGroup") typeClass="event-small";
@@ -99,7 +110,7 @@ function renderEventList(){
   });
 }
 
-// Render calendar with colored dots
+// Render calendar with colored dots and day click
 function renderCalendar(){
   const month = currentDate.getMonth();
   const year = currentDate.getFullYear();
@@ -142,13 +153,14 @@ function renderCalendar(){
             dot.className = "event-dot "+cls;
             dot.title = `${ev.title} (${ev.startTime||''}-${ev.endTime||''})`;
 
-            // Scroll to reminder on click
-            dot.addEventListener("click", ()=>{
+            // Scroll to individual reminder on dot click
+            dot.addEventListener("click", (e)=>{
+              e.stopPropagation(); // prevent day click
               const reminder = document.querySelector(`#reminderList li[data-event-id='${ev._id}']`);
               if(reminder){
                 reminder.scrollIntoView({behavior:"smooth", block:"start"});
                 reminder.classList.add("reminder-highlight");
-                setTimeout(()=>reminder.classList.remove("reminder-highlight"), 2000);
+                setTimeout(()=>reminder.classList.remove("reminder-highlight"),2000);
               }
             });
 
@@ -156,6 +168,24 @@ function renderCalendar(){
           });
           cell.appendChild(dotContainer);
         }
+
+        // Click day to scroll and expand all events for that day
+        cell.addEventListener("click", ()=>{
+          const reminders = document.querySelectorAll("#reminderList li");
+          reminders.forEach(li=>{
+            const details = li.querySelector(".reminder-details");
+            if(li.dataset.eventId && eventsForDay.some(ev=>ev._id===li.dataset.eventId)){
+              // Expand and highlight
+              details.classList.add("show");
+              li.classList.add("reminder-highlight");
+              setTimeout(()=>li.classList.remove("reminder-highlight"),2000);
+            } else {
+              // Collapse other events
+              details.classList.remove("show");
+            }
+          });
+          if(reminders.length) reminders[0].scrollIntoView({behavior:"smooth", block:"start"});
+        });
 
         date++;
       }
@@ -170,10 +200,12 @@ function renderCalendar(){
 document.getElementById("previous").addEventListener("click", ()=>{
   currentDate.setMonth(currentDate.getMonth()-1);
   renderCalendar();
+  renderEventList();
 });
 document.getElementById("next").addEventListener("click", ()=>{
   currentDate.setMonth(currentDate.getMonth()+1);
   renderCalendar();
+  renderEventList();
 });
 
 // Jump selects
@@ -193,8 +225,16 @@ for(let y=currentDate.getFullYear()-5;y<=currentDate.getFullYear()+5;y++){
 }
 monthSelect.value = currentDate.getMonth();
 yearSelect.value = currentDate.getFullYear();
-monthSelect.addEventListener("change", ()=>{ currentDate.setMonth(+monthSelect.value); renderCalendar(); });
-yearSelect.addEventListener("change", ()=>{ currentDate.setFullYear(+yearSelect.value); renderCalendar(); });
+monthSelect.addEventListener("change", ()=>{
+  currentDate.setMonth(+monthSelect.value);
+  renderCalendar();
+  renderEventList();
+});
+yearSelect.addEventListener("change", ()=>{
+  currentDate.setFullYear(+yearSelect.value);
+  renderCalendar();
+  renderEventList();
+});
 
 loadEvents();
 </script>
