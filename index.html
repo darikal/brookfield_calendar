@@ -3,119 +3,42 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<link rel="stylesheet" href="styles.css">
 <title>Brookfield Events Calendar [Alpha]</title>
+<link rel="stylesheet" href="styles.css">
+<style>
+/* Calendar & layout */
+.wrapper { max-width: 1200px; margin: auto; padding: 10px; }
+.container-calendar { display: flex; flex-wrap: wrap; gap: 20px; }
+#left, #right { flex: 1 1 400px; }
+#monthAndYear { text-align: center; margin-bottom: 10px; }
+.table-calendar { width: 100%; border-collapse: collapse; }
+.table-calendar th, .table-calendar td { border: 1px solid #ccc; text-align: center; padding: 5px; }
+.button-container-calendar { text-align: center; margin-bottom: 10px; }
+.footer-container-calendar { text-align: center; margin-top: 10px; }
+#reminderList { list-style-type: none; padding: 0; margin: 10px 0; }
+#reminderList li { background: #f0f0f0; margin-bottom: 5px; padding: 5px 10px; border-left: 5px solid #0077cc; }
+.eventTitle { font-weight: bold; }
+.eventTime { font-style: italic; color: #555; }
+.eventContact { color: #333; font-size: 0.9em; }
+</style>
 </head>
 <body>
-
 <div class="wrapper">
 
-  <!-- ================= CALENDAR LAYOUT ================= -->
   <div class="container-calendar">
-
-    <!-- LEFT COLUMN -->
+    <!-- Left: Event list -->
     <div id="left">
       <h1>Brookfield Events Calendar [Alpha]</h1>
 
-      <!-- Public Add Event Section (Hidden for now) -->
-      <div id="event-section" class="public-add-event" style="display:none;">
-        <h3>Add Event</h3>
-
-        <select id="eventTypeMajor">
-          <option value="" hidden>--- Event Type ---</option>
-          <option value="socialCommitteeEvent">Social Committee Hosted Event</option>
-          <option value="smallGroup">Small Group Event</option>
-          <option value="reservedPaid">Paid Reservation</option>
-          <option value="noSocialnoPaid">Large Group Event</option>
-        </select>
-
-        <div id="eventDetailsWrapper" style="display:none;">
-
-          <input type="date" id="eventDate">
-
-          <div class="time-input">
-            <label>Start Time:</label>
-            <input type="time" id="startTime" min="07:30" max="19:00">
-            <label>End Time:</label>
-            <input type="time" id="endTime" min="08:15" max="19:45">
-          </div>
-
-          <div class="group-size-wrapper">
-            <label>Approximate size of group [max 180]</label>
-            <input type="text" id="groupSize" placeholder="10–15" maxlength="5">
-          </div>
-
-          <div id="recurBox">
-            <label>
-              <input type="checkbox" id="recurCheckbox">
-              Recurring Event
-            </label>
-          </div>
-
-          <div id="recurring" style="display:none;">
-            <select id="recurWhen">
-              <option value="week">Weekly</option>
-              <option value="biWeek">Bi-Weekly</option>
-              <option value="month">Monthly</option>
-            </select>
-
-            <label>For the next</label>
-            <input type="number" id="recurLengthNum" placeholder="10" max="52">
-
-            <select id="recurLength">
-              <option value="week">Weeks</option>
-              <option value="month">Months</option>
-            </select>
-          </div>
-
-          <div class="contactDiv">
-            <input type="text" id="contactName" placeholder="Contact name">
-            <input type="text" id="contactInfo" placeholder="Phone or email">
-          </div>
-
-          <input type="text" id="eventTitle" placeholder="Event Title">
-          <input type="text" id="eventDescription" placeholder="Event Description">
-
-          <div id="paidInfo" style="display:none;">
-            <input type="text" id="residentName" placeholder="Resident Name">
-            <input type="text" id="contactNamePaid" placeholder="Contact Name (if different)">
-            <input type="text" id="residentAddress" placeholder="Resident Address">
-
-            <div id="termsWrapper" style="margin-top:10px;">
-              <label>
-                <input type="checkbox" id="acceptTerms">
-                I accept the Terms and Conditions
-              </label>
-              <textarea readonly rows="5" style="width:100%; margin-top:5px;">
-Full terms and conditions text for paid reservations.
-              </textarea>
-            </div>
-          </div>
-
-          <select id="walkInWelcome">
-            <option value="" hidden>--- Are Walk Ins Welcome ---</option>
-            <option value="Open">Open to walk ins</option>
-            <option value="Closed">Closed to walk ins</option>
-            <option value="Other">Other – specify</option>
-          </select>
-
-          <div id="eventOther" style="display:none;">
-            <input type="text" id="eventType" placeholder="Email or call contact">
-          </div>
-
-          <div id="signUpField" style="display:none;">
-            <input type="text" id="signUp" placeholder="Signup instructions">
-          </div>
-
-          <button id="addEvent">Submit</button>
-        </div>
+      <div id="reminder-section">
+        <h3>Events & Reservations</h3>
+        <ul id="reminderList"></ul>
       </div>
     </div>
 
-    <!-- RIGHT COLUMN -->
+    <!-- Right: Calendar -->
     <div id="right">
       <h3 id="monthAndYear"></h3>
-
       <div class="button-container-calendar">
         <button id="previous">‹</button>
         <button id="next">›</button>
@@ -127,22 +50,114 @@ Full terms and conditions text for paid reservations.
       </table>
 
       <div class="footer-container-calendar">
-        <label>Jump To:</label>
+        <label for="month">Jump To: </label>
         <select id="month"></select>
         <select id="year"></select>
       </div>
     </div>
-
   </div>
-
-  <!-- ================= EVENTS BELOW CALENDAR ================= -->
-  <div id="reminder-section" class="below-calendar">
-    <h3>Events & Reservations</h3>
-    <ul id="reminderList"></ul>
-  </div>
-
 </div>
 
-<script src="script.js" defer></script>
+<script>
+// Placeholder calendar logic
+let currentDate = new Date();
+let events = [];
+
+// Load events from API
+async function loadEvents(){
+  try {
+    const res = await fetch("/api/getEvents");
+    events = await res.json();
+    renderEventList();
+    renderCalendar();
+  } catch(err){
+    console.error("Error loading events:", err);
+  }
+}
+
+// Render event list below calendar
+function renderEventList(){
+  const ul = document.getElementById("reminderList");
+  ul.innerHTML = "";
+  events.sort((a,b)=>new Date(a.date)-new Date(b.date));
+  events.forEach(e=>{
+    const li = document.createElement("li");
+    li.innerHTML = `
+      <div class="eventTitle">${e.title} (${e.eType})</div>
+      <div class="eventTime">${e.date} ${e.startTime||''}-${e.endTime||''}</div>
+      <div class="eventContact">${e.contactName || ''} ${e.contactInfo || ''}</div>
+    `;
+    ul.appendChild(li);
+  });
+}
+
+// Calendar rendering
+function renderCalendar(){
+  const month = currentDate.getMonth();
+  const year = currentDate.getFullYear();
+  const monthAndYear = document.getElementById("monthAndYear");
+  monthAndYear.textContent = `${currentDate.toLocaleString('default',{month:'long'})} ${year}`;
+
+  const firstDay = new Date(year, month, 1).getDay();
+  const daysInMonth = new Date(year, month+1, 0).getDate();
+
+  const tblBody = document.getElementById("calendar-body");
+  tblBody.innerHTML = "";
+  let date = 1;
+  for(let i=0; i<6; i++){
+    const row = document.createElement("tr");
+    for(let j=0; j<7; j++){
+      const cell = document.createElement("td");
+      if(i===0 && j<firstDay){ cell.innerHTML = ""; }
+      else if(date>daysInMonth){ cell.innerHTML = ""; }
+      else{
+        cell.innerHTML = date;
+        const cellDate = `${year}-${String(month+1).padStart(2,'0')}-${String(date).padStart(2,'0')}`;
+        // Highlight days with events
+        if(events.some(ev=>ev.date===cellDate)){
+          cell.style.backgroundColor = "#ccf2ff";
+          cell.title = events.filter(ev=>ev.date===cellDate).map(ev=>ev.title).join(", ");
+        }
+        date++;
+      }
+      row.appendChild(cell);
+    }
+    tblBody.appendChild(row);
+    if(date>daysInMonth) break;
+  }
+}
+
+// Calendar navigation
+document.getElementById("previous").addEventListener("click", ()=>{
+  currentDate.setMonth(currentDate.getMonth()-1);
+  renderCalendar();
+});
+document.getElementById("next").addEventListener("click", ()=>{
+  currentDate.setMonth(currentDate.getMonth()+1);
+  renderCalendar();
+});
+
+// Jump selects
+const monthSelect = document.getElementById("month");
+const yearSelect = document.getElementById("year");
+for(let m=0;m<12;m++){
+  const opt = document.createElement("option");
+  opt.value = m;
+  opt.text = new Date(0,m).toLocaleString('default',{month:'long'});
+  monthSelect.appendChild(opt);
+}
+for(let y=currentDate.getFullYear()-5;y<=currentDate.getFullYear()+5;y++){
+  const opt = document.createElement("option");
+  opt.value = y;
+  opt.text = y;
+  yearSelect.appendChild(opt);
+}
+monthSelect.value = currentDate.getMonth();
+yearSelect.value = currentDate.getFullYear();
+monthSelect.addEventListener("change", ()=>{ currentDate.setMonth(+monthSelect.value); renderCalendar(); });
+yearSelect.addEventListener("change", ()=>{ currentDate.setFullYear(+yearSelect.value); renderCalendar(); });
+
+loadEvents();
+</script>
 </body>
 </html>

@@ -19,30 +19,28 @@ function generateRecurringDates(startDate, type, lengthNum) {
     else if (type === "biWeek") current.setDate(current.getDate() + 14);
     else if (type === "month") current.setMonth(current.getMonth() + 1);
   }
+
   return dates;
 }
 
 export default async function handler(req, res) {
   try {
-    if (req.method !== "POST") {
-      return res.status(405).json({ error: "Method not allowed" });
-    }
+    if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed" });
 
     const db = await getDB();
-    const event = { ...req.body };
+    const event = await req.json ? await req.json() : req.body;
+
+    if (!event) return res.status(400).json({ error: "Empty request body" });
     if (event.id) delete event.id;
 
-    // Validate required fields
+    // Required fields
     const required = ["eType", "date", "startTime", "endTime", "title"];
     for (const f of required) {
       if (!event[f]) return res.status(400).json({ error: `Missing field: ${f}` });
     }
 
-    if (!PRIORITY[event.eType]) {
-      return res.status(400).json({ error: `Unknown event type: ${event.eType}` });
-    }
+    if (!PRIORITY[event.eType]) return res.status(400).json({ error: `Unknown event type: ${event.eType}` });
 
-    // Determine all dates to insert
     const dates = event.recurring
       ? generateRecurringDates(event.date, event.recurWhen, event.recurLengthNum)
       : [event.date];
@@ -50,18 +48,13 @@ export default async function handler(req, res) {
     const conflictBreakdown = {};
 
     for (const date of dates) {
-      // Use $expr to compare times
-      const conflicts = await db.collection("events").find({
-        date,
-        $expr: {
-          $and: [
-            { $lt: ["$startTime", event.endTime] },
-            { $gt: ["$endTime", event.startTime] }
-          ]
-        }
-      }).toArray();
+      const conflicts = await db.collection("events").find({ date }).toArray();
 
-      const blocking = conflicts.filter(e => PRIORITY[e.eType] >= PRIORITY[event.eType]);
+      const blocking = conflicts.filter(e => {
+        return PRIORITY[e.eType] >= PRIORITY[event.eType] &&
+          !(e.endTime <= event.startTime || e.startTime >= event.endTime);
+      });
+
       if (blocking.length) {
         conflictBreakdown[date] = blocking.map(e => ({
           title: e.title,
@@ -73,25 +66,19 @@ export default async function handler(req, res) {
     }
 
     if (Object.keys(conflictBreakdown).length && !event.overrideApproved) {
-      return res.status(409).json({
-        error: "conflict",
-        conflicts: conflictBreakdown
-      });
+      return res.status(409).json({ error: "conflict", conflicts: conflictBreakdown });
     }
 
     const insertedIds = [];
     for (const date of dates) {
       if (conflictBreakdown[date] && !event.overrideApproved) continue;
-      const insert = await db.collection("events").insertOne({
-        ...event,
-        date,
-        createdAt: new Date()
-      });
-      insertedIds.push(insert.insertedId);
+
+      const doc = { ...event, date, createdAt: new Date() };
+      const result = await db.collection("events").insertOne(doc);
+      insertedIds.push(result.insertedId);
     }
 
     return res.json({ success: true, inserted: insertedIds, conflicts: conflictBreakdown });
-
   } catch (err) {
     console.error("addEvent error:", err);
     return res.status(500).json({ error: "Server error", details: err.message });
