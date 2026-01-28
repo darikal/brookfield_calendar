@@ -9,19 +9,14 @@ if (!uri) {
 let client;
 let clientPromise;
 
-export async function getDB() {
-  try {
-    if (!clientPromise) {
-      client = new MongoClient(uri, {
-        maxPoolSize: 5
-      });
-      clientPromise = client.connect();
-    }
+if (!global._mongoClientPromise) {
+  client = new MongoClient(uri, {
+    maxPoolSize: 10
+  });
 
-    const connectedClient = await clientPromise;
-    return connectedClient.db();
-  } catch (err) {
-    console.error("MongoDB connection failed:", err);
-    throw err;
-  }
+  global._mongoClientPromise = client.connect();
 }
+
+clientPromise = global._mongoClientPromise;
+
+export default clientPromise;
