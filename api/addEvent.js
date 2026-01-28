@@ -14,22 +14,24 @@ export default async function handler(req, res) {
     }
 
     const db = await getDB();
-    const event = req.body;
+    const event = { ...req.body };
+
+    // Remove `id` if present to prevent MongoDB error
+    delete event.id;
 
     if (!event.date || !event.startTime || !event.endTime || !event.eType) {
       return res.status(400).json({ error: "Missing required fields" });
     }
 
+    // Ensure safe string comparison for times
     const conflicts = await db.collection("events").find({
       date: event.date,
-      startTime: { $lt: event.endTime },
-      endTime: { $gt: event.startTime }
+      startTime: { $exists: true, $lt: event.endTime },
+      endTime: { $exists: true, $gt: event.startTime }
     }).toArray();
 
     const blockingConflicts = conflicts.filter(existing => {
-      return (
-        PRIORITY[existing.eType] >= PRIORITY[event.eType]
-      );
+      return PRIORITY[existing.eType] >= PRIORITY[event.eType];
     });
 
     if (blockingConflicts.length && !event.overrideApproved) {
@@ -45,7 +47,6 @@ export default async function handler(req, res) {
     });
 
     return res.json({ success: true });
-
   } catch (err) {
     console.error("addEvent error:", err);
     return res.status(500).json({ error: "Server error" });
