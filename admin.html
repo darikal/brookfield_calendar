@@ -135,7 +135,7 @@ let editId = null;
 window.addEventListener("DOMContentLoaded", async () => {
   try {
     const res = await fetch("/api/session");
-    if (res.ok) {
+    if(res.ok){
       currentUser = await res.json();
       loginWrapper.classList.add("hidden");
       adminWrapper.classList.remove("hidden");
@@ -151,43 +151,40 @@ loginForm.addEventListener("submit", async e => {
   e.preventDefault();
   try {
     const res = await fetch("/api/login", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
+      method:"POST",
+      headers:{ "Content-Type":"application/json" },
       body: JSON.stringify({
         username: username.value,
         password: password.value
       })
     });
     const data = await res.json();
-    if (!res.ok) {
+    if(!res.ok){
       loginError.textContent = data.error || "Login failed";
       return;
     }
     location.reload();
-  } catch (err) {
+  } catch(err) {
     console.error("Login error:", err);
     loginError.textContent = "Network error";
   }
 });
 
 /* LOGOUT */
-async function logout() {
+async function logout(){
   await fetch("/api/logout");
   location.reload();
 }
 
 /* FORM VISIBILITY */
-eventType.addEventListener("change", () => {
+eventType.addEventListener("change", ()=>{
   eventForm.classList.toggle("hidden", !eventType.value);
   paidInfo.classList.toggle("hidden", eventType.value !== "reservedPaid");
 });
-
-recurCheckbox.addEventListener("change", () => {
-  recurringOptions.classList.toggle("hidden", !recurCheckbox.checked);
-});
+recurCheckbox.addEventListener("change", ()=>{ recurringOptions.classList.toggle("hidden", !recurCheckbox.checked); });
 
 /* LOAD EVENTS */
-async function loadEvents() {
+async function loadEvents(){
   try {
     const res = await fetch("/api/getEvents?admin=true");
     let events = await res.json();
@@ -195,10 +192,10 @@ async function loadEvents() {
     const search = searchEvent.value.toLowerCase();
     events = events.filter(e => e.title.toLowerCase().includes(search));
 
-    events.sort((a, b) => {
-      if (sortEvent.value === "dateAsc") return new Date(a.date) - new Date(b.date);
-      if (sortEvent.value === "dateDesc") return new Date(b.date) - new Date(a.date);
-      if (sortEvent.value === "title") return a.title.localeCompare(b.title);
+    events.sort((a,b)=>{
+      if(sortEvent.value==="dateAsc") return new Date(a.date)-new Date(b.date);
+      if(sortEvent.value==="dateDesc") return new Date(b.date)-new Date(a.date);
+      if(sortEvent.value==="title") return a.title.localeCompare(b.title);
       return a.eType.localeCompare(b.eType);
     });
 
@@ -209,25 +206,23 @@ async function loadEvents() {
           <td>${ev.date}</td>
           <td>${ev.title}</td>
           <td>${ev.eType}</td>
-          <td>${ev.addedBy || "—"}</td>
+          <td>${ev.addedBy||"—"}</td>
           <td>
             <button onclick="editEvent('${ev._id}')">Edit</button>
             <button onclick="deleteEvent('${ev._id}')">Delete</button>
           </td>
         </tr>`;
     });
-  } catch (err) {
-    console.error("Load events error:", err);
-  }
+  } catch(err){ console.error("Load events error:", err); }
 }
 
-/* EDIT EVENT */
-function editEvent(id) {
+/* EDIT */
+function editEvent(id){
   fetch("/api/getEvents?admin=true")
-    .then(r => r.json())
-    .then(events => {
-      const ev = events.find(e => e._id === id);
-      if (!ev) return;
+    .then(r=>r.json())
+    .then(events=>{
+      const ev = events.find(e=>e._id===id);
+      if(!ev) return;
 
       editId = id;
       eventType.value = ev.eType;
@@ -240,23 +235,19 @@ function editEvent(id) {
       contactInfo.value = ev.contactInfo || "";
       eventTitle.value = ev.title;
       eventDescription.value = ev.description || "";
-
       recurCheckbox.checked = !!ev.recurring;
       recurringOptions.classList.toggle("hidden", !ev.recurring);
       recurWhen.value = ev.recurWhen || "week";
       recurLengthNum.value = ev.recurLengthNum || "";
       recurLength.value = ev.recurLength || "week";
-
       paidInfo.classList.toggle("hidden", ev.eType !== "reservedPaid");
       residentName.value = ev.residentName || "";
       residentAddress.value = ev.residentAddress || "";
     });
 }
 
-/* SAVE EVENT */
-saveBtn.addEventListener("click", async () => {
-  if (!currentUser) return alert("Not logged in");
-
+/* SAVE */
+saveBtn.addEventListener("click", async ()=>{
   const payload = {
     id: editId,
     eType: eventType.value,
@@ -272,57 +263,58 @@ saveBtn.addEventListener("click", async () => {
     recurWhen: recurWhen.value,
     recurLengthNum: recurLengthNum.value,
     recurLength: recurLength.value,
-    addedBy: currentUser.username,
-    overrideApproved: false
+    addedBy: currentUser.username
   };
 
   try {
     const res = await fetch("/api/addEvent", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
-      credentials: "include"
+      method:"POST",
+      headers: {"Content-Type":"application/json"},
+      body: JSON.stringify(payload)
     });
 
-    const data = await res.json();
+    const text = await res.text();
+    console.log("RAW SERVER RESPONSE:", text); // ← debugging
 
-    if (!res.ok) {
-      if (data.error === "conflict") {
+    let data;
+    try { data = JSON.parse(text); } 
+    catch(err) { console.error("Invalid JSON:", text); alert("Server returned invalid JSON"); return; }
+
+    if(!res.ok){
+      if(data.error === "conflict"){
         let msg = "Conflicts detected:\n";
-        for (const date in data.conflicts) {
+        for(const date in data.conflicts){
           msg += `\n${date}:\n`;
-          data.conflicts[date].forEach(c => {
+          data.conflicts[date].forEach(c=>{
             msg += `  ${c.title} (${c.type}) ${c.startTime}-${c.endTime}\n`;
           });
         }
-        return alert(msg);
-      }
-      return alert("Error saving event: " + (data.error || "Unknown"));
+        alert(msg);
+      } else alert("Error: "+(data.error||"Unknown"));
+      return;
     }
 
     alert(`Event saved! ${data.inserted.length} occurrence(s).`);
-    editId = null;
+    editId=null;
     loadEvents();
 
-  } catch (err) {
+  } catch(err){
     console.error("Save event error:", err);
     alert("Network or server error. See console.");
   }
 });
 
-/* DELETE EVENT */
-async function deleteEvent(id) {
-  if (!confirm("Delete this event?")) return;
+/* DELETE */
+async function deleteEvent(id){
+  if(!confirm("Delete this event?")) return;
   try {
     await fetch("/api/deleteEvent", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ id })
+      method:"POST",
+      headers: {"Content-Type":"application/json"},
+      body: JSON.stringify({id})
     });
     loadEvents();
-  } catch (err) {
-    console.error("Delete event error:", err);
-  }
+  } catch(err){ console.error("Delete event error:", err); }
 }
 
 searchEvent.addEventListener("input", loadEvents);
