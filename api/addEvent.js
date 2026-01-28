@@ -13,40 +13,54 @@ function generateRecurringDates(startDate, type, lengthNum) {
   const count = parseInt(lengthNum, 10) || 0;
   let current = new Date(startDate);
 
-  for (let i=0; i<count; i++){
+  for (let i = 0; i < count; i++) {
     dates.push(current.toISOString().split("T")[0]);
-    if(type==="week") current.setDate(current.getDate()+7);
-    else if(type==="biWeek") current.setDate(current.getDate()+14);
-    else if(type==="month") current.setMonth(current.getMonth()+1);
+
+    if (type === "week") current.setDate(current.getDate() + 7);
+    else if (type === "biWeek") current.setDate(current.getDate() + 14);
+    else if (type === "month") current.setMonth(current.getMonth() + 1);
   }
+
   return dates;
 }
 
-export default async function handler(req,res){
-  try{
-    if(req.method!=="POST") return res.status(405).json({error:"Method not allowed"});
+export default async function handler(req, res) {
+  try {
+    if (req.method !== "POST") {
+      return res.status(405).json({ error: "Method not allowed" });
+    }
 
-    // Parse JSON safely
+    // ✅ SAFE BODY PARSING FOR VERCEL
     let event;
     try {
-      event = req.body;
-      if(!event){
-        const text = await req.text();
-        event = JSON.parse(text);
-      }
-    } catch(err){
-      return res.status(400).json({error:"Invalid JSON body", details: err.message});
+      event =
+        typeof req.body === "string"
+          ? JSON.parse(req.body)
+          : req.body;
+    } catch (err) {
+      return res.status(400).json({
+        error: "Invalid JSON body",
+        details: err.message
+      });
     }
 
-    if(event.id) delete event.id;
+    if (!event || typeof event !== "object") {
+      return res.status(400).json({ error: "Empty or invalid body" });
+    }
+
+    if (event.id) delete event.id;
 
     // Validate required fields
-    const required = ["eType","date","startTime","endTime","title"];
-    for(const f of required){
-      if(!event[f]) return res.status(400).json({error:`Missing field: ${f}`});
+    const required = ["eType", "date", "startTime", "endTime", "title"];
+    for (const f of required) {
+      if (!event[f]) {
+        return res.status(400).json({ error: `Missing field: ${f}` });
+      }
     }
 
-    if(!PRIORITY[event.eType]) return res.status(400).json({error:`Unknown event type: ${event.eType}`});
+    if (!PRIORITY[event.eType]) {
+      return res.status(400).json({ error: `Unknown event type: ${event.eType}` });
+    }
 
     const db = await getDB();
 
@@ -56,16 +70,20 @@ export default async function handler(req,res){
 
     const conflictBreakdown = {};
 
-    for(const date of dates){
-      const conflicts = await db.collection("events").find({date}).toArray();
-      const blocking = conflicts.filter(e=>
+    for (const date of dates) {
+      const conflicts = await db
+        .collection("events")
+        .find({ date })
+        .toArray();
+
+      const blocking = conflicts.filter(e =>
         PRIORITY[e.eType] >= PRIORITY[event.eType] &&
         e.startTime < event.endTime &&
         e.endTime > event.startTime
       );
 
-      if(blocking.length){
-        conflictBreakdown[date] = blocking.map(e=>({
+      if (blocking.length) {
+        conflictBreakdown[date] = blocking.map(e => ({
           title: e.title,
           type: e.eType,
           startTime: e.startTime,
@@ -74,21 +92,38 @@ export default async function handler(req,res){
       }
     }
 
-    if(Object.keys(conflictBreakdown).length && !event.overrideApproved){
-      return res.status(409).json({error:"conflict", conflicts: conflictBreakdown});
+    if (Object.keys(conflictBreakdown).length && !event.overrideApproved) {
+      return res.status(409).json({
+        error: "conflict",
+        conflicts: conflictBreakdown
+      });
     }
 
     const insertedIds = [];
-    for(const date of dates){
-      if(conflictBreakdown[date] && !event.overrideApproved) continue;
-      const insert = await db.collection("events").insertOne({...event, date, createdAt: new Date()});
+
+    for (const date of dates) {
+      if (conflictBreakdown[date] && !event.overrideApproved) continue;
+
+      const insert = await db.collection("events").insertOne({
+        ...event,
+        date,
+        createdAt: new Date()
+      });
+
       insertedIds.push(insert.insertedId);
     }
 
-    return res.json({success:true, inserted: insertedIds, conflicts: conflictBreakdown});
+    return res.status(200).json({
+      success: true,
+      inserted: insertedIds,
+      conflicts: conflictBreakdown
+    });
 
-  } catch(err){
+  } catch (err) {
     console.error("addEvent error:", err);
-    return res.status(500).json({error:"Server error", details: err.message});
+    return res.status(500).json({
+      error: "Server error",
+      details: err.message
+    });
   }
 }
