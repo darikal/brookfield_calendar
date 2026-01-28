@@ -6,54 +6,106 @@
 <title>Brookfield Events Calendar [Alpha]</title>
 <link rel="stylesheet" href="styles.css">
 <style>
-/* Highlight effect for scrolling */
-.reminder-highlight {
-  animation: highlightAnim 2s ease;
+/* =========================
+   Inline adjustments for calendar rendering
+========================= */
+.wrapper { max-width: 1100px; margin: 20px auto; padding: 0 20px; }
+.container-calendar { display: flex; flex-direction: column; gap: 20px; }
+
+#monthAndYear { text-align: center; margin-bottom: 10px; font-size: 1.3em; font-weight: bold; }
+
+.table-calendar { width: 100%; border-collapse: collapse; table-layout: fixed; background: white; position: relative; }
+.table-calendar th, .table-calendar td {
+  border: 1px solid #e2e2e2; 
+  text-align: center; 
+  vertical-align: top; 
+  height: 65px; 
+  position: relative;
+  overflow: hidden;
 }
-@keyframes highlightAnim {
-  0% { background-color: #ffff99; }
-  100% { background-color: #f0f0f0; }
+.table-calendar thead th { background-color: var(--blue-dark); color: #fff; }
+
+/* Event dots inside each cell */
+.event-dots {
+  position: absolute;
+  bottom: 2px;
+  left: 2px;
+  display: flex;
+  flex-wrap: wrap-reverse;
+  gap: 2px;
+  max-width: calc(100% - 4px);
+  align-items: flex-end;
+  justify-content: flex-start;
 }
+.event-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.event-social { background-color: #59fb41; }
+.event-small  { background-color: #340be9; }
+.event-paid   { background-color: #ffaf47; }
+.event-large  { background-color: #e80ce8; }
+.event-default{ background-color: #ff0b36; }
+
+/* Reminder list below calendar */
+#reminderList { list-style-type: none; padding: 0; margin-top: 10px; }
+#reminderList li { background: #f0f0f0; margin-bottom: 5px; padding: 5px 10px; border-left: 5px solid #0077cc; }
+.eventTitle { font-weight: bold; }
+.eventTime { font-style: italic; color: #555; }
+.eventContact { color: #333; font-size: 0.9em; }
+
+/* Navigation buttons */
+.button-container-calendar { overflow: hidden; margin-bottom: 10px; }
+.button-container-calendar button {
+  cursor: pointer;
+  background: var(--blue-dark);
+  color: #fff;
+  border: 1px solid var(--blue-dark);
+  border-radius: 4px;
+  padding: 6px 12px;
+  font-size: 14px;
+}
+#previous { float: left; }
+#next { float: right; }
+.footer-container-calendar { margin-top: 10px; border-top: 1px solid #dadada; padding: 10px 0; }
+.footer-container-calendar select { cursor: pointer; padding: 5px 10px; border-radius: 3px; }
 </style>
 </head>
 <body>
+
 <div class="wrapper">
+  <h1 style="text-align:center; color: var(--blue-dark);">Brookfield Events Calendar [Alpha]</h1>
 
-  <h1>Brookfield Events Calendar [Alpha]</h1>
-
-  <!-- CALENDAR -->
-  <div id="calendar-container" class="container-calendar">
-    <h3 id="monthAndYear"></h3>
-    <div class="button-container-calendar">
-      <button id="previous">‹</button>
-      <button id="next">›</button>
-    </div>
-
-    <table class="table-calendar" id="calendar" data-lang="en">
-      <thead id="thead-month"></thead>
-      <tbody id="calendar-body"></tbody>
-    </table>
-
-    <div class="footer-container-calendar">
-      <label for="month">Jump To: </label>
-      <select id="month"></select>
-      <select id="year"></select>
-    </div>
+  <div id="monthAndYear"></div>
+  <div class="button-container-calendar">
+    <button id="previous">‹</button>
+    <button id="next">›</button>
   </div>
 
-  <!-- EVENTS / REMINDERS -->
-  <div id="reminder-section">
-    <h3>Events & Reservations</h3>
-    <ul id="reminderList"></ul>
+  <table class="table-calendar" id="calendar">
+    <thead id="thead-month"></thead>
+    <tbody id="calendar-body"></tbody>
+  </table>
+
+  <div class="footer-container-calendar">
+    <label for="month">Jump To: </label>
+    <select id="month"></select>
+    <select id="year"></select>
   </div>
 
+  <h3>Events & Reservations</h3>
+  <ul id="reminderList"></ul>
 </div>
 
 <script>
 let currentDate = new Date();
 let events = [];
 
-// Load all events from API
+// =====================
+// Load events from API
+// =====================
 async function loadEvents(){
   try {
     const res = await fetch("/api/getEvents");
@@ -65,52 +117,35 @@ async function loadEvents(){
   }
 }
 
-// Render only events for the currently displayed month
+// =====================
+// Render reminder list
+// =====================
 function renderEventList(){
   const ul = document.getElementById("reminderList");
   ul.innerHTML = "";
 
-  const month = currentDate.getMonth();
-  const year = currentDate.getFullYear();
+  // Only events in current month
+  const monthStr = String(currentDate.getMonth()+1).padStart(2,'0');
+  const yearStr = currentDate.getFullYear();
+  const eventsThisMonth = events.filter(e => e.date.startsWith(`${yearStr}-${monthStr}`));
 
-  const eventsForMonth = events.filter(ev=>{
-    const d = new Date(ev.date);
-    return d.getMonth() === month && d.getFullYear() === year;
-  });
+  // Sort by date
+  eventsThisMonth.sort((a,b)=>new Date(a.date)-new Date(b.date));
 
-  eventsForMonth.sort((a,b)=>new Date(a.date)-new Date(b.date));
-
-  eventsForMonth.forEach(e=>{
+  eventsThisMonth.forEach(e=>{
     const li = document.createElement("li");
-    li.dataset.eventId = e._id; // for linking
-
-    let typeClass = "event-default";
-    if(e.eType==="socialCommitteeEvent") typeClass="event-social";
-    else if(e.eType==="smallGroup") typeClass="event-small";
-    else if(e.eType==="reservedPaid") typeClass="event-paid";
-    else if(e.eType==="noSocialnoPaid") typeClass="event-large";
-
-    li.className = "reminder-item";
     li.innerHTML = `
-      <div class="reminder-header ${typeClass}">${e.title} (${e.eType})</div>
-      <div class="reminder-details">
-        <div class="eventTime">${e.date} ${e.startTime||''}-${e.endTime||''}</div>
-        <div class="eventContact">${e.contactName || ''} ${e.contactInfo || ''}</div>
-        <div class="eventDescription">${e.description || ''}</div>
-      </div>
+      <div class="eventTitle">${e.title} (${e.eType})</div>
+      <div class="eventTime">${e.date} ${e.startTime||''}-${e.endTime||''}</div>
+      <div class="eventContact">${e.contactName||''} ${e.contactInfo||''}</div>
     `;
-
-    // Toggle details accordion
-    li.querySelector(".reminder-header").addEventListener("click", ()=>{
-      const details = li.querySelector(".reminder-details");
-      details.classList.toggle("show");
-    });
-
     ul.appendChild(li);
   });
 }
 
-// Render calendar with colored dots and day click
+// =====================
+// Render calendar with dots
+// =====================
 function renderCalendar(){
   const month = currentDate.getMonth();
   const year = currentDate.getFullYear();
@@ -120,83 +155,55 @@ function renderCalendar(){
   const firstDay = new Date(year, month, 1).getDay();
   const daysInMonth = new Date(year, month+1, 0).getDate();
 
-  const tblBody = document.getElementById("calendar-body");
-  tblBody.innerHTML = "";
-
-  // Table header
+  // Table header for weekdays
+  const weekdays = ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
   const thead = document.getElementById("thead-month");
-  thead.innerHTML = "<tr><th>Sun</th><th>Mon</th><th>Tue</th><th>Wed</th><th>Thu</th><th>Fri</th><th>Sat</th></tr>";
+  thead.innerHTML = "<tr>"+weekdays.map(d=>`<th>${d}</th>`).join("")+"</tr>";
 
+  const tbody = document.getElementById("calendar-body");
+  tbody.innerHTML = "";
   let date = 1;
+
   for(let i=0;i<6;i++){
     const row = document.createElement("tr");
     for(let j=0;j<7;j++){
       const cell = document.createElement("td");
-      if(i===0 && j<firstDay){ cell.innerHTML = ""; }
-      else if(date>daysInMonth){ cell.innerHTML = ""; }
+      if(i===0 && j<firstDay){ cell.innerHTML=""; }
+      else if(date>daysInMonth){ cell.innerHTML=""; }
       else{
         cell.textContent = date;
+
         const cellDate = `${year}-${String(month+1).padStart(2,'0')}-${String(date).padStart(2,'0')}`;
+        const eventsOnDay = events.filter(ev=>ev.date.split("T")[0] === cellDate);
 
-        // Add event dots
-        const eventsForDay = events.filter(ev=>ev.date===cellDate);
-        if(eventsForDay.length){
-          const dotContainer = document.createElement("div");
-          dotContainer.className = "event-dots";
-          eventsForDay.forEach(ev=>{
-            const dot = document.createElement("span");
-            let cls = "event-default";
-            if(ev.eType==="socialCommitteeEvent") cls="event-social";
-            else if(ev.eType==="smallGroup") cls="event-small";
-            else if(ev.eType==="reservedPaid") cls="event-paid";
-            else if(ev.eType==="noSocialnoPaid") cls="event-large";
-            dot.className = "event-dot "+cls;
-            dot.title = `${ev.title} (${ev.startTime||''}-${ev.endTime||''})`;
-
-            // Scroll to individual reminder on dot click
-            dot.addEventListener("click", (e)=>{
-              e.stopPropagation(); // prevent day click
-              const reminder = document.querySelector(`#reminderList li[data-event-id='${ev._id}']`);
-              if(reminder){
-                reminder.scrollIntoView({behavior:"smooth", block:"start"});
-                reminder.classList.add("reminder-highlight");
-                setTimeout(()=>reminder.classList.remove("reminder-highlight"),2000);
-              }
-            });
-
-            dotContainer.appendChild(dot);
+        if(eventsOnDay.length){
+          const dotsDiv = document.createElement("div");
+          dotsDiv.className = "event-dots";
+          eventsOnDay.forEach(ev=>{
+            const dot = document.createElement("div");
+            dot.className = "event-dot";
+            if(ev.eType==="socialCommitteeEvent") dot.classList.add("event-social");
+            else if(ev.eType==="smallGroup") dot.classList.add("event-small");
+            else if(ev.eType==="reservedPaid") dot.classList.add("event-paid");
+            else if(ev.eType==="noSocialnoPaid") dot.classList.add("event-large");
+            else dot.classList.add("event-default");
+            dotsDiv.appendChild(dot);
           });
-          cell.appendChild(dotContainer);
+          cell.appendChild(dotsDiv);
         }
-
-        // Click day to scroll and expand all events for that day
-        cell.addEventListener("click", ()=>{
-          const reminders = document.querySelectorAll("#reminderList li");
-          reminders.forEach(li=>{
-            const details = li.querySelector(".reminder-details");
-            if(li.dataset.eventId && eventsForDay.some(ev=>ev._id===li.dataset.eventId)){
-              // Expand and highlight
-              details.classList.add("show");
-              li.classList.add("reminder-highlight");
-              setTimeout(()=>li.classList.remove("reminder-highlight"),2000);
-            } else {
-              // Collapse other events
-              details.classList.remove("show");
-            }
-          });
-          if(reminders.length) reminders[0].scrollIntoView({behavior:"smooth", block:"start"});
-        });
 
         date++;
       }
       row.appendChild(cell);
     }
-    tblBody.appendChild(row);
+    tbody.appendChild(row);
     if(date>daysInMonth) break;
   }
 }
 
-// Navigation buttons
+// =====================
+// Navigation
+// =====================
 document.getElementById("previous").addEventListener("click", ()=>{
   currentDate.setMonth(currentDate.getMonth()-1);
   renderCalendar();
@@ -225,6 +232,7 @@ for(let y=currentDate.getFullYear()-5;y<=currentDate.getFullYear()+5;y++){
 }
 monthSelect.value = currentDate.getMonth();
 yearSelect.value = currentDate.getFullYear();
+
 monthSelect.addEventListener("change", ()=>{
   currentDate.setMonth(+monthSelect.value);
   renderCalendar();
@@ -236,7 +244,11 @@ yearSelect.addEventListener("change", ()=>{
   renderEventList();
 });
 
+// =====================
+// Initial load
+// =====================
 loadEvents();
 </script>
+
 </body>
 </html>
