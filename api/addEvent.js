@@ -1,41 +1,53 @@
-import { getDb } from "./_db.js";
+import { getDB } from "./_db.js";
 
 const PRIORITY = {
-  paid: 4,
-  social: 3,
-  large: 2,
-  small: 1
+  reservedPaid: 4,
+  socialCommitteeEvent: 3,
+  noSocialnoPaid: 2,
+  smallGroup: 1
 };
 
 export default async function handler(req, res) {
-  if (req.method !== "POST") {
-    return res.status(405).json({ error: "Method not allowed" });
-  }
+  try {
+    if (req.method !== "POST") {
+      return res.status(405).json({ error: "Method not allowed" });
+    }
 
-  const db = await getDb();
-  const event = req.body;
+    const db = await getDB();
+    const event = req.body;
 
-  const conflicts = await db.collection("events").find({
-    date: event.date,
-    startTime: { $lt: event.endTime },
-    endTime: { $gt: event.startTime }
-  }).toArray();
+    if (!event.date || !event.startTime || !event.endTime || !event.eType) {
+      return res.status(400).json({ error: "Missing required fields" });
+    }
 
-  const blockingConflicts = conflicts.filter(existing => {
-    return PRIORITY[existing.eventType] >= PRIORITY[event.eventType];
-  });
+    const conflicts = await db.collection("events").find({
+      date: event.date,
+      startTime: { $lt: event.endTime },
+      endTime: { $gt: event.startTime }
+    }).toArray();
 
-  if (blockingConflicts.length && !event.overrideApproved) {
-    return res.status(409).json({
-      error: "conflict",
-      conflicts: blockingConflicts
+    const blockingConflicts = conflicts.filter(existing => {
+      return (
+        PRIORITY[existing.eType] >= PRIORITY[event.eType]
+      );
     });
+
+    if (blockingConflicts.length && !event.overrideApproved) {
+      return res.status(409).json({
+        error: "conflict",
+        conflicts: blockingConflicts
+      });
+    }
+
+    await db.collection("events").insertOne({
+      ...event,
+      createdAt: new Date()
+    });
+
+    return res.json({ success: true });
+
+  } catch (err) {
+    console.error("addEvent error:", err);
+    return res.status(500).json({ error: "Server error" });
   }
-
-  await db.collection("events").insertOne({
-    ...event,
-    createdAt: new Date(),
-  });
-
-  res.json({ success: true });
 }

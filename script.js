@@ -1,301 +1,189 @@
 let events = [];
 
-const eventDateInput = document.getElementById("eventDate");
-const eventTitleInput = document.getElementById("eventTitle");
-const eventDescriptionInput = document.getElementById("eventDescription");
-const startTimeInput = document.getElementById("startTime");
-const endTimeInput = document.getElementById("endTime");
-const eventTypeInput = document.getElementById("eventTypeMajor");
-const walkInSelect = document.getElementById("walkInWelcome");
-const recurCheckbox = document.getElementById("recurCheckbox");
-const recurLengthNum = document.getElementById("recurLengthNum");
-const recurWhen = document.getElementById("recurWhen");
 const reminderList = document.getElementById("reminderList");
-const addEventButton = document.getElementById("addEvent");
+const calendarBody = document.getElementById("calendar-body");
+const monthAndYear = document.getElementById("monthAndYear");
 
 let today = new Date();
 let currentMonth = today.getMonth();
 let currentYear = today.getFullYear();
 
-const monthAndYear = document.getElementById("monthAndYear");
-const calendarBody = document.getElementById("calendar-body");
-const monthsFull = ["January","February","March","April","May","June","July","August","September","October","November","December"];
-const monthSelect = document.getElementById("month");
-const yearSelect = document.getElementById("year");
-const monthsShort = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+const months = [
+  "January","February","March","April","May","June",
+  "July","August","September","October","November","December"
+];
 
-// Populate month and year selects
-monthsShort.forEach((m,i) => { 
-    const opt = document.createElement("option"); 
-    opt.value = i; 
-    opt.text = m; 
-    monthSelect.add(opt); 
-});
-for(let y = currentYear-5; y <= currentYear+5; y++) {
-    const opt = document.createElement("option");
-    opt.value = y;
-    opt.text = y;
-    yearSelect.add(opt);
-}
-monthSelect.value = currentMonth;
-yearSelect.value = currentYear;
-
-// ---------------- Backend ----------------
-async function sendEventToBackend(eventData) {
-    try {
-        const response = await fetch("/api/addEvent", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(eventData)
-        });
-        if (!response.ok) console.error(await response.text());
-    } catch (err) { console.error(err); }
+/* =========================
+   FETCH EVENTS
+========================= */
+async function loadEvents() {
+  try {
+    const res = await fetch("/api/getEvents");
+    events = await res.json();
+    renderCalendar(currentMonth, currentYear);
+    renderEventList();
+  } catch (e) {
+    console.error("Failed to load events", e);
+  }
 }
 
-async function loadEventsFromBackend(month=currentMonth, year=currentYear) {
-    try {
-        const response = await fetch(`/api/getEvents?month=${month}&year=${year}`);
-        if (!response.ok) { console.error(await response.text()); return; }
-        const data = await response.json();
-        events = data.map(ev => ({ ...ev, id: ev._id || ev.id }));
-    } catch (err) { console.error(err); }
-}
+/* =========================
+   RENDER CALENDAR
+========================= */
+function renderCalendar(month, year) {
+  calendarBody.innerHTML = "";
+  monthAndYear.textContent = `${months[month]} ${year}`;
 
-// ---------------- Helpers ----------------
-function parseDateFromInput(value) {
-    const [y,m,d] = value.split("-").map(Number);
-    return new Date(y, m-1, d);
-}
+  const firstDay = new Date(year, month).getDay();
+  const daysInMonth = 32 - new Date(year, month, 32).getDate();
 
-function getReadableEventType(eType) {
-    switch(eType){
-        case "socialCommitteeEvent": return "Social Committee";
-        case "smallGroup": return "Small Group";
-        case "reservedPaid": return "Paid Reservation";
-        case "noSocialnoPaid": return "Large Group";
-        default: return "Event";
-    }
-}
+  let date = 1;
 
-function getEventColorClass(eType) {
-    switch(eType){
-        case "socialCommitteeEvent": return "event-social";
-        case "smallGroup": return "event-small";
-        case "reservedPaid": return "event-paid";
-        case "noSocialnoPaid": return "event-large";
-        default: return "event-default";
-    }
-}
-
-function daysInMonth(month, year) {
-    return 32 - new Date(year, month, 32).getDate();
-}
-
-function generateRecurringDates(baseDate, type, count) {
-    let dates = [];
-    for (let i=1; i<=count; i++) {
-        let d = new Date(baseDate);
-        if(type==="week") d.setDate(baseDate.getDate()+7*i);
-        if(type==="biWeek") d.setDate(baseDate.getDate()+14*i);
-        if(type==="month") d.setMonth(baseDate.getMonth()+i);
-        dates.push(d);
-    }
-    return dates;
-}
-
-function getEventsOnDate(date, month, year) {
-    return events.filter(ev => {
-        const d = parseDateFromInput(ev.date);
-        return d.getDate()===date && d.getMonth()===month && d.getFullYear()===year;
-    });
-}
-
-// ---------------- Display ----------------
-function showWeekdays() {
-    const thead = document.getElementById("thead-month");
-    thead.innerHTML = "";
-
+  for (let i = 0; i < 6; i++) {
     const row = document.createElement("tr");
-    const days = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
-    days.forEach(day => {
-        const th = document.createElement("th");
-        th.textContent = day;
-        row.appendChild(th);
-    });
+    for (let j = 0; j < 7; j++) {
+      const cell = document.createElement("td");
 
-    thead.appendChild(row);
-}
+      if (i === 0 && j < firstDay) {
+        cell.innerHTML = "";
+      } else if (date > daysInMonth) {
+        break;
+      } else {
+        const dateStr = `${year}-${String(month + 1).padStart(2,"0")}-${String(date).padStart(2,"0")}`;
 
-function displayReminders() {
-    reminderList.innerHTML = "";
-    events.forEach(ev => {
-        const d = parseDateFromInput(ev.date);
-        if(d.getMonth()===currentMonth && d.getFullYear()===currentYear) {
-            const li = document.createElement("li");
-            li.className = "reminder-item";
+        cell.classList.add("calendar-day");
+        cell.dataset.date = dateStr;
+        cell.innerHTML = `<span>${date}</span>`;
 
-            const header = document.createElement("div");
-            header.className = "reminder-header " + getEventColorClass(ev.eType);
-            header.textContent = `${getReadableEventType(ev.eType)}: ${ev.title}`;
-
-            const details = document.createElement("div");
-            details.className = "reminder-details";
-            details.innerHTML = `
-                <strong>Date:</strong> ${ev.date}<br>
-                ${ev.startTime ? `<strong>Time:</strong> ${ev.startTime} - ${ev.endTime}<br>` : ""}
-                ${ev.description ? `<strong>Description:</strong> ${ev.description}<br>` : ""}
-                ${ev.groupSize ? `<strong>Group Size:</strong> ${ev.groupSize}<br>` : ""}
-                ${ev.contactName ? `<strong>Contact:</strong> ${ev.contactName} (${ev.contactInfo || ''})<br>` : ""}
-                ${ev.walkIn ? `<strong>Walk-in:</strong> ${ev.walkIn}<br>` : ""}
-            `;
-            header.onclick = () => { details.classList.toggle("show"); };
-
-            li.appendChild(header);
-            li.appendChild(details);
-            reminderList.appendChild(li);
+        const dayEvents = events.filter(e => eventMatchesDate(e, dateStr));
+        if (dayEvents.length) {
+          const dots = document.createElement("div");
+          dots.className = "event-dots";
+          dayEvents.forEach(ev => {
+            const dot = document.createElement("span");
+            dot.className = `dot ${ev.eventTypeMajor}`;
+            dots.appendChild(dot);
+          });
+          cell.appendChild(dots);
         }
-    });
-}
 
-function showCalendar(month, year) {
-    calendarBody.innerHTML = "";
-    monthAndYear.textContent = `${monthsFull[month]} ${year}`;
-    const firstDay = new Date(year, month, 1).getDay();
-    let date = 1;
-    for(let i=0; i<6; i++){
-        const row = document.createElement("tr");
-        for(let j=0;j<7;j++){
-            const cell = document.createElement("td");
-            if(i===0 && j<firstDay){ row.appendChild(cell); continue; }
-            if(date>daysInMonth(month,year)) break;
-            cell.className = "date-picker";
-            cell.innerHTML = `<span>${date}</span>`;
-            const todaysEvents = getEventsOnDate(date, month, year);
-            if(todaysEvents.length){
-                const dots = document.createElement("div");
-                dots.className = "event-dots";
-                todaysEvents.forEach(ev=>{
-                    const dot = document.createElement("span");
-                    dot.className = "event-dot " + getEventColorClass(ev.eType);
-                    dots.appendChild(dot);
-                });
-                cell.appendChild(dots);
-            }
-            const capturedDate = date;
-            cell.onclick = () => {
-                eventDateInput.value = `${year}-${String(month+1).padStart(2,"0")}-${String(capturedDate).padStart(2,"0")}`;
-                document.getElementById("eventDetailsWrapper").style.display = "block";
-            };
-            row.appendChild(cell);
-            date++;
-        }
-        calendarBody.appendChild(row);
+        cell.addEventListener("click", () => handleDateClick(dateStr));
+        date++;
+      }
+
+      row.appendChild(cell);
     }
+
+    calendarBody.appendChild(row);
+  }
 }
 
-// ---------------- Event Form ----------------
-function toggleTitleDiv(){
-    const detailsWrapper=document.getElementById("eventDetailsWrapper");
-    const paidInfo=document.getElementById("paidInfo");
-    const recurBox=document.getElementById("recurBox");
-    const recurringDiv=document.getElementById("recurring");
+/* =========================
+   DATE CLICK HANDLER
+========================= */
+function handleDateClick(dateStr) {
+  const items = document.querySelectorAll(".reminder-item");
 
-    detailsWrapper.style.display="block";
-    recurCheckbox.checked=false;
-    recurringDiv.style.display="none";
-
-    if(eventTypeInput.value==="reservedPaid"){
-        paidInfo.style.display="block";
-        recurBox.style.display="none";
+  items.forEach(item => {
+    if (item.dataset.date === dateStr) {
+      item.classList.add("highlight");
+      item.classList.remove("dimmed");
     } else {
-        paidInfo.style.display="none";
-        recurBox.style.display="block";
+      item.classList.remove("highlight");
+      item.classList.add("dimmed");
     }
+  });
+
+  document.getElementById("reminder-section")
+    .scrollIntoView({ behavior: "smooth" });
 }
 
-function toggleDiv() {
-    const otherDiv = document.getElementById("eventOther");
-    const signUpDiv = document.getElementById("signUpField");
-    if(walkInSelect.value==="Other"){ otherDiv.style.display="block"; signUpDiv.style.display="none"; }
-    else if(walkInSelect.value==="signUpRequired"){ signUpDiv.style.display="block"; otherDiv.style.display="none"; }
-    else { otherDiv.style.display="none"; signUpDiv.style.display="none"; }
+/* =========================
+   EVENT DATE MATCHING
+========================= */
+function eventMatchesDate(event, dateStr) {
+  if (event.date === dateStr) return true;
+
+  if (!event.recurring) return false;
+
+  const start = new Date(event.date);
+  const target = new Date(dateStr);
+
+  if (target < start) return false;
+
+  if (event.recurWhen === "week") {
+    const diff = Math.floor((target - start) / (1000 * 60 * 60 * 24));
+    return diff % 7 === 0;
+  }
+
+  if (event.recurWhen === "biWeek") {
+    const diff = Math.floor((target - start) / (1000 * 60 * 60 * 24));
+    return diff % 14 === 0;
+  }
+
+  if (event.recurWhen === "month") {
+    return start.getDate() === target.getDate();
+  }
+
+  return false;
 }
 
-recurCheckbox.addEventListener("change", ()=>{
-    document.getElementById("recurring").style.display = recurCheckbox.checked ? "block" : "none";
-});
+/* =========================
+   EVENT LIST
+========================= */
+function renderEventList() {
+  reminderList.innerHTML = "";
 
-eventTypeInput.addEventListener("change", toggleTitleDiv);
-walkInSelect.addEventListener("change", toggleDiv);
+  const sorted = [...events].sort(
+    (a,b) => new Date(a.date) - new Date(b.date)
+  );
 
-addEventButton.addEventListener("click", async ()=>{
-    const date = eventDateInput.value;
-    if(!date || !eventTitleInput.value || !eventTypeInput.value) return;
+  sorted.forEach(ev => {
+    const li = document.createElement("li");
+    li.className = `reminder-item ${ev.eventTypeMajor}`;
+    li.dataset.date = ev.date;
 
-    let baseDate = parseDateFromInput(date);
-    let dates = [baseDate];
-    if(recurCheckbox.checked && recurLengthNum.value){
-        dates = dates.concat(generateRecurringDates(baseDate, recurWhen.value, parseInt(recurLengthNum.value)));
-    }
+    li.innerHTML = `
+      <strong>${ev.eventTitle}</strong><br>
+      <small>${ev.date} • ${ev.startTime || ""}–${ev.endTime || ""}</small><br>
+      ${ev.eventDescription || ""}
+    `;
 
-    for(const d of dates){
-        await sendEventToBackend({
-            date: d.toISOString().split("T")[0],
-            title: eventTitleInput.value,
-            description: eventDescriptionInput.value,
-            eType: eventTypeInput.value,
-            startTime: startTimeInput.value,
-            endTime: endTimeInput.value,
-            groupSize: document.getElementById("groupSize").value,
-            contactName: document.getElementById("contactName").value,
-            contactInfo: document.getElementById("contactInfo").value,
-            walkIn: walkInSelect.value
-        });
-    }
-    await loadEventsFromBackend(currentMonth,currentYear);
-    updateCalendar();
-});
-
-// ---------------- Navigation ----------------
-function updateCalendar() {
-    showCalendar(currentMonth,currentYear);
-    displayReminders();
-    monthSelect.value = currentMonth;
-    yearSelect.value = currentYear;
+    reminderList.appendChild(li);
+  });
 }
 
-document.getElementById("previous").addEventListener("click", async ()=>{
-    currentMonth--;
-    if(currentMonth<0){ currentMonth=11; currentYear--; }
-    await loadEventsFromBackend(currentMonth,currentYear);
-    updateCalendar();
-});
+/* =========================
+   NAV CONTROLS
+========================= */
+document.getElementById("previous").onclick = () => {
+  currentMonth--;
+  if (currentMonth < 0) {
+    currentMonth = 11;
+    currentYear--;
+  }
+  clearHighlights();
+  renderCalendar(currentMonth, currentYear);
+};
 
-document.getElementById("next").addEventListener("click", async ()=>{
-    currentMonth++;
-    if(currentMonth>11){ currentMonth=0; currentYear++; }
-    await loadEventsFromBackend(currentMonth,currentYear);
-    updateCalendar();
-});
+document.getElementById("next").onclick = () => {
+  currentMonth++;
+  if (currentMonth > 11) {
+    currentMonth = 0;
+    currentYear++;
+  }
+  clearHighlights();
+  renderCalendar(currentMonth, currentYear);
+};
 
-monthSelect.addEventListener("change", async ()=>{
-    currentMonth = parseInt(monthSelect.value);
-    currentYear = parseInt(yearSelect.value);
-    await loadEventsFromBackend(currentMonth,currentYear);
-    updateCalendar();
-});
+function clearHighlights() {
+  document.querySelectorAll(".reminder-item").forEach(i => {
+    i.classList.remove("highlight","dimmed");
+  });
+}
 
-yearSelect.addEventListener("change", async ()=>{
-    currentMonth = parseInt(monthSelect.value);
-    currentYear = parseInt(yearSelect.value);
-    await loadEventsFromBackend(currentMonth,currentYear);
-    updateCalendar();
-});
-
-// ---------------- Init ----------------
-(async ()=>{
-    showWeekdays();
-    await loadEventsFromBackend(currentMonth,currentYear);
-    updateCalendar();
-})();
+/* =========================
+   INIT
+========================= */
+loadEvents();
