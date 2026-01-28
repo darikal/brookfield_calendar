@@ -35,10 +35,6 @@ export default async function handler(req, res) {
     if (!db) throw new Error("Database not initialized");
 
     const event = { ...req.body };
-
-    console.log("Received event:", event);
-
-    // Remove client-side id to avoid DB conflicts
     if (event.id) delete event.id;
 
     // Validate required fields
@@ -54,21 +50,15 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: `Unknown event type: ${event.eType}` });
     }
 
-    // Determine dates to insert (single or recurring)
-    let datesToInsert = [event.date];
-    if (event.recurring) {
-      datesToInsert = generateRecurringDates(
-        event.date,
-        event.recurWhen,
-        event.recurLengthNum,
-        event.recurLength
-      );
-    }
+    // Determine all dates to insert (single or recurring)
+    const datesToInsert = event.recurring
+      ? generateRecurringDates(event.date, event.recurWhen, event.recurLengthNum, event.recurLength)
+      : [event.date];
 
-    const insertedEvents = [];
+    const conflictsByDate = {};
 
+    // Check all dates first
     for (const date of datesToInsert) {
-      // Check conflicts
       const conflicts = await db.collection("events").find({
         date,
         startTime: { $exists: true, $lt: event.endTime },
@@ -80,21 +70,27 @@ export default async function handler(req, res) {
         return PRIORITY[existing.eType] >= PRIORITY[event.eType];
       });
 
-      if (blockingConflicts.length && !event.overrideApproved) {
-        return res.status(409).json({
-          error: "conflict",
-          date,
-          conflicts: blockingConflicts
-        });
+      if (blockingConflicts.length) {
+        conflictsByDate[date] = blockingConflicts;
       }
+    }
 
-      // Insert event
+    // If any conflicts, abort and return all conflicts
+    if (Object.keys(conflictsByDate).length && !event.overrideApproved) {
+      return res.status(409).json({
+        error: "conflict",
+        conflicts: conflictsByDate
+      });
+    }
+
+    // Insert all events
+    const insertedEvents = [];
+    for (const date of datesToInsert) {
       const insertResult = await db.collection("events").insertOne({
         ...event,
         date,
         createdAt: new Date()
       });
-
       insertedEvents.push(insertResult.insertedId);
     }
 
