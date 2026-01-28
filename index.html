@@ -6,60 +6,50 @@
 <title>Brookfield Events Calendar [Alpha]</title>
 <link rel="stylesheet" href="styles.css">
 <style>
-/* Calendar & layout */
-.wrapper { max-width: 1200px; margin: auto; padding: 10px; }
-.container-calendar { display: flex; flex-wrap: wrap; gap: 20px; }
-#left, #right { flex: 1 1 400px; }
-#monthAndYear { text-align: center; margin-bottom: 10px; }
-.table-calendar { width: 100%; border-collapse: collapse; }
-.table-calendar th, .table-calendar td { border: 1px solid #ccc; text-align: center; padding: 5px; }
-.button-container-calendar { text-align: center; margin-bottom: 10px; }
-.footer-container-calendar { text-align: center; margin-top: 10px; }
-#reminderList { list-style-type: none; padding: 0; margin: 10px 0; }
-#reminderList li { background: #f0f0f0; margin-bottom: 5px; padding: 5px 10px; border-left: 5px solid #0077cc; }
-.eventTitle { font-weight: bold; }
-.eventTime { font-style: italic; color: #555; }
-.eventContact { color: #333; font-size: 0.9em; }
+/* Highlight effect for scrolling */
+.reminder-highlight {
+  animation: highlightAnim 2s ease;
+}
+@keyframes highlightAnim {
+  0% { background-color: #ffff99; }
+  100% { background-color: #f0f0f0; }
+}
 </style>
 </head>
 <body>
 <div class="wrapper">
 
-  <div class="container-calendar">
-    <!-- Left: Event list -->
-    <div id="left">
-      <h1>Brookfield Events Calendar [Alpha]</h1>
+  <h1>Brookfield Events Calendar [Alpha]</h1>
 
-      <div id="reminder-section">
-        <h3>Events & Reservations</h3>
-        <ul id="reminderList"></ul>
-      </div>
+  <!-- CALENDAR -->
+  <div id="calendar-container" class="container-calendar">
+    <h3 id="monthAndYear"></h3>
+    <div class="button-container-calendar">
+      <button id="previous">‹</button>
+      <button id="next">›</button>
     </div>
 
-    <!-- Right: Calendar -->
-    <div id="right">
-      <h3 id="monthAndYear"></h3>
-      <div class="button-container-calendar">
-        <button id="previous">‹</button>
-        <button id="next">›</button>
-      </div>
+    <table class="table-calendar" id="calendar" data-lang="en">
+      <thead id="thead-month"></thead>
+      <tbody id="calendar-body"></tbody>
+    </table>
 
-      <table class="table-calendar" id="calendar" data-lang="en">
-        <thead id="thead-month"></thead>
-        <tbody id="calendar-body"></tbody>
-      </table>
-
-      <div class="footer-container-calendar">
-        <label for="month">Jump To: </label>
-        <select id="month"></select>
-        <select id="year"></select>
-      </div>
+    <div class="footer-container-calendar">
+      <label for="month">Jump To: </label>
+      <select id="month"></select>
+      <select id="year"></select>
     </div>
   </div>
+
+  <!-- EVENTS / REMINDERS -->
+  <div id="reminder-section">
+    <h3>Events & Reservations</h3>
+    <ul id="reminderList"></ul>
+  </div>
+
 </div>
 
 <script>
-// Placeholder calendar logic
 let currentDate = new Date();
 let events = [];
 
@@ -68,8 +58,8 @@ async function loadEvents(){
   try {
     const res = await fetch("/api/getEvents");
     events = await res.json();
-    renderEventList();
     renderCalendar();
+    renderEventList();
   } catch(err){
     console.error("Error loading events:", err);
   }
@@ -82,16 +72,34 @@ function renderEventList(){
   events.sort((a,b)=>new Date(a.date)-new Date(b.date));
   events.forEach(e=>{
     const li = document.createElement("li");
+    li.dataset.eventId = e._id; // for linking
+    let typeClass = "event-default";
+    if(e.eType==="socialCommitteeEvent") typeClass="event-social";
+    else if(e.eType==="smallGroup") typeClass="event-small";
+    else if(e.eType==="reservedPaid") typeClass="event-paid";
+    else if(e.eType==="noSocialnoPaid") typeClass="event-large";
+
+    li.className = "reminder-item";
     li.innerHTML = `
-      <div class="eventTitle">${e.title} (${e.eType})</div>
-      <div class="eventTime">${e.date} ${e.startTime||''}-${e.endTime||''}</div>
-      <div class="eventContact">${e.contactName || ''} ${e.contactInfo || ''}</div>
+      <div class="reminder-header ${typeClass}">${e.title} (${e.eType})</div>
+      <div class="reminder-details">
+        <div class="eventTime">${e.date} ${e.startTime||''}-${e.endTime||''}</div>
+        <div class="eventContact">${e.contactName || ''} ${e.contactInfo || ''}</div>
+        <div class="eventDescription">${e.description || ''}</div>
+      </div>
     `;
+
+    // Toggle details accordion
+    li.querySelector(".reminder-header").addEventListener("click", ()=>{
+      const details = li.querySelector(".reminder-details");
+      details.classList.toggle("show");
+    });
+
     ul.appendChild(li);
   });
 }
 
-// Calendar rendering
+// Render calendar with colored dots
 function renderCalendar(){
   const month = currentDate.getMonth();
   const year = currentDate.getFullYear();
@@ -103,21 +111,52 @@ function renderCalendar(){
 
   const tblBody = document.getElementById("calendar-body");
   tblBody.innerHTML = "";
+
+  // Table header
+  const thead = document.getElementById("thead-month");
+  thead.innerHTML = "<tr><th>Sun</th><th>Mon</th><th>Tue</th><th>Wed</th><th>Thu</th><th>Fri</th><th>Sat</th></tr>";
+
   let date = 1;
-  for(let i=0; i<6; i++){
+  for(let i=0;i<6;i++){
     const row = document.createElement("tr");
-    for(let j=0; j<7; j++){
+    for(let j=0;j<7;j++){
       const cell = document.createElement("td");
       if(i===0 && j<firstDay){ cell.innerHTML = ""; }
       else if(date>daysInMonth){ cell.innerHTML = ""; }
       else{
-        cell.innerHTML = date;
+        cell.textContent = date;
         const cellDate = `${year}-${String(month+1).padStart(2,'0')}-${String(date).padStart(2,'0')}`;
-        // Highlight days with events
-        if(events.some(ev=>ev.date===cellDate)){
-          cell.style.backgroundColor = "#ccf2ff";
-          cell.title = events.filter(ev=>ev.date===cellDate).map(ev=>ev.title).join(", ");
+
+        // Add event dots
+        const eventsForDay = events.filter(ev=>ev.date===cellDate);
+        if(eventsForDay.length){
+          const dotContainer = document.createElement("div");
+          dotContainer.className = "event-dots";
+          eventsForDay.forEach(ev=>{
+            const dot = document.createElement("span");
+            let cls = "event-default";
+            if(ev.eType==="socialCommitteeEvent") cls="event-social";
+            else if(ev.eType==="smallGroup") cls="event-small";
+            else if(ev.eType==="reservedPaid") cls="event-paid";
+            else if(ev.eType==="noSocialnoPaid") cls="event-large";
+            dot.className = "event-dot "+cls;
+            dot.title = `${ev.title} (${ev.startTime||''}-${ev.endTime||''})`;
+
+            // Scroll to reminder on click
+            dot.addEventListener("click", ()=>{
+              const reminder = document.querySelector(`#reminderList li[data-event-id='${ev._id}']`);
+              if(reminder){
+                reminder.scrollIntoView({behavior:"smooth", block:"start"});
+                reminder.classList.add("reminder-highlight");
+                setTimeout(()=>reminder.classList.remove("reminder-highlight"), 2000);
+              }
+            });
+
+            dotContainer.appendChild(dot);
+          });
+          cell.appendChild(dotContainer);
         }
+
         date++;
       }
       row.appendChild(cell);
@@ -127,7 +166,7 @@ function renderCalendar(){
   }
 }
 
-// Calendar navigation
+// Navigation buttons
 document.getElementById("previous").addEventListener("click", ()=>{
   currentDate.setMonth(currentDate.getMonth()-1);
   renderCalendar();
