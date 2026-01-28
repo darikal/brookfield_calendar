@@ -14,12 +14,11 @@ function generateRecurringDates(startDate, type, lengthNum) {
   let current = new Date(startDate);
 
   for (let i = 0; i < count; i++) {
-    dates.push(current.toISOString().split("T")[0]); // YYYY-MM-DD
+    dates.push(current.toISOString().split("T")[0]);
     if (type === "week") current.setDate(current.getDate() + 7);
     else if (type === "biWeek") current.setDate(current.getDate() + 14);
     else if (type === "month") current.setMonth(current.getMonth() + 1);
   }
-
   return dates;
 }
 
@@ -31,15 +30,19 @@ export default async function handler(req, res) {
 
     const db = await getDB();
     const event = { ...req.body };
+    if (event.id) delete event.id;
 
-    if (!event.eType || !event.date || !event.startTime || !event.endTime || !event.title) {
-      return res.status(400).json({ error: "Missing required fields" });
+    // Validate required fields
+    const required = ["eType", "date", "startTime", "endTime", "title"];
+    for (const f of required) {
+      if (!event[f]) return res.status(400).json({ error: `Missing field: ${f}` });
     }
 
     if (!PRIORITY[event.eType]) {
       return res.status(400).json({ error: `Unknown event type: ${event.eType}` });
     }
 
+    // Determine all dates to insert
     const dates = event.recurring
       ? generateRecurringDates(event.date, event.recurWhen, event.recurLengthNum)
       : [event.date];
@@ -47,10 +50,9 @@ export default async function handler(req, res) {
     const conflictBreakdown = {};
 
     for (const date of dates) {
+      // Use $expr to compare times
       const conflicts = await db.collection("events").find({
         date,
-        startTime: { $exists: true },
-        endTime: { $exists: true },
         $expr: {
           $and: [
             { $lt: ["$startTime", event.endTime] },
@@ -70,32 +72,28 @@ export default async function handler(req, res) {
       }
     }
 
-    // If conflicts exist and override not approved, return them
     if (Object.keys(conflictBreakdown).length && !event.overrideApproved) {
-      return res.status(409).json({ error: "conflict", conflicts: conflictBreakdown });
+      return res.status(409).json({
+        error: "conflict",
+        conflicts: conflictBreakdown
+      });
     }
 
-    // Insert non-conflicting events
     const insertedIds = [];
     for (const date of dates) {
       if (conflictBreakdown[date] && !event.overrideApproved) continue;
-      const result = await db.collection("events").insertOne({
+      const insert = await db.collection("events").insertOne({
         ...event,
         date,
         createdAt: new Date()
       });
-      insertedIds.push(result.insertedId);
+      insertedIds.push(insert.insertedId);
     }
 
     return res.json({ success: true, inserted: insertedIds, conflicts: conflictBreakdown });
 
   } catch (err) {
     console.error("addEvent error:", err);
-
-    // Always return valid JSON
-    return res.status(500).json({
-      error: "Server error",
-      message: err.message || "Unknown error"
-    });
+    return res.status(500).json({ error: "Server error", details: err.message });
   }
 }

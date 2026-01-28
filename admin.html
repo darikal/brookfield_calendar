@@ -6,19 +6,14 @@
 <title>Brookfield Admin Console</title>
 <link rel="stylesheet" href="styles.css">
 <style>
-/* Quick inline styles for conflicts */
-.conflict {
-  background-color: #ffcccc;
-}
-#conflictContainer {
-  color: red;
-  margin-top: 10px;
-  display: none;
-}
+/* Simple visibility helpers */
 .hidden { display: none; }
 .admin-wrapper { padding: 20px; }
+.admin-toolbar { margin: 10px 0; }
+.time-input input { margin: 0 5px; }
+.group-size-wrapper { margin: 5px 0; }
 .admin-events-table { width: 100%; border-collapse: collapse; margin-top: 20px; }
-.admin-events-table th, .admin-events-table td { border: 1px solid #ccc; padding: 8px; text-align: left; }
+.admin-events-table th, .admin-events-table td { border: 1px solid #ccc; padding: 5px; }
 </style>
 </head>
 <body>
@@ -61,9 +56,10 @@
     <option value="reservedPaid">Paid Reservation</option>
   </select>
 
-  <!-- EVENT FORM (HIDDEN UNTIL TYPE SELECTED) -->
+  <!-- EVENT FORM -->
   <div id="eventForm" class="hidden">
     <input type="date" id="eventDate">
+
     <div class="time-input">
       <label>Start</label>
       <input type="time" id="startTime">
@@ -76,12 +72,10 @@
       <input type="text" id="groupSize" placeholder="10–15">
     </div>
 
-    <!-- CONTACT INFO -->
     <h4>Contact Information</h4>
     <input type="text" id="contactName" placeholder="Contact Name">
     <input type="text" id="contactInfo" placeholder="Phone or Email">
 
-    <!-- RECURRING -->
     <label>
       <input type="checkbox" id="recurCheckbox">
       Recurring Event
@@ -93,6 +87,7 @@
         <option value="biWeek">Bi-Weekly</option>
         <option value="month">Monthly</option>
       </select>
+
       <label>For the next</label>
       <input type="number" id="recurLengthNum" min="1" max="52">
       <select id="recurLength">
@@ -104,7 +99,6 @@
     <input type="text" id="eventTitle" placeholder="Event Title">
     <input type="text" id="eventDescription" placeholder="Event Description">
 
-    <!-- PAID -->
     <div id="paidInfo" class="hidden">
       <h4>Paid Reservation</h4>
       <input type="text" id="residentName" placeholder="Resident Name">
@@ -115,11 +109,9 @@
       </label>
     </div>
 
-    <button id="saveBtn" onclick="saveEvent()">Save Event</button>
-    <div id="conflictContainer"></div>
+    <button id="saveBtn">Save Event</button>
   </div>
 
-  <!-- EVENTS LIST -->
   <h2>Existing Events</h2>
   <table class="admin-events-table">
     <thead>
@@ -141,33 +133,41 @@ let editId = null;
 
 /* SESSION */
 window.addEventListener("DOMContentLoaded", async () => {
-  const res = await fetch("/api/session");
-  if(res.ok){
-    const data = await res.json();
-    currentUser = data;
-    loginWrapper.classList.add("hidden");
-    adminWrapper.classList.remove("hidden");
-    loadEvents();
+  try {
+    const res = await fetch("/api/session");
+    if(res.ok){
+      currentUser = await res.json();
+      loginWrapper.classList.add("hidden");
+      adminWrapper.classList.remove("hidden");
+      loadEvents();
+    }
+  } catch (err) {
+    console.error("Session fetch error:", err);
   }
 });
 
 /* LOGIN */
 loginForm.addEventListener("submit", async e => {
   e.preventDefault();
-  const res = await fetch("/api/login",{
-    method:"POST",
-    headers:{ "Content-Type":"application/json" },
-    body: JSON.stringify({
-      username: username.value,
-      password: password.value
-    })
-  });
-  const data = await res.json();
-  if(!res.ok){
-    loginError.textContent = data.error || "Login failed";
-    return;
+  try {
+    const res = await fetch("/api/login", {
+      method:"POST",
+      headers:{ "Content-Type":"application/json" },
+      body: JSON.stringify({
+        username: username.value,
+        password: password.value
+      })
+    });
+    const data = await res.json();
+    if(!res.ok){
+      loginError.textContent = data.error || "Login failed";
+      return;
+    }
+    location.reload();
+  } catch(err) {
+    console.error("Login error:", err);
+    loginError.textContent = "Network error";
   }
-  location.reload();
 });
 
 /* LOGOUT */
@@ -177,45 +177,48 @@ async function logout(){
 }
 
 /* FORM VISIBILITY */
-eventType.addEventListener("change",()=>{
+eventType.addEventListener("change", ()=>{
   eventForm.classList.toggle("hidden", !eventType.value);
   paidInfo.classList.toggle("hidden", eventType.value !== "reservedPaid");
 });
 
-recurCheckbox.addEventListener("change",()=>{
+recurCheckbox.addEventListener("change", ()=>{
   recurringOptions.classList.toggle("hidden", !recurCheckbox.checked);
 });
 
 /* LOAD EVENTS */
 async function loadEvents(){
-  const res = await fetch("/api/getEvents?admin=true");
-  let events = await res.json();
+  try {
+    const res = await fetch("/api/getEvents?admin=true");
+    let events = await res.json();
 
-  const search = searchEvent.value.toLowerCase();
-  events = events.filter(e => e.title.toLowerCase().includes(search));
+    const search = searchEvent.value.toLowerCase();
+    events = events.filter(e => e.title.toLowerCase().includes(search));
 
-  events.sort((a,b)=>{
-    if(sortEvent.value==="dateAsc") return new Date(a.date)-new Date(b.date);
-    if(sortEvent.value==="dateDesc") return new Date(b.date)-new Date(a.date);
-    if(sortEvent.value==="title") return a.title.localeCompare(b.title);
-    return a.eType.localeCompare(b.eType);
-  });
+    events.sort((a,b)=>{
+      if(sortEvent.value==="dateAsc") return new Date(a.date)-new Date(b.date);
+      if(sortEvent.value==="dateDesc") return new Date(b.date)-new Date(a.date);
+      if(sortEvent.value==="title") return a.title.localeCompare(b.title);
+      return a.eType.localeCompare(b.eType);
+    });
 
-  eventsTable.innerHTML="";
-  events.forEach(ev=>{
-    const conflictClass = ev.hasConflict ? "conflict" : "";
-    eventsTable.innerHTML += `
-      <tr class="${conflictClass}">
-        <td>${ev.date}</td>
-        <td>${ev.title}</td>
-        <td>${ev.eType}</td>
-        <td>${ev.addedBy||"—"}</td>
-        <td>
-          <button onclick="editEvent('${ev._id}')">Edit</button>
-          <button onclick="deleteEvent('${ev._id}')">Delete</button>
-        </td>
-      </tr>`;
-  });
+    eventsTable.innerHTML = "";
+    events.forEach(ev => {
+      eventsTable.innerHTML += `
+        <tr>
+          <td>${ev.date}</td>
+          <td>${ev.title}</td>
+          <td>${ev.eType}</td>
+          <td>${ev.addedBy||"—"}</td>
+          <td>
+            <button onclick="editEvent('${ev._id}')">Edit</button>
+            <button onclick="deleteEvent('${ev._id}')">Delete</button>
+          </td>
+        </tr>`;
+    });
+  } catch(err){
+    console.error("Load events error:", err);
+  }
 }
 
 /* EDIT */
@@ -224,38 +227,34 @@ function editEvent(id){
     .then(r=>r.json())
     .then(events=>{
       const ev = events.find(e=>e._id===id);
-      editId=id;
+      if(!ev) return;
 
-      eventType.value=ev.eType;
+      editId = id;
+      eventType.value = ev.eType;
       eventForm.classList.remove("hidden");
+      eventDate.value = ev.date;
+      startTime.value = ev.startTime || "";
+      endTime.value = ev.endTime || "";
+      groupSize.value = ev.groupSize || "";
+      contactName.value = ev.contactName || "";
+      contactInfo.value = ev.contactInfo || "";
+      eventTitle.value = ev.title;
+      eventDescription.value = ev.description || "";
 
-      eventDate.value=ev.date;
-      startTime.value=ev.startTime||"";
-      endTime.value=ev.endTime||"";
-      groupSize.value=ev.groupSize||"";
-      contactName.value=ev.contactName||"";
-      contactInfo.value=ev.contactInfo||"";
-      eventTitle.value=ev.title;
-      eventDescription.value=ev.description||"";
-
-      recurCheckbox.checked=!!ev.recurring;
+      recurCheckbox.checked = !!ev.recurring;
       recurringOptions.classList.toggle("hidden", !ev.recurring);
-      recurWhen.value=ev.recurWhen||"week";
-      recurLengthNum.value=ev.recurLengthNum||"";
-      recurLength.value=ev.recurLength||"week";
+      recurWhen.value = ev.recurWhen || "week";
+      recurLengthNum.value = ev.recurLengthNum || "";
+      recurLength.value = ev.recurLength || "week";
 
-      paidInfo.classList.toggle("hidden", ev.eType!=="reservedPaid");
-      residentName.value=ev.residentName||"";
-      residentAddress.value=ev.residentAddress||"";
+      paidInfo.classList.toggle("hidden", ev.eType !== "reservedPaid");
+      residentName.value = ev.residentName || "";
+      residentAddress.value = ev.residentAddress || "";
     });
 }
 
 /* SAVE */
-async function saveEvent() {
-  const conflictContainer = document.getElementById("conflictContainer");
-  conflictContainer.style.display = "none";
-  conflictContainer.innerHTML = "";
-
+saveBtn.addEventListener("click", async ()=>{
   const payload = {
     id: editId,
     eType: eventType.value,
@@ -276,52 +275,51 @@ async function saveEvent() {
 
   try {
     const res = await fetch("/api/addEvent", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
+      method:"POST",
+      headers: {"Content-Type":"application/json"},
       body: JSON.stringify(payload)
     });
 
-    const data = await res.json();
+    const text = await res.text();
+    let data;
+    try { data = JSON.parse(text); } 
+    catch { console.error("Invalid JSON:", text); alert("Server returned invalid JSON"); return; }
 
-    if (!res.ok) {
-      if (res.status === 409 && data.conflicts) {
-        conflictContainer.style.display = "block";
-        conflictContainer.innerHTML = "<strong>Conflicts detected:</strong><br>";
-        for (const date in data.conflicts) {
-          conflictContainer.innerHTML += `<u>${date}</u>:<br>`;
-          data.conflicts[date].forEach(e => {
-            conflictContainer.innerHTML += `&nbsp;${e.startTime}-${e.endTime} | ${e.title} (${e.type})<br>`;
+    if(!res.ok){
+      if(data.error === "conflict"){
+        let msg = "Conflicts detected:\n";
+        for(const date in data.conflicts){
+          msg += `\n${date}:\n`;
+          data.conflicts[date].forEach(c=>{
+            msg += `  ${c.title} (${c.type}) ${c.startTime}-${c.endTime}\n`;
           });
         }
-      } else {
-        conflictContainer.style.display = "block";
-        conflictContainer.textContent = data.error || "Failed to save event";
-      }
+        alert(msg);
+      } else alert("Error: "+(data.error||"Unknown"));
       return;
     }
 
-    // Success
-    editId = null;
-    conflictContainer.style.display = "none";
-    conflictContainer.innerHTML = "";
+    alert(`Event saved! ${data.inserted.length} occurrence(s).`);
+    editId=null;
     loadEvents();
 
-  } catch (err) {
+  } catch(err){
     console.error("Save event error:", err);
-    conflictContainer.style.display = "block";
-    conflictContainer.textContent = "Server error: " + err.message;
+    alert("Network or server error. See console.");
   }
-}
+});
 
 /* DELETE */
 async function deleteEvent(id){
   if(!confirm("Delete this event?")) return;
-  await fetch("/api/deleteEvent",{
-    method:"POST",
-    headers:{ "Content-Type":"application/json" },
-    body: JSON.stringify({id})
-  });
-  loadEvents();
+  try {
+    await fetch("/api/deleteEvent", {
+      method:"POST",
+      headers: {"Content-Type":"application/json"},
+      body: JSON.stringify({id})
+    });
+    loadEvents();
+  } catch(err){ console.error("Delete event error:", err); }
 }
 
 searchEvent.addEventListener("input", loadEvents);
