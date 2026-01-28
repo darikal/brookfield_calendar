@@ -7,14 +7,21 @@ const PRIORITY = {
   smallGroup: 1
 };
 
-// Generate recurring dates based on start date and recurrence type
+// Convert "HH:MM" to minutes
+function timeToMinutes(t) {
+  if (!t) return 0;
+  const [h, m] = t.split(":").map(Number);
+  return h * 60 + m;
+}
+
+// Generate recurring dates
 function generateRecurringDates(startDate, type, lengthNum) {
   const dates = [];
   const count = parseInt(lengthNum, 10) || 0;
   let current = new Date(startDate);
 
   for (let i = 0; i < count; i++) {
-    dates.push(current.toISOString().split("T")[0]); // YYYY-MM-DD
+    dates.push(current.toISOString().split("T")[0]);
     if (type === "week") current.setDate(current.getDate() + 7);
     else if (type === "biWeek") current.setDate(current.getDate() + 14);
     else if (type === "month") current.setMonth(current.getMonth() + 1);
@@ -32,11 +39,7 @@ export default async function handler(req, res) {
     // --- SAFELY PARSE JSON ---
     let event;
     try {
-      event = req.body;
-      if (!event) {
-        const text = await req.text();
-        event = JSON.parse(text);
-      }
+      event = await req.json();
     } catch (err) {
       return res.status(400).json({ error: "Invalid JSON body", details: err.message });
     }
@@ -55,27 +58,29 @@ export default async function handler(req, res) {
     }
 
     const db = await getDB();
-
-    // Generate all dates
     const dates = event.recurring
       ? generateRecurringDates(event.date, event.recurWhen, event.recurLengthNum)
       : [event.date];
 
     const conflictBreakdown = {};
+    const insertedIds = [];
 
-    // Check conflicts
     for (const date of dates) {
-      const conflicts = await db.collection("events").find({
-        date,
-        startTime: { $exists: true },
-        endTime: { $exists: true }
-      }).toArray();
+      let conflicts = [];
+      try {
+        conflicts = await db.collection("events").find({ date }).toArray();
+      } catch (err) {
+        return res.status(500).json({ error: "DB query failed", details: err.message });
+      }
 
-      const blocking = conflicts.filter(e => 
-        PRIORITY[e.eType] >= PRIORITY[event.eType] &&
-        e.startTime < event.endTime &&
-        e.endTime > event.startTime
-      );
+      const eventStart = timeToMinutes(event.startTime);
+      const eventEnd = timeToMinutes(event.endTime);
+
+      const blocking = conflicts.filter(e => {
+        const s = timeToMinutes(e.startTime);
+        const e_ = timeToMinutes(e.endTime);
+        return PRIORITY[e.eType] >= PRIORITY[event.eType] && s < eventEnd && e_ > eventStart;
+      });
 
       if (blocking.length) {
         conflictBreakdown[date] = blocking.map(e => ({
@@ -84,10 +89,21 @@ export default async function handler(req, res) {
           startTime: e.startTime,
           endTime: e.endTime
         }));
+      } else {
+        // Insert non-conflicting date
+        try {
+          const insert = await db.collection("events").insertOne({
+            ...event,
+            date,
+            createdAt: new Date()
+          });
+          insertedIds.push(insert.insertedId);
+        } catch (err) {
+          return res.status(500).json({ error: "DB insert failed", details: err.message });
+        }
       }
     }
 
-    // Return 409 if conflicts and override not approved
     if (Object.keys(conflictBreakdown).length && !event.overrideApproved) {
       return res.status(409).json({
         error: "conflict",
@@ -95,19 +111,11 @@ export default async function handler(req, res) {
       });
     }
 
-    // Insert non-conflicting dates
-    const insertedIds = [];
-    for (const date of dates) {
-      if (conflictBreakdown[date] && !event.overrideApproved) continue;
-      const insert = await db.collection("events").insertOne({
-        ...event,
-        date,
-        createdAt: new Date()
-      });
-      insertedIds.push(insert.insertedId);
-    }
-
-    return res.json({ success: true, inserted: insertedIds, conflicts: conflictBreakdown });
+    return res.status(200).json({
+      success: true,
+      inserted: insertedIds,
+      conflicts: conflictBreakdown
+    });
 
   } catch (err) {
     console.error("addEvent error:", err);

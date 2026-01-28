@@ -283,7 +283,7 @@ saveBtn.addEventListener("click", async ()=>{
     const text = await res.text();
     let data;
     try { data = JSON.parse(text); } 
-    catch { console.error("Invalid JSON:", text); alert("Server returned invalid JSON"); return; }
+    catch { console.error("Invalid JSON:", text); alert("$3rver returned invalid JSON"); return; }
 
     if(!res.ok){
       if(data.error === "conflict"){
