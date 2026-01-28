@@ -1,20 +1,22 @@
 import { getDB } from "./_db.js";
+import { ObjectId } from "mongodb";
 
 const PRIORITY = {
   reservedPaid: 4,
   socialCommitteeEvent: 3,
-  noSocialnoPaid: 2,
+ noSocialnoPaid: 2,
   smallGroup: 1
 };
 
-// Recurring dates generator
+// Generates recurring dates
 function generateRecurringDates(startDate, type, lengthNum) {
   const dates = [];
-  const count = Number(lengthNum) || 0;
+  const count = parseInt(lengthNum, 10) || 0;
   let current = new Date(startDate);
 
   for (let i = 0; i < count; i++) {
     dates.push(current.toISOString().split("T")[0]);
+
     if (type === "week") current.setDate(current.getDate() + 7);
     else if (type === "biWeek") current.setDate(current.getDate() + 14);
     else if (type === "month") current.setMonth(current.getMonth() + 1);
@@ -29,58 +31,50 @@ export default async function handler(req, res) {
       return res.status(405).json({ error: "Method not allowed" });
     }
 
-    // Safe parsing
-    let body;
+    // Safe parsing for Vercel
+    let event;
     try {
-      body = typeof req.body === "string" ? JSON.parse(req.body) : req.body;
+      event = typeof req.body === "string" ? JSON.parse(req.body) : req.body;
     } catch (err) {
       return res.status(400).json({ error: "Invalid JSON body", details: err.message });
     }
 
-    if (!body || typeof body !== "object") {
+    if (!event || typeof event !== "object") {
       return res.status(400).json({ error: "Empty or invalid body" });
     }
+
+    if (event.id && !ObjectId.isValid(event.id)) {
+      return res.status(400).json({ error: "Invalid event ID" });
+    }
+
+    // Required fields
+    const required = ["eType", "date", "startTime", "endTime", "title"];
+    for (const f of required) {
+      if (!event[f]) return res.status(400).json({ error: `Missing field: ${f}` });
+    }
+
+    if (!PRIORITY[event.eType]) return res.status(400).json({ error: `Unknown event type: ${event.eType}` });
 
     const db = await getDB();
     const events = db.collection("events");
 
-    // Sanitize fields
-    const eType = body.eType;
-    const date = body.date;
-    const startTime = body.startTime;
-    const endTime = body.endTime;
-    const title = body.title;
-    const description = body.description || "";
-    const groupSize = body.groupSize ? Number(body.groupSize) : null;
-    const contactName = body.contactName || "";
-    const contactInfo = body.contactInfo || "";
-    const recurring = !!body.recurring;
-    const recurWhen = body.recurWhen || "week";
-    const recurLengthNum = Number(body.recurLengthNum) || 0;
-    const addedBy = body.addedBy || "admin";
-    const overrideApproved = !!body.overrideApproved;
-
-    // Validate required fields
-    const required = [eType, date, startTime, endTime, title];
-    if (required.some(f => !f)) {
-      return res.status(400).json({ error: "Missing required fields" });
-    }
-
-    if (!PRIORITY[eType]) return res.status(400).json({ error: `Unknown event type: ${eType}` });
-
-    const dates = recurring ? generateRecurringDates(date, recurWhen, recurLengthNum) : [date];
+    const dates = event.recurring
+      ? generateRecurringDates(event.date, event.recurWhen, event.recurLengthNum)
+      : [event.date];
 
     const conflictBreakdown = {};
 
-    for (const d of dates) {
-      const conflicts = await events.find({ date: d }).toArray();
+    // Check for conflicts
+    for (const date of dates) {
+      const conflicts = await events.find({ date }).toArray();
       const blocking = conflicts.filter(e =>
-        PRIORITY[e.eType] >= PRIORITY[eType] &&
-        e.startTime < endTime &&
-        e.endTime > startTime
+        PRIORITY[e.eType] >= PRIORITY[event.eType] &&
+        e.startTime < event.endTime &&
+        e.endTime > event.startTime
       );
+
       if (blocking.length) {
-        conflictBreakdown[d] = blocking.map(e => ({
+        conflictBreakdown[date] = blocking.map(e => ({
           title: e.title,
           type: e.eType,
           startTime: e.startTime,
@@ -89,41 +83,42 @@ export default async function handler(req, res) {
       }
     }
 
-    if (Object.keys(conflictBreakdown).length && !overrideApproved) {
+    if (Object.keys(conflictBreakdown).length && !event.overrideApproved) {
       return res.status(409).json({ error: "conflict", conflicts: conflictBreakdown });
     }
 
     const insertedIds = [];
 
-    for (const d of dates) {
-      if (conflictBreakdown[d] && !overrideApproved) continue;
+    for (const date of dates) {
+      if (conflictBreakdown[date] && !event.overrideApproved) continue;
 
       const eventData = {
-        eType,
-        date: d,
-        startTime,
-        endTime,
-        title,
-        description,
-        groupSize,
-        contactName,
-        contactInfo,
-        recurring,
-        recurWhen,
-        recurLengthNum,
-        addedBy,
+        eType: event.eType,
+        date,
+        startTime: event.startTime,
+        endTime: event.endTime,
+        title: event.title,
+        description: event.description || "",
+        groupSize: event.groupSize || "",
+        contactName: event.contactName || "",
+        contactInfo: event.contactInfo || "",
+        addedBy: event.addedBy || "unknown",
+        recurring: !!event.recurring,
+        recurWhen: event.recurWhen || null,
+        recurLengthNum: event.recurLengthNum || null,
+        recurLength: event.recurLength || null,
         createdAt: new Date()
       };
 
-      // If editing, use existing id
-      if (body.id && typeof body.id === "string" && body.id.length === 24) {
-        const { id, ...rest } = eventData;
-        const result = await events.updateOne(
-          { _id: new (await import("mongodb")).ObjectId(body.id) },
-          { $set: rest }
+      if (event.id) {
+        // Update existing event
+        await events.updateOne(
+          { _id: new ObjectId(event.id) },
+          { $set: eventData }
         );
-        insertedIds.push(body.id);
+        insertedIds.push(event.id);
       } else {
+        // Insert new event
         const result = await events.insertOne(eventData);
         insertedIds.push(result.insertedId);
       }
