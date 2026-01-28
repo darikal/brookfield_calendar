@@ -1,6 +1,5 @@
 import { getDB } from "./_db.js";
 
-// Event priority: higher number = higher priority
 const PRIORITY = {
   reservedPaid: 4,
   socialCommitteeEvent: 3,
@@ -8,18 +7,17 @@ const PRIORITY = {
   smallGroup: 1
 };
 
-// Helper to generate recurring dates
-function generateRecurringDates(startDate, type, lengthNum, lengthUnit) {
+// Generate recurring dates based on start date and recurrence type
+function generateRecurringDates(startDate, type, lengthNum) {
   const dates = [];
-  let current = new Date(startDate);
   const count = parseInt(lengthNum, 10) || 0;
+  let current = new Date(startDate);
 
   for (let i = 0; i < count; i++) {
-    dates.push(new Date(current).toISOString().split("T")[0]);
+    dates.push(current.toISOString().split("T")[0]); // YYYY-MM-DD
     if (type === "week") current.setDate(current.getDate() + 7);
     else if (type === "biWeek") current.setDate(current.getDate() + 14);
     else if (type === "month") current.setMonth(current.getMonth() + 1);
-    else break;
   }
 
   return dates;
@@ -32,71 +30,70 @@ export default async function handler(req, res) {
     }
 
     const db = await getDB();
-    if (!db) throw new Error("Database not initialized");
-
     const event = { ...req.body };
-    if (event.id) delete event.id;
+    if (event.id) delete event.id; // remove any legacy ID
 
     // Validate required fields
-    const requiredFields = ["eType", "date", "startTime", "endTime", "title"];
-    for (const f of requiredFields) {
-      if (!event[f]) {
-        return res.status(400).json({ error: `Missing required field: ${f}` });
-      }
+    const required = ["eType", "date", "startTime", "endTime", "title"];
+    for (const f of required) {
+      if (!event[f]) return res.status(400).json({ error: `Missing field: ${f}` });
     }
 
-    // Ensure eType is recognized
     if (!PRIORITY[event.eType]) {
       return res.status(400).json({ error: `Unknown event type: ${event.eType}` });
     }
 
-    // Determine all dates to insert (single or recurring)
-    const datesToInsert = event.recurring
-      ? generateRecurringDates(event.date, event.recurWhen, event.recurLengthNum, event.recurLength)
+    // Determine all dates to insert
+    const dates = event.recurring
+      ? generateRecurringDates(event.date, event.recurWhen, event.recurLengthNum)
       : [event.date];
 
-    const conflictsByDate = {};
+    const conflictBreakdown = {};
 
-    // Check all dates first
-    for (const date of datesToInsert) {
+    // Check conflicts for each date
+    for (const date of dates) {
       const conflicts = await db.collection("events").find({
         date,
-        startTime: { $exists: true, $lt: event.endTime },
-        endTime: { $exists: true, $gt: event.startTime }
+        startTime: { $exists: true },
+        endTime: { $exists: true },
+        $expr: { $and: [
+          { $lt: ["$startTime", event.endTime] },
+          { $gt: ["$endTime", event.startTime] }
+        ]}
       }).toArray();
 
-      const blockingConflicts = conflicts.filter(existing => {
-        if (!existing.eType || !PRIORITY[existing.eType]) return false;
-        return PRIORITY[existing.eType] >= PRIORITY[event.eType];
-      });
-
-      if (blockingConflicts.length) {
-        conflictsByDate[date] = blockingConflicts;
+      const blocking = conflicts.filter(e => PRIORITY[e.eType] >= PRIORITY[event.eType]);
+      if (blocking.length) {
+        conflictBreakdown[date] = blocking.map(e => ({
+          title: e.title,
+          type: e.eType,
+          startTime: e.startTime,
+          endTime: e.endTime
+        }));
       }
     }
 
-    // If any conflicts, abort and return all conflicts
-    if (Object.keys(conflictsByDate).length && !event.overrideApproved) {
+    // If there are conflicts and override not approved, return 409 with details
+    if (Object.keys(conflictBreakdown).length && !event.overrideApproved) {
       return res.status(409).json({
         error: "conflict",
-        conflicts: conflictsByDate
+        conflicts: conflictBreakdown
       });
     }
 
-    // Insert all events
-    const insertedEvents = [];
-    for (const date of datesToInsert) {
-      const insertResult = await db.collection("events").insertOne({
+    // Insert events for non-conflicting dates
+    const insertedIds = [];
+    for (const date of dates) {
+      if (conflictBreakdown[date] && !event.overrideApproved) continue; // skip conflicting date
+      const insert = await db.collection("events").insertOne({
         ...event,
         date,
         createdAt: new Date()
       });
-      insertedEvents.push(insertResult.insertedId);
+      insertedIds.push(insert.insertedId);
     }
 
-    console.log("Inserted events:", insertedEvents);
-    return res.json({ success: true, insertedEvents });
-
+    return res.json({ success: true, inserted: insertedIds, conflicts: conflictBreakdown });
   } catch (err) {
     console.error("addEvent error:", err);
     return res.status(500).json({ error: "Server error", details: err.message });
