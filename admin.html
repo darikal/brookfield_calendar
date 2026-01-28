@@ -139,6 +139,7 @@ window.addEventListener("DOMContentLoaded", async () => {
       currentUser = await res.json();
       loginWrapper.classList.add("hidden");
       adminWrapper.classList.remove("hidden");
+      resetForm(); // form hidden initially
       loadEvents();
     }
   } catch (err) {
@@ -182,6 +183,30 @@ eventType.addEventListener("change", ()=>{
   paidInfo.classList.toggle("hidden", eventType.value !== "reservedPaid");
 });
 recurCheckbox.addEventListener("change", ()=>{ recurringOptions.classList.toggle("hidden", !recurCheckbox.checked); });
+
+/* RESET FORM FUNCTION */
+function resetForm(){
+  editId = null;
+  eventForm.classList.add("hidden");
+  eventType.value = "";
+  eventDate.value = "";
+  startTime.value = "";
+  endTime.value = "";
+  groupSize.value = "";
+  contactName.value = "";
+  contactInfo.value = "";
+  eventTitle.value = "";
+  eventDescription.value = "";
+  recurCheckbox.checked = false;
+  recurringOptions.classList.add("hidden");
+  recurWhen.value = "week";
+  recurLengthNum.value = "";
+  recurLength.value = "week";
+  paidInfo.classList.add("hidden");
+  residentName.value = "";
+  residentAddress.value = "";
+  acceptTerms.checked = false;
+}
 
 /* LOAD EVENTS */
 async function loadEvents(){
@@ -227,6 +252,7 @@ function editEvent(id){
       editId = id;
       eventType.value = ev.eType;
       eventForm.classList.remove("hidden");
+      eventForm.scrollIntoView({behavior:"smooth"});
       eventDate.value = ev.date;
       startTime.value = ev.startTime || "";
       endTime.value = ev.endTime || "";
@@ -240,9 +266,10 @@ function editEvent(id){
       recurWhen.value = ev.recurWhen || "week";
       recurLengthNum.value = ev.recurLengthNum || "";
       recurLength.value = ev.recurLength || "week";
-      paidInfo.classList.toggle("hidden", ev.eType !== "reservedPaid");
+      paidInfo.classList.toggle("hidden", ev.eType === "reservedPaid");
       residentName.value = ev.residentName || "";
       residentAddress.value = ev.residentAddress || "";
+      acceptTerms.checked = ev.acceptTerms || false;
     });
 }
 
@@ -263,7 +290,10 @@ saveBtn.addEventListener("click", async ()=>{
     recurWhen: recurWhen.value,
     recurLengthNum: recurLengthNum.value,
     recurLength: recurLength.value,
-    addedBy: currentUser.username
+    addedBy: currentUser.username,
+    residentName: residentName.value,
+    residentAddress: residentAddress.value,
+    acceptTerms: acceptTerms.checked
   };
 
   try {
@@ -274,8 +304,6 @@ saveBtn.addEventListener("click", async ()=>{
     });
 
     const text = await res.text();
-    console.log("RAW SERVER RESPONSE:", text); // ← debugging
-
     let data;
     try { data = JSON.parse(text); } 
     catch(err) { console.error("Invalid JSON:", text); alert("Server returned invalid JSON"); return; }
@@ -295,7 +323,7 @@ saveBtn.addEventListener("click", async ()=>{
     }
 
     alert(`Event saved! ${data.inserted.length} occurrence(s).`);
-    editId=null;
+    resetForm();
     loadEvents();
 
   } catch(err){
@@ -313,6 +341,7 @@ async function deleteEvent(id){
       headers: {"Content-Type":"application/json"},
       body: JSON.stringify({id})
     });
+    resetForm();
     loadEvents();
   } catch(err){ console.error("Delete event error:", err); }
 }
