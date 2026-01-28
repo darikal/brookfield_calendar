@@ -7,15 +7,20 @@
 <title>Brookfield Events Calendar [Alpha]</title>
 </head>
 <body>
+
 <div class="wrapper">
 
+  <!-- ================= CALENDAR LAYOUT ================= -->
   <div class="container-calendar">
+
+    <!-- LEFT COLUMN -->
     <div id="left">
       <h1>Brookfield Events Calendar [Alpha]</h1>
 
       <!-- Public Add Event Section (Hidden for now) -->
       <div id="event-section" class="public-add-event" style="display:none;">
         <h3>Add Event</h3>
+
         <select id="eventTypeMajor">
           <option value="" hidden>--- Event Type ---</option>
           <option value="socialCommitteeEvent">Social Committee Hosted Event</option>
@@ -25,63 +30,64 @@
         </select>
 
         <div id="eventDetailsWrapper" style="display:none;">
+
           <input type="date" id="eventDate">
 
           <div class="time-input">
-            <label for="startTime">Start Time:</label>
+            <label>Start Time:</label>
             <input type="time" id="startTime" min="07:30" max="19:00">
-            <label for="endTime">End Time:</label>
+            <label>End Time:</label>
             <input type="time" id="endTime" min="08:15" max="19:45">
           </div>
 
           <div class="group-size-wrapper">
-            <label for="groupSize">Approximate size of group [max 180]</label>
-            <input type="text" id="groupSize" placeholder="10-15" maxlength="5">
+            <label>Approximate size of group [max 180]</label>
+            <input type="text" id="groupSize" placeholder="10–15" maxlength="5">
           </div>
 
           <div id="recurBox">
-            <label for="recurCheckbox">Recurring Event</label>
-            <input type="checkbox" id="recurCheckbox">
+            <label>
+              <input type="checkbox" id="recurCheckbox">
+              Recurring Event
+            </label>
           </div>
 
           <div id="recurring" style="display:none;">
             <select id="recurWhen">
               <option value="week">Weekly</option>
-              <option value="month">Monthly</option>
               <option value="biWeek">Bi-Weekly</option>
+              <option value="month">Monthly</option>
             </select>
 
-            <label>For the next </label>
+            <label>For the next</label>
             <input type="number" id="recurLengthNum" placeholder="10" max="52">
+
             <select id="recurLength">
               <option value="week">Weeks</option>
               <option value="month">Months</option>
             </select>
           </div>
 
-          <div class="contactDiv" id="contactDiv">
-            <input type="text" id="contactName" placeholder="Name of contact person">
-            <input type="text" id="contactInfo" placeholder="email or phone #">
+          <div class="contactDiv">
+            <input type="text" id="contactName" placeholder="Contact name">
+            <input type="text" id="contactInfo" placeholder="Phone or email">
           </div>
 
-          <div id="titleDiv">
-            <input type="text" id="eventTitle" placeholder="Event Title">
-          </div>
-
+          <input type="text" id="eventTitle" placeholder="Event Title">
           <input type="text" id="eventDescription" placeholder="Event Description">
 
           <div id="paidInfo" style="display:none;">
-            <input type="text" id="residentName" placeholder="Name of Resident">
+            <input type="text" id="residentName" placeholder="Resident Name">
             <input type="text" id="contactNamePaid" placeholder="Contact Name (if different)">
-            <input type="text" id="residentAddress" placeholder="Address of Resident">
-            <br>
+            <input type="text" id="residentAddress" placeholder="Resident Address">
+
             <div id="termsWrapper" style="margin-top:10px;">
               <label>
                 <input type="checkbox" id="acceptTerms">
-                I accept the <a href="#" target="_blank">Terms and Conditions</a>
+                I accept the Terms and Conditions
               </label>
               <textarea readonly rows="5" style="width:100%; margin-top:5px;">
-Full terms and conditions text for paid reservations. Users must read this before accepting.
+Full terms and conditions text for paid reservations.
               </textarea>
             </div>
           </div>
@@ -90,29 +96,26 @@ Full terms and conditions text for paid reservations. Users must read this befor
             <option value="" hidden>--- Are Walk Ins Welcome ---</option>
             <option value="Open">Open to walk ins</option>
             <option value="Closed">Closed to walk ins</option>
-            <option value="Other">Other - specify</option>
-            <option id="signUpRequired" value="signUpRequired" hidden>Signup Required</option>
+            <option value="Other">Other – specify</option>
           </select>
 
           <div id="eventOther" style="display:none;">
-            <input type="text" id="eventType" placeholder="Email {name} | call {name}">
+            <input type="text" id="eventType" placeholder="Email or call contact">
           </div>
+
           <div id="signUpField" style="display:none;">
-            <input type="text" id="signUp" placeholder="Contact {name} at {email}">
+            <input type="text" id="signUp" placeholder="Signup instructions">
           </div>
 
           <button id="addEvent">Submit</button>
         </div>
       </div>
-
-      <div id="reminder-section">
-        <h3>Events & Reservations</h3>
-        <ul id="reminderList"></ul>
-      </div>
     </div>
 
+    <!-- RIGHT COLUMN -->
     <div id="right">
       <h3 id="monthAndYear"></h3>
+
       <div class="button-container-calendar">
         <button id="previous">‹</button>
         <button id="next">›</button>
@@ -124,12 +127,20 @@ Full terms and conditions text for paid reservations. Users must read this befor
       </table>
 
       <div class="footer-container-calendar">
-        <label for="month">Jump To: </label>
+        <label>Jump To:</label>
         <select id="month"></select>
         <select id="year"></select>
       </div>
     </div>
+
   </div>
+
+  <!-- ================= EVENTS BELOW CALENDAR ================= -->
+  <div id="reminder-section" class="below-calendar">
+    <h3>Events & Reservations</h3>
+    <ul id="reminderList"></ul>
+  </div>
+
 </div>
 
 <script src="script.js" defer></script>
