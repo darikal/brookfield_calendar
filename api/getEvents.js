@@ -2,7 +2,46 @@ import clientPromise from "./_db.js";
 import { ObjectId } from "mongodb";
 
 /**
- * Get logged-in user from session cookie
+ * Expand recurring events based on stored schema
+ * This ONLY expands events marked recurring === true
+ */
+function expandRecurringEvent(event) {
+  // Non-recurring events pass through unchanged
+  if (!event.recurring) {
+    return [event];
+  }
+
+  const results = [];
+  const startDate = new Date(event.date);
+
+  const total = parseInt(event.recurLengthNum, 10);
+  if (!total || total <= 0) return [];
+
+  for (let i = 0; i < total; i++) {
+    const d = new Date(startDate);
+
+    if (event.recurWhen === "week") {
+      d.setDate(startDate.getDate() + i * 7);
+    } else if (event.recurWhen === "biWeek") {
+      d.setDate(startDate.getDate() + i * 14);
+    } else if (event.recurWhen === "month") {
+      d.setMonth(startDate.getMonth() + i);
+    } else {
+      continue;
+    }
+
+    results.push({
+      ...event,
+      date: d.toISOString().split("T")[0],
+      _parentId: event._id // helps debugging / future edits
+    });
+  }
+
+  return results;
+}
+
+/**
+ * Session → user
  */
 async function getUserFromSession(req, db) {
   const cookie = req.headers.cookie || "";
@@ -24,40 +63,31 @@ async function getUserFromSession(req, db) {
 
 export default async function handler(req, res) {
   try {
-    const { month, year, admin } = req.query;
-
-    if (!month || !year) {
-      return res.status(400).json({ error: "Missing month or year" });
-    }
-
-    const monthNum = parseInt(month, 10);
-    const yearNum = parseInt(year, 10);
-    const isAdminView = admin === "true";
+    const isAdminView = req.query.admin === "true";
 
     const client = await clientPromise;
     const db = client.db("calendar");
 
-    // Build date range ONCE
-    const start = `${yearNum}-${String(monthNum).padStart(2, "0")}-01`;
-    const end = `${yearNum}-${String(monthNum).padStart(2, "0")}-31`;
-
-    // 🔒 SINGLE SOURCE OF TRUTH
-    const events = await db
+    // ALWAYS fetch all base events
+    const rawEvents = await db
       .collection("events")
-      .find({
-        date: { $gte: start, $lte: end }
-      })
-      .sort({ date: 1, startTime: 1 })
+      .find({})
       .toArray();
 
+    // Expand recurring events ONCE
+    let events = rawEvents.flatMap(ev => expandRecurringEvent(ev));
+
+    // Auth-based sanitization
     const user = await getUserFromSession(req, db);
     const role = user?.role || "guest";
 
-    const sanitized = events.map(ev => {
+    events = events.map(ev => {
+      // Admin & admin panel see everything
       if (isAdminView || role === "admin" || role === "subAdmin") {
         return ev;
       }
 
+      // Public view: strip private fields
       const clean = { ...ev };
       delete clean.contactName;
       delete clean.contactInfo;
@@ -66,9 +96,12 @@ export default async function handler(req, res) {
       return clean;
     });
 
-    res.status(200).json(sanitized);
+    // ALWAYS return an array
+    res.status(200).json(events);
+
   } catch (err) {
     console.error("GET EVENTS ERROR:", err);
-    res.status(500).json([]);
+    // Never break the frontend contract
+    res.status(200).json([]);
   }
 }
