@@ -6,6 +6,7 @@
 <title>Brookfield Events Calendar [Alpha]</title>
 <link rel="stylesheet" href="styles.css">
 <style>
+/* Highlight effect for scrolling */
 .reminder-highlight {
   animation: highlightAnim 2s ease;
 }
@@ -55,14 +56,14 @@ let currentDate = new Date();
 let events = [];
 
 /* =========================
-   LOAD + EXPAND EVENTS
+   LOAD EVENTS (ONLY MONTH)
 ========================= */
 async function loadEvents(){
   try{
-    const res = await fetch("/api/getEvents");
-    const raw = await res.json();
-    events = [];
-    raw.forEach(ev => events.push(...expandRecurring(ev)));
+    const month = currentDate.getMonth();
+    const year = currentDate.getFullYear();
+    const res = await fetch(`/api/getEvents?month=${month}&year=${year}`);
+    events = await res.json();
     renderCalendar();
     renderEventList();
   }catch(err){
@@ -70,43 +71,16 @@ async function loadEvents(){
   }
 }
 
-function expandRecurring(ev){
-  if(!ev.recurring) return [ev];
-
-  const out = [];
-  const start = new Date(ev.date);
-  const count = parseInt(ev.recurLengthNum, 10) || 1;
-
-  for(let i=0;i<count;i++){
-    const d = new Date(start);
-
-    if(ev.recurWhen === "week") d.setDate(d.getDate() + i*7);
-    else if(ev.recurWhen === "biWeek") d.setDate(d.getDate() + i*14);
-    else if(ev.recurWhen === "month") d.setMonth(d.getMonth() + i);
-
-    out.push({
-      ...ev,
-      date: d.toISOString().split("T")[0],
-      _occurrence: i
-    });
-  }
-  return out;
-}
-
 /* =========================
-   EVENT LIST (MONTH ONLY)
+   EVENT LIST
 ========================= */
 function renderEventList(){
   const ul = document.getElementById("reminderList");
   ul.innerHTML = "";
 
-  const m = currentDate.getMonth();
-  const y = currentDate.getFullYear();
-
-  const monthEvents = events.filter(e=>{
-    const d = new Date(e.date);
-    return d.getMonth()===m && d.getFullYear()===y;
-  }).sort((a,b)=>new Date(a.date)-new Date(b.date));
+  const monthEvents = events
+    .slice()
+    .sort((a,b)=>new Date(a.date)-new Date(b.date));
 
   monthEvents.forEach(e=>{
     let cls="event-default";
@@ -168,10 +142,11 @@ function renderCalendar(){
         cell.textContent=date;
         const dStr=`${year}-${String(month+1).padStart(2,"0")}-${String(date).padStart(2,"0")}`;
 
-        const dayEvents=events.filter(e=>e.date===dStr);
+        const dayEvents = events.filter(e=>e.date===dStr);
         if(dayEvents.length){
           const dots=document.createElement("div");
           dots.className="event-dots";
+
           dayEvents.forEach(e=>{
             const dot=document.createElement("span");
             let cls="event-default";
@@ -192,6 +167,7 @@ function renderCalendar(){
             };
             dots.appendChild(dot);
           });
+
           cell.appendChild(dots);
         }
 
@@ -216,10 +192,16 @@ function renderCalendar(){
 }
 
 /* =========================
-   NAV
+   NAVIGATION
 ========================= */
-previous.onclick=()=>{ currentDate.setMonth(currentDate.getMonth()-1); renderCalendar(); renderEventList(); };
-next.onclick=()=>{ currentDate.setMonth(currentDate.getMonth()+1); renderCalendar(); renderEventList(); };
+document.getElementById("previous").onclick=()=>{ 
+  currentDate.setMonth(currentDate.getMonth()-1); 
+  loadEvents(); 
+};
+document.getElementById("next").onclick=()=>{ 
+  currentDate.setMonth(currentDate.getMonth()+1); 
+  loadEvents(); 
+};
 
 const monthSel=document.getElementById("month");
 const yearSel=document.getElementById("year");
@@ -234,9 +216,18 @@ for(let y=currentDate.getFullYear()-5;y<=currentDate.getFullYear()+5;y++){
 monthSel.value=currentDate.getMonth();
 yearSel.value=currentDate.getFullYear();
 
-monthSel.onchange=()=>{ currentDate.setMonth(+monthSel.value); renderCalendar(); renderEventList(); };
-yearSel.onchange=()=>{ currentDate.setFullYear(+yearSel.value); renderCalendar(); renderEventList(); };
+monthSel.onchange=()=>{ 
+  currentDate.setMonth(+monthSel.value); 
+  loadEvents(); 
+};
+yearSel.onchange=()=>{ 
+  currentDate.setFullYear(+yearSel.value); 
+  loadEvents(); 
+};
 
+/* =========================
+   INITIAL LOAD
+========================= */
 loadEvents();
 </script>
 </body>
