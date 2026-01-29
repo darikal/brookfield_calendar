@@ -6,14 +6,14 @@
 <title>Brookfield Events Calendar [Alpha]</title>
 <link rel="stylesheet" href="styles.css">
 <style>
-/* Highlight effect for scrolling */
-.reminder-highlight {
-  animation: highlightAnim 2s ease;
-}
-@keyframes highlightAnim {
-  0% { background-color: #ffff99; }
-  100% { background-color: #f0f0f0; }
-}
+  /* Highlight effect for scrolling */
+  .reminder-highlight {
+    animation: highlightAnim 2s ease;
+  }
+  @keyframes highlightAnim {
+    0% { background-color: #ffff99; }
+    100% { background-color: #f0f0f0; }
+  }
 </style>
 </head>
 <body>
@@ -56,14 +56,14 @@ let currentDate = new Date();
 let events = [];
 
 /* =========================
-   LOAD EVENTS (ONLY MONTH)
+   LOAD EVENTS (BACKEND ALREADY EXPANDS)
 ========================= */
 async function loadEvents(){
   try{
     const month = currentDate.getMonth();
     const year = currentDate.getFullYear();
     const res = await fetch(`/api/getEvents?month=${month}&year=${year}`);
-    events = await res.json();
+    events = await res.json(); // backend already expands recurring events
     renderCalendar();
     renderEventList();
   }catch(err){
@@ -72,15 +72,19 @@ async function loadEvents(){
 }
 
 /* =========================
-   EVENT LIST
+   EVENT LIST (CURRENT MONTH)
 ========================= */
 function renderEventList(){
   const ul = document.getElementById("reminderList");
   ul.innerHTML = "";
 
-  const monthEvents = events
-    .slice()
-    .sort((a,b)=>new Date(a.date)-new Date(b.date));
+  const m = currentDate.getMonth();
+  const y = currentDate.getFullYear();
+
+  const monthEvents = events.filter(e=>{
+    const d = new Date(e.date);
+    return d.getMonth()===m && d.getFullYear()===y;
+  }).sort((a,b)=>new Date(a.date)-new Date(b.date));
 
   monthEvents.forEach(e=>{
     let cls="event-default";
@@ -142,11 +146,10 @@ function renderCalendar(){
         cell.textContent=date;
         const dStr=`${year}-${String(month+1).padStart(2,"0")}-${String(date).padStart(2,"0")}`;
 
-        const dayEvents = events.filter(e=>e.date===dStr);
+        const dayEvents=events.filter(e=>e.date===dStr);
         if(dayEvents.length){
           const dots=document.createElement("div");
           dots.className="event-dots";
-
           dayEvents.forEach(e=>{
             const dot=document.createElement("span");
             let cls="event-default";
@@ -167,7 +170,6 @@ function renderCalendar(){
             };
             dots.appendChild(dot);
           });
-
           cell.appendChild(dots);
         }
 
@@ -216,18 +218,9 @@ for(let y=currentDate.getFullYear()-5;y<=currentDate.getFullYear()+5;y++){
 monthSel.value=currentDate.getMonth();
 yearSel.value=currentDate.getFullYear();
 
-monthSel.onchange=()=>{ 
-  currentDate.setMonth(+monthSel.value); 
-  loadEvents(); 
-};
-yearSel.onchange=()=>{ 
-  currentDate.setFullYear(+yearSel.value); 
-  loadEvents(); 
-};
+monthSel.onchange=()=>{ currentDate.setMonth(+monthSel.value); loadEvents(); };
+yearSel.onchange=()=>{ currentDate.setFullYear(+yearSel.value); loadEvents(); };
 
-/* =========================
-   INITIAL LOAD
-========================= */
 loadEvents();
 </script>
 </body>
