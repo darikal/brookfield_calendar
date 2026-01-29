@@ -16,5 +16,5 @@ export default clientPromise;
 
 export async function getDB() {
   const client = await clientPromise;
-  return client.db("calendarDB");
+  return client.db("calendar");
 }
