@@ -6,7 +6,6 @@
 <title>Brookfield Events Calendar [Alpha]</title>
 <link rel="stylesheet" href="styles.css">
 <style>
-/* Highlight effect for scrolling reminders */
 .reminder-highlight {
   animation: highlightAnim 2s ease;
 }
@@ -17,31 +16,33 @@
 </style>
 </head>
 <body>
+
 <div class="wrapper">
 
   <h1>Brookfield Events Calendar [Alpha]</h1>
 
   <!-- CALENDAR -->
-  <div id="calendar-container" class="container-calendar">
+  <div class="container-calendar">
     <h3 id="monthAndYear"></h3>
+
     <div class="button-container-calendar">
       <button id="previous">‹</button>
       <button id="next">›</button>
     </div>
 
-    <table class="table-calendar" id="calendar" data-lang="en">
+    <table class="table-calendar">
       <thead id="thead-month"></thead>
       <tbody id="calendar-body"></tbody>
     </table>
 
     <div class="footer-container-calendar">
-      <label for="month">Jump To: </label>
+      <label>Jump To:</label>
       <select id="month"></select>
       <select id="year"></select>
     </div>
   </div>
 
-  <!-- EVENTS / REMINDERS BELOW CALENDAR -->
+  <!-- EVENTS LIST -->
   <div id="reminder-section">
     <h3>Events & Reservations</h3>
     <ul id="reminderList"></ul>
@@ -53,180 +54,188 @@
 let currentDate = new Date();
 let events = [];
 
-// Generate all occurrences for recurring events
-function expandRecurring(ev){
-  if(!ev.recurring) return [ev];
-  const occurrences = [];
-  const startDate = new Date(ev.date);
-  const recurCount = parseInt(ev.recurLengthNum) || 1;
-  const interval = ev.recurWhen==="week" ? 7 : ev.recurWhen==="biWeek" ? 14 : 30;
-  for(let i=0;i<recurCount;i++){
-    const newEv = {...ev};
-    const newDate = new Date(startDate);
-    newDate.setDate(newDate.getDate() + i*interval);
-    newEv.date = newDate.toISOString().split('T')[0];
-    occurrences.push(newEv);
-  }
-  return occurrences;
-}
-
-// Load events from API and expand recurring
+/* =========================
+   LOAD + EXPAND EVENTS
+========================= */
 async function loadEvents(){
-  try {
+  try{
     const res = await fetch("/api/getEvents");
-    const rawEvents = await res.json();
+    const raw = await res.json();
     events = [];
-    rawEvents.forEach(ev=>{ events.push(...expandRecurring(ev)); });
+    raw.forEach(ev => events.push(...expandRecurring(ev)));
     renderCalendar();
     renderEventList();
-  } catch(err){ console.error("Error loading events:", err); }
+  }catch(err){
+    console.error("Load events error:", err);
+  }
 }
 
-// Filter events for the current month
-function eventsForCurrentMonth(){
-  const month = currentDate.getMonth();
-  const year = currentDate.getFullYear();
-  return events.filter(ev=>{
-    const d = new Date(ev.date);
-    return d.getMonth()===month && d.getFullYear()===year;
-  });
+function expandRecurring(ev){
+  if(!ev.recurring) return [ev];
+
+  const out = [];
+  const start = new Date(ev.date);
+  const count = parseInt(ev.recurLengthNum, 10) || 1;
+
+  for(let i=0;i<count;i++){
+    const d = new Date(start);
+
+    if(ev.recurWhen === "week") d.setDate(d.getDate() + i*7);
+    else if(ev.recurWhen === "biWeek") d.setDate(d.getDate() + i*14);
+    else if(ev.recurWhen === "month") d.setMonth(d.getMonth() + i);
+
+    out.push({
+      ...ev,
+      date: d.toISOString().split("T")[0],
+      _occurrence: i
+    });
+  }
+  return out;
 }
 
-// Render reminder list
+/* =========================
+   EVENT LIST (MONTH ONLY)
+========================= */
 function renderEventList(){
   const ul = document.getElementById("reminderList");
   ul.innerHTML = "";
-  const monthEvents = eventsForCurrentMonth().sort((a,b)=>new Date(a.date)-new Date(b.date));
+
+  const m = currentDate.getMonth();
+  const y = currentDate.getFullYear();
+
+  const monthEvents = events.filter(e=>{
+    const d = new Date(e.date);
+    return d.getMonth()===m && d.getFullYear()===y;
+  }).sort((a,b)=>new Date(a.date)-new Date(b.date));
 
   monthEvents.forEach(e=>{
-    const li = document.createElement("li");
-    li.dataset.eventId = e._id;
-    let typeClass = "event-default";
-    if(e.eType==="socialCommitteeEvent") typeClass="event-social";
-    else if(e.eType==="smallGroup") typeClass="event-small";
-    else if(e.eType==="reservedPaid") typeClass="event-paid";
-    else if(e.eType==="noSocialnoPaid") typeClass="event-large";
+    let cls="event-default";
+    if(e.eType==="socialCommitteeEvent") cls="event-social";
+    else if(e.eType==="smallGroup") cls="event-small";
+    else if(e.eType==="reservedPaid") cls="event-paid";
+    else if(e.eType==="noSocialnoPaid") cls="event-large";
 
-    li.className = "reminder-item";
+    const li = document.createElement("li");
+    li.className="reminder-item";
+    li.dataset.key = `${e._id}-${e.date}`;
+
     li.innerHTML = `
-      <div class="reminder-header ${typeClass}">${e.title} (${e.eType})</div>
+      <div class="reminder-header ${cls}">
+        ${e.title} – ${e.date}
+      </div>
       <div class="reminder-details">
-        <div class="eventTime">${e.date} ${e.startTime||''}-${e.endTime||''}</div>
-        <div class="eventContact">${e.contactName||''} ${e.contactInfo||''}</div>
-        <div class="eventDescription">${e.description||''}</div>
+        <div>${e.startTime||""} ${e.endTime||""}</div>
+        <div>${e.contactName||""} ${e.contactInfo||""}</div>
+        <div>${e.description||""}</div>
       </div>
     `;
-    li.querySelector(".reminder-header").addEventListener("click", ()=>{
+
+    li.querySelector(".reminder-header").onclick=()=>{
       li.querySelector(".reminder-details").classList.toggle("show");
-    });
+    };
 
     ul.appendChild(li);
   });
 }
 
-// Render calendar with dots
+/* =========================
+   CALENDAR
+========================= */
 function renderCalendar(){
   const month = currentDate.getMonth();
   const year = currentDate.getFullYear();
-  const monthAndYear = document.getElementById("monthAndYear");
-  monthAndYear.textContent = `${currentDate.toLocaleString('default',{month:'long'})} ${year}`;
 
-  const firstDay = new Date(year, month, 1).getDay();
-  const daysInMonth = new Date(year, month+1, 0).getDate();
-  const tblBody = document.getElementById("calendar-body");
-  tblBody.innerHTML = "";
+  document.getElementById("monthAndYear").textContent =
+    currentDate.toLocaleString("default",{month:"long"})+" "+year;
 
-  const thead = document.getElementById("thead-month");
-  thead.innerHTML = "<tr><th>Sun</th><th>Mon</th><th>Tue</th><th>Wed</th><th>Thu</th><th>Fri</th><th>Sat</th></tr>";
+  document.getElementById("thead-month").innerHTML =
+    "<tr><th>Sun</th><th>Mon</th><th>Tue</th><th>Wed</th><th>Thu</th><th>Fri</th><th>Sat</th></tr>";
 
-  let date = 1;
+  const body = document.getElementById("calendar-body");
+  body.innerHTML="";
+
+  const firstDay = new Date(year,month,1).getDay();
+  const daysInMonth = new Date(year,month+1,0).getDate();
+
+  let date=1;
   for(let i=0;i<6;i++){
-    const row = document.createElement("tr");
+    const row=document.createElement("tr");
     for(let j=0;j<7;j++){
-      const cell = document.createElement("td");
-      if(i===0 && j<firstDay){ cell.innerHTML = ""; }
-      else if(date>daysInMonth){ cell.innerHTML = ""; }
-      else{
-        cell.textContent = date;
-        const cellDate = `${year}-${String(month+1).padStart(2,'0')}-${String(date).padStart(2,'0')}`;
-        const eventsOnDay = events.filter(ev=>ev.date===cellDate);
+      const cell=document.createElement("td");
+      if(i===0 && j<firstDay || date>daysInMonth){
+        cell.innerHTML="";
+      } else {
+        cell.textContent=date;
+        const dStr=`${year}-${String(month+1).padStart(2,"0")}-${String(date).padStart(2,"0")}`;
 
-        if(eventsOnDay.length){
-          const dotContainer = document.createElement("div");
-          dotContainer.className = "event-dots";
-          eventsOnDay.forEach(ev=>{
-            const dot = document.createElement("span");
+        const dayEvents=events.filter(e=>e.date===dStr);
+        if(dayEvents.length){
+          const dots=document.createElement("div");
+          dots.className="event-dots";
+          dayEvents.forEach(e=>{
+            const dot=document.createElement("span");
             let cls="event-default";
-            if(ev.eType==="socialCommitteeEvent") cls="event-social";
-            else if(ev.eType==="smallGroup") cls="event-small";
-            else if(ev.eType==="reservedPaid") cls="event-paid";
-            else if(ev.eType==="noSocialnoPaid") cls="event-large";
-            dot.className = "event-dot "+cls;
-            dot.title = `${ev.title} (${ev.startTime||''}-${ev.endTime||''})`;
+            if(e.eType==="socialCommitteeEvent") cls="event-social";
+            else if(e.eType==="smallGroup") cls="event-small";
+            else if(e.eType==="reservedPaid") cls="event-paid";
+            else if(e.eType==="noSocialnoPaid") cls="event-large";
+            dot.className="event-dot "+cls;
 
-            dot.addEventListener("click", e=>{
-              e.stopPropagation();
-              const reminder = document.querySelector(`#reminderList li[data-event-id='${ev._id}']`);
-              if(reminder){
-                reminder.scrollIntoView({behavior:"smooth", block:"start"});
-                reminder.classList.add("reminder-highlight");
-                setTimeout(()=>reminder.classList.remove("reminder-highlight"),2000);
+            dot.onclick=(ev)=>{
+              ev.stopPropagation();
+              const li=document.querySelector(`[data-key='${e._id}-${e.date}']`);
+              if(li){
+                li.scrollIntoView({behavior:"smooth"});
+                li.classList.add("reminder-highlight");
+                setTimeout(()=>li.classList.remove("reminder-highlight"),2000);
               }
-            });
-
-            dotContainer.appendChild(dot);
+            };
+            dots.appendChild(dot);
           });
-          cell.appendChild(dotContainer);
+          cell.appendChild(dots);
         }
+
+        cell.onclick=()=>{
+          document.querySelectorAll(".reminder-details").forEach(d=>d.classList.remove("show"));
+          dayEvents.forEach(e=>{
+            const li=document.querySelector(`[data-key='${e._id}-${e.date}']`);
+            if(li){
+              li.querySelector(".reminder-details").classList.add("show");
+              li.scrollIntoView({behavior:"smooth"});
+            }
+          });
+        };
 
         date++;
       }
       row.appendChild(cell);
     }
-    tblBody.appendChild(row);
+    body.appendChild(row);
     if(date>daysInMonth) break;
   }
 }
 
-// Navigation buttons
-document.getElementById("previous").addEventListener("click", ()=>{
-  currentDate.setMonth(currentDate.getMonth()-1);
-  renderCalendar();
-  renderEventList();
-});
-document.getElementById("next").addEventListener("click", ()=>{
-  currentDate.setMonth(currentDate.getMonth()+1);
-  renderCalendar();
-  renderEventList();
-});
+/* =========================
+   NAV
+========================= */
+previous.onclick=()=>{ currentDate.setMonth(currentDate.getMonth()-1); renderCalendar(); renderEventList(); };
+next.onclick=()=>{ currentDate.setMonth(currentDate.getMonth()+1); renderCalendar(); renderEventList(); };
 
-// Jump selects
-const monthSelect = document.getElementById("month");
-const yearSelect = document.getElementById("year");
+const monthSel=document.getElementById("month");
+const yearSel=document.getElementById("year");
+
 for(let m=0;m<12;m++){
-  const opt = document.createElement("option");
-  opt.value = m;
-  opt.text = new Date(0,m).toLocaleString('default',{month:'long'});
-  monthSelect.appendChild(opt);
+  monthSel.innerHTML+=`<option value="${m}">${new Date(0,m).toLocaleString("default",{month:"long"})}</option>`;
 }
 for(let y=currentDate.getFullYear()-5;y<=currentDate.getFullYear()+5;y++){
-  const opt = document.createElement("option");
-  opt.value = y;
-  opt.text = y;
-  yearSelect.appendChild(opt);
+  yearSel.innerHTML+=`<option value="${y}">${y}</option>`;
 }
-monthSelect.value = currentDate.getMonth();
-yearSelect.value = currentDate.getFullYear();
-monthSelect.addEventListener("change", ()=>{
-  currentDate.setMonth(+monthSelect.value);
-  renderCalendar();
-  renderEventList();
-});
-yearSelect.addEventListener("change", ()=>{
-  currentDate.setFullYear(+yearSelect.value);
-  renderCalendar();
-  renderEventList();
-});
+
+monthSel.value=currentDate.getMonth();
+yearSel.value=currentDate.getFullYear();
+
+monthSel.onchange=()=>{ currentDate.setMonth(+monthSel.value); renderCalendar(); renderEventList(); };
+yearSel.onchange=()=>{ currentDate.setFullYear(+yearSel.value); renderCalendar(); renderEventList(); };
 
 loadEvents();
 </script>
