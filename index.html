@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Brookfield Events Calendar [Alpha]</title>
 <link rel="stylesheet" href="styles.css">
+
 <style>
 .reminder-highlight {
   animation: highlightAnim 2s ease;
@@ -55,46 +56,17 @@ let currentDate = new Date();
 let events = [];
 
 /* =========================
-   LOAD + EXPAND EVENTS
+   LOAD EVENTS (NO EXPANSION)
 ========================= */
 async function loadEvents() {
   try {
     const res = await fetch("/api/getEvents");
-    const raw = await res.json();
-    events = [];
-
-    // Flatten recurring events
-    raw.forEach(ev => events.push(...expandRecurring(ev)));
-
+    events = await res.json();
     renderCalendar();
     renderEventList();
   } catch (err) {
     console.error("Load events error:", err);
   }
-}
-
-// Expand recurring events into individual occurrences
-function expandRecurring(ev) {
-  if (!ev.recurring) return [ev];
-
-  const out = [];
-  const start = new Date(ev.date);
-  const count = parseInt(ev.recurLengthNum, 10) || 1;
-
-  for (let i = 0; i < count; i++) {
-    const d = new Date(start);
-
-    if (ev.recurWhen === "week") d.setDate(d.getDate() + i * 7);
-    else if (ev.recurWhen === "biWeek") d.setDate(d.getDate() + i * 14);
-    else if (ev.recurWhen === "month") d.setMonth(d.getMonth() + i);
-
-    out.push({
-      ...ev,
-      date: d.toISOString().split("T")[0],
-      _occurrence: i
-    });
-  }
-  return out;
 }
 
 /* =========================
@@ -104,13 +76,15 @@ function renderEventList() {
   const ul = document.getElementById("reminderList");
   ul.innerHTML = "";
 
-  const m = currentDate.getMonth() + 1; // JS Date is 0-indexed
+  const m = currentDate.getMonth() + 1;
   const y = currentDate.getFullYear();
 
-  const monthEvents = events.filter(e => {
-    const [ey, em] = e.date.split('-').map(Number);
-    return ey === y && em === m;
-  }).sort((a, b) => new Date(a.date) - new Date(b.date));
+  const monthEvents = events
+    .filter(e => {
+      const [ey, em] = e.date.split("-").map(Number);
+      return ey === y && em === m;
+    })
+    .sort((a, b) => new Date(a.date) - new Date(b.date));
 
   monthEvents.forEach(e => {
     let cls = "event-default";
@@ -164,19 +138,22 @@ function renderCalendar() {
   let date = 1;
   for (let i = 0; i < 6; i++) {
     const row = document.createElement("tr");
+
     for (let j = 0; j < 7; j++) {
       const cell = document.createElement("td");
+
       if ((i === 0 && j < firstDay) || date > daysInMonth) {
         cell.innerHTML = "";
       } else {
         cell.textContent = date;
-        const dStr = `${year}-${String(month + 1).padStart(2, "0")}-${String(date).padStart(2, "0")}`;
 
+        const dStr = `${year}-${String(month + 1).padStart(2, "0")}-${String(date).padStart(2, "0")}`;
         const dayEvents = events.filter(e => e.date === dStr);
 
         if (dayEvents.length) {
           const dots = document.createElement("div");
           dots.className = "event-dots";
+
           dayEvents.forEach(e => {
             const dot = document.createElement("span");
             let cls = "event-default";
@@ -184,30 +161,42 @@ function renderCalendar() {
             else if (e.eType === "smallGroup") cls = "event-small";
             else if (e.eType === "reservedPaid") cls = "event-paid";
             else if (e.eType === "noSocialnoPaid") cls = "event-large";
+
             dot.className = "event-dot " + cls;
 
-            dot.onclick = (ev) => {
+            dot.onclick = ev => {
               ev.stopPropagation();
-              const li = document.querySelector(`[data-key='${e._id}-${e.date}']`);
+              const li = document.querySelector(
+                `[data-key='${e._id}-${e.date}']`
+              );
               if (li) {
                 li.scrollIntoView({ behavior: "smooth" });
                 li.classList.add("reminder-highlight");
                 setTimeout(() => li.classList.remove("reminder-highlight"), 2000);
               }
             };
+
             dots.appendChild(dot);
           });
+
           cell.appendChild(dots);
         }
 
         cell.onclick = () => {
-          document.querySelectorAll(".reminder-details").forEach(d => d.classList.remove("show"));
+          document.querySelectorAll(".reminder-details")
+            .forEach(d => d.classList.remove("show"));
+
           dayEvents.forEach(e => {
-            const li = document.querySelector(`[data-key='${e._id}-${e.date}']`);
+            const li = document.querySelector(
+              `[data-key='${e._id}-${e.date}']`
+            );
             if (li) li.querySelector(".reminder-details").classList.add("show");
           });
+
           if (dayEvents.length) {
-            const li = document.querySelector(`[data-key='${dayEvents[0]._id}-${dayEvents[0].date}']`);
+            const li = document.querySelector(
+              `[data-key='${dayEvents[0]._id}-${dayEvents[0].date}']`
+            );
             if (li) li.scrollIntoView({ behavior: "smooth" });
           }
         };
