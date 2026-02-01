@@ -1,5 +1,6 @@
 import { getDB } from "./_db.js";
 import { ObjectId } from "mongodb";
+import { v4 as uuidv4 } from "uuid"; // npm install uuid
 
 const PRIORITY = {
   reservedPaid: 4,
@@ -8,7 +9,7 @@ const PRIORITY = {
   smallGroup: 1
 };
 
-// Generate recurring dates (includes start date)
+// Generates recurring dates
 function generateRecurringDates(startDate, type, lengthNum) {
   const dates = [];
   const count = parseInt(lengthNum, 10) || 0;
@@ -16,7 +17,7 @@ function generateRecurringDates(startDate, type, lengthNum) {
 
   for (let i = 0; i < count; i++) {
     if (!isNaN(current.getTime())) {
-      dates.push(current.toISOString().split("T")[0]);
+      dates.push(new Date(current)); // keep as Date object
     }
     if (type === "week") current.setDate(current.getDate() + 7);
     else if (type === "biWeek") current.setDate(current.getDate() + 14);
@@ -28,55 +29,42 @@ function generateRecurringDates(startDate, type, lengthNum) {
 
 export default async function handler(req, res) {
   try {
-    if (req.method !== "POST") {
-      return res.status(405).json({ error: "Method not allowed" });
-    }
+    if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed" });
 
-    // Vercel sometimes sends string body
     let bodyData;
     try {
       bodyData = typeof req.body === "string" ? JSON.parse(req.body) : req.body;
     } catch (err) {
-      return res.status(400).json({ error: "Invalid JSON body" });
+      return res.status(400).json({ error: "Invalid JSON body", details: err.message });
     }
 
     const event = bodyData || {};
-    if (!event || typeof event !== "object") {
-      return res.status(400).json({ error: "Empty or invalid body" });
-    }
+    if (!event || typeof event !== "object") return res.status(400).json({ error: "Empty or invalid body" });
 
-    // Validate required fields
     const required = ["eType", "date", "startTime", "endTime", "title"];
     for (const f of required) {
-      if (!event[f]) {
-        return res.status(400).json({ error: `Missing field: ${f}` });
-      }
+      if (!event[f]) return res.status(400).json({ error: `Missing field: ${f}` });
     }
 
-    if (!PRIORITY[event.eType]) {
-      return res.status(400).json({ error: `Unknown event type: ${event.eType}` });
-    }
+    if (!PRIORITY[event.eType]) return res.status(400).json({ error: `Unknown event type: ${event.eType}` });
 
     const db = await getDB();
     const eventsCollection = db.collection("events");
 
     const dates = event.recurring
       ? generateRecurringDates(event.date, event.recurWhen, event.recurLengthNum)
-      : [event.date];
+      : [new Date(event.date)];
 
-    // ---- CONFLICT CHECKS (all dates) ----
     const conflictBreakdown = {};
-
     for (const date of dates) {
-      const conflicts = await eventsCollection.find({ date }).toArray();
+      const conflicts = await eventsCollection.find({ date: date.toISOString().split("T")[0] }).toArray();
       const blocking = conflicts.filter(e =>
         PRIORITY[e.eType] >= PRIORITY[event.eType] &&
         e.startTime < event.endTime &&
         e.endTime > event.startTime
       );
-
       if (blocking.length) {
-        conflictBreakdown[date] = blocking.map(e => ({
+        conflictBreakdown[date.toISOString().split("T")[0]] = blocking.map(e => ({
           title: e.title,
           type: e.eType,
           startTime: e.startTime,
@@ -86,68 +74,55 @@ export default async function handler(req, res) {
     }
 
     if (Object.keys(conflictBreakdown).length && !event.overrideApproved) {
-      return res.status(409).json({
-        error: "conflict",
-        conflicts: conflictBreakdown
-      });
+      return res.status(409).json({ error: "conflict", conflicts: conflictBreakdown });
     }
 
     const insertedIds = [];
+    const seriesId = event.recurring ? uuidv4() : null;
 
-    // ---- BASE EVENT DATA ----
-    const baseEventData = {
-      eType: event.eType,
-      startTime: event.startTime,
-      endTime: event.endTime,
-      title: event.title,
-      description: event.description || "",
-      groupSize: event.groupSize || "",
-      contactName: event.contactName || "",
-      contactInfo: event.contactInfo || "",
-      addedBy: event.addedBy || "unknown",
-      recurWhen: event.recurWhen || null,
-      recurLengthNum: event.recurLengthNum || null,
-      recurLength: event.recurLength || null,
-      createdAt: new Date()
-    };
+    for (let i = 0; i < dates.length; i++) {
+      const dateObj = dates[i];
+      const dateStr = dateObj.toISOString().split("T")[0];
 
-    // ---- INSERT PARENT ----
-    const parentData = {
-      ...baseEventData,
-      date: dates[0],
-      recurring: !!event.recurring
-    };
+      if (conflictBreakdown[dateStr] && !event.overrideApproved) continue;
 
-    const parentResult = await eventsCollection.insertOne(parentData);
-    const parentId = parentResult.insertedId;
-    insertedIds.push(parentId);
+      const eventData = {
+        eType: event.eType,
+        date: dateStr,
+        startTime: event.startTime,
+        endTime: event.endTime,
+        title: event.title,
+        description: event.description || "",
+        groupSize: event.groupSize || "",
+        contactName: event.contactName || "",
+        contactInfo: event.contactInfo || "",
+        addedBy: event.addedBy || "unknown",
+        recurring: !!event.recurring,
+        isParent: i === 0 && !!event.recurring, // only the first occurrence
+        seriesId: seriesId,
+        recurWhen: event.recurWhen || null,
+        recurLengthNum: event.recurLengthNum || null,
+        createdAt: new Date()
+      };
 
-    // ---- INSERT CHILDREN (non-recurring) ----
-    if (event.recurring && dates.length > 1) {
-      for (const date of dates.slice(1)) {
-        const childData = {
-          ...baseEventData,
-          date,
-          recurring: false,
-          parentId
-        };
-
-        const childResult = await eventsCollection.insertOne(childData);
-        insertedIds.push(childResult.insertedId);
+      try {
+        if (event.id && ObjectId.isValid(event.id)) {
+          await eventsCollection.updateOne({ _id: new ObjectId(event.id) }, { $set: eventData });
+          insertedIds.push(event.id);
+        } else {
+          const result = await eventsCollection.insertOne(eventData);
+          insertedIds.push(result.insertedId);
+        }
+      } catch (insertErr) {
+        console.error("Insert error:", insertErr);
+        return res.status(500).json({ error: "Database insert failed", details: insertErr.message });
       }
     }
 
-    return res.status(200).json({
-      success: true,
-      inserted: insertedIds,
-      conflicts: conflictBreakdown
-    });
+    return res.status(200).json({ success: true, inserted: insertedIds, conflicts: conflictBreakdown });
 
   } catch (err) {
     console.error("addEvent fatal error:", err);
-    return res.status(500).json({
-      error: "Server error",
-      details: err.message
-    });
+    return res.status(500).json({ error: "Server error", details: err.message });
   }
 }

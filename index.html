@@ -14,12 +14,16 @@
   0% { background-color: #ffff99; }
   100% { background-color: #f0f0f0; }
 }
+.series-label {
+  font-size: 0.8em;
+  color: #555;
+  margin-left: 5px;
+}
 </style>
 </head>
 <body>
 
 <div class="wrapper">
-
   <h1>Brookfield Events Calendar [Alpha]</h1>
 
   <!-- CALENDAR -->
@@ -48,16 +52,12 @@
     <h3>Events & Reservations</h3>
     <ul id="reminderList"></ul>
   </div>
-
 </div>
 
 <script>
 let currentDate = new Date();
 let events = [];
 
-/* =========================
-   LOAD EVENTS
-========================= */
 async function loadEvents() {
   try {
     const res = await fetch("/api/getEvents");
@@ -69,9 +69,6 @@ async function loadEvents() {
   }
 }
 
-/* =========================
-   EVENT LIST (MONTH ONLY)
-========================= */
 function renderEventList() {
   const ul = document.getElementById("reminderList");
   ul.innerHTML = "";
@@ -82,11 +79,7 @@ function renderEventList() {
   const monthEvents = events
     .filter(e => {
       const [ey, em] = e.date.split("-").map(Number);
-      // Show:
-      // 1) Standalone single events
-      // 2) Parent occurrence (recurring: true)
-      // 3) Children occurrences (recurring: false)
-      return ey === y && em === m && (e.recurring === false || e.recurring === true);
+      return ey === y && em === m;
     })
     .sort((a, b) => new Date(a.date) - new Date(b.date));
 
@@ -103,7 +96,7 @@ function renderEventList() {
 
     li.innerHTML = `
       <div class="reminder-header ${cls}">
-        ${e.title} – ${e.date}
+        ${e.title} – ${e.date} ${e.seriesId ? '<span class="series-label">(Series)</span>' : ''}
       </div>
       <div class="reminder-details">
         <div>${e.startTime || ""} ${e.endTime || ""}</div>
@@ -120,9 +113,6 @@ function renderEventList() {
   });
 }
 
-/* =========================
-   CALENDAR
-========================= */
 function renderCalendar() {
   const month = currentDate.getMonth();
   const year = currentDate.getFullYear();
@@ -167,6 +157,7 @@ function renderCalendar() {
             else if (e.eType === "noSocialnoPaid") cls = "event-large";
 
             dot.className = "event-dot " + cls;
+            if(e.seriesId) dot.title = "(Series)";
 
             dot.onclick = ev => {
               ev.stopPropagation();
@@ -185,8 +176,7 @@ function renderCalendar() {
         }
 
         cell.onclick = () => {
-          document.querySelectorAll(".reminder-details")
-            .forEach(d => d.classList.remove("show"));
+          document.querySelectorAll(".reminder-details").forEach(d => d.classList.remove("show"));
 
           dayEvents.forEach(e => {
             const li = document.querySelector(`[data-key='${e._id}-${e.date}']`);
