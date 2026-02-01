@@ -61,7 +61,7 @@ let events = [];
 async function loadEvents() {
   try {
     const res = await fetch("/api/getEvents");
-    events = await res.json(); // backend already expanded recurrence
+    events = await res.json();
     renderCalendar();
     renderEventList();
   } catch (err) {
@@ -79,11 +79,14 @@ function renderEventList() {
   const m = currentDate.getMonth() + 1;
   const y = currentDate.getFullYear();
 
-  // Only show actual occurrences (recurring: false)
   const monthEvents = events
     .filter(e => {
       const [ey, em] = e.date.split("-").map(Number);
-      return ey === y && em === m && e.recurring === false;
+      // Show:
+      // 1) Standalone single events
+      // 2) Parent occurrence (recurring: true)
+      // 3) Children occurrences (recurring: false)
+      return ey === y && em === m && (e.recurring === false || e.recurring === true);
     })
     .sort((a, b) => new Date(a.date) - new Date(b.date));
 
@@ -149,7 +152,7 @@ function renderCalendar() {
         cell.textContent = date;
 
         const dStr = `${year}-${String(month + 1).padStart(2, "0")}-${String(date).padStart(2, "0")}`;
-        const dayEvents = events.filter(e => e.date === dStr && e.recurring === false);
+        const dayEvents = events.filter(e => e.date === dStr);
 
         if (dayEvents.length) {
           const dots = document.createElement("div");
