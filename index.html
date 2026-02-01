@@ -6,18 +6,9 @@
 <title>Brookfield Events Calendar [Alpha]</title>
 <link rel="stylesheet" href="styles.css">
 <style>
-.reminder-highlight {
-  animation: highlightAnim 2s ease;
-}
-@keyframes highlightAnim {
-  0% { background-color: #ffff99; }
-  100% { background-color: #f0f0f0; }
-}
-.series-label {
-  font-size: 0.8em;
-  color: #555;
-  margin-left: 5px;
-}
+.reminder-highlight { animation: highlightAnim 2s ease; }
+@keyframes highlightAnim { 0% { background-color: #ffff99; } 100% { background-color: #f0f0f0; } }
+.series-label { font-size: 0.8em; color: #555; margin-left: 5px; }
 </style>
 </head>
 <body>
@@ -51,54 +42,20 @@
 let currentDate = new Date();
 let events = [];
 
-/* =========================
-   EXPAND SERIES (RECURRENT)
-========================= */
-function expandSeries(eventsRaw) {
-  const map = {};
-  eventsRaw.forEach(e => {
-    const key = e.seriesId || e._id;
-    if (!map[key]) map[key] = [];
-    map[key].push(e);
-  });
-
-  const sorted = Object.values(map).map(series =>
-    series.sort((a, b) => {
-      if (a.isParent && !b.isParent) return -1;
-      if (!a.isParent && b.isParent) return 1;
-      return new Date(a.date) - new Date(b.date);
-    })
-  );
-
-  return sorted.flat();
-}
-
-/* =========================
-   LOAD EVENTS
-========================= */
 async function loadEvents() {
   try {
     const res = await fetch("/api/getEvents");
-    const raw = await res.json();
-    const normalized = raw.map(e => ({ ...e, date: e.date.split("T")[0] }));
-    events = expandSeries(normalized);
+    events = await res.json();
     renderCalendar();
     renderEventList();
-  } catch (err) {
-    console.error("Load events error:", err);
-  }
+  } catch (err) { console.error(err); }
 }
 
-/* =========================
-   RENDER EVENT LIST
-========================= */
 function renderEventList() {
   const ul = document.getElementById("reminderList");
   ul.innerHTML = "";
-
   const m = currentDate.getMonth() + 1;
   const y = currentDate.getFullYear();
-
   const monthEvents = events
     .filter(e => {
       const [ey, em] = e.date.split("-").map(Number);
@@ -112,6 +69,7 @@ function renderEventList() {
     else if(e.eType==="smallGroup") cls="event-small";
     else if(e.eType==="reservedPaid") cls="event-paid";
     else if(e.eType==="noSocialnoPaid") cls="event-large";
+    else if(e.eType==="boardMeeting") cls="event-board";
 
     const li=document.createElement("li");
     li.className="reminder-item";
@@ -131,30 +89,22 @@ function renderEventList() {
     li.querySelector(".reminder-header").onclick = ()=>{
       li.querySelector(".reminder-details").classList.toggle("show");
     };
-
     ul.appendChild(li);
   });
 }
 
-/* =========================
-   RENDER CALENDAR
-========================= */
 function renderCalendar() {
   const month=currentDate.getMonth();
   const year=currentDate.getFullYear();
-
   document.getElementById("monthAndYear").textContent =
     currentDate.toLocaleString("default",{month:"long"})+" "+year;
-
   document.getElementById("thead-month").innerHTML =
     "<tr><th>Sun</th><th>Mon</th><th>Tue</th><th>Wed</th><th>Thu</th><th>Fri</th><th>Sat</th></tr>";
 
   const body=document.getElementById("calendar-body");
   body.innerHTML="";
-
   const firstDay=new Date(year,month,1).getDay();
   const daysInMonth=new Date(year,month+1,0).getDate();
-
   let date=1;
   for(let i=0;i<6;i++){
     const row=document.createElement("tr");
@@ -175,6 +125,8 @@ function renderCalendar() {
             else if(e.eType==="smallGroup") cls="event-small";
             else if(e.eType==="reservedPaid") cls="event-paid";
             else if(e.eType==="noSocialnoPaid") cls="event-large";
+            else if(e.eType==="boardMeeting") cls="event-board";
+
             dot.className="event-dot "+cls;
             if(e.seriesId) dot.title="(Series)";
             dot.onclick=ev=>{
@@ -209,37 +161,18 @@ function renderCalendar() {
   }
 }
 
-/* =========================
-   NAVIGATION
-========================= */
-document.getElementById("previous").onclick=()=>{
-  currentDate.setMonth(currentDate.getMonth()-1);
-  renderCalendar(); renderEventList();
-};
-document.getElementById("next").onclick=()=>{
-  currentDate.setMonth(currentDate.getMonth()+1);
-  renderCalendar(); renderEventList();
-};
+document.getElementById("previous").onclick=()=>{ currentDate.setMonth(currentDate.getMonth()-1); renderCalendar(); renderEventList(); };
+document.getElementById("next").onclick=()=>{ currentDate.setMonth(currentDate.getMonth()+1); renderCalendar(); renderEventList(); };
 
 const monthSel=document.getElementById("month");
 const yearSel=document.getElementById("year");
-
-for(let m=0;m<12;m++){
-  monthSel.innerHTML+=`<option value="${m}">${new Date(0,m).toLocaleString("default",{month:"long"})}</option>`;
-}
-for(let y=currentDate.getFullYear()-5;y<=currentDate.getFullYear()+5;y++){
-  yearSel.innerHTML+=`<option value="${y}">${y}</option>`;
-}
-
+for(let m=0;m<12;m++) monthSel.innerHTML+=`<option value="${m}">${new Date(0,m).toLocaleString("default",{month:"long"})}</option>`;
+for(let y=currentDate.getFullYear()-5;y<=currentDate.getFullYear()+5;y++) yearSel.innerHTML+=`<option value="${y}">${y}</option>`;
 monthSel.value=currentDate.getMonth();
 yearSel.value=currentDate.getFullYear();
-
 monthSel.onchange=()=>{ currentDate.setMonth(+monthSel.value); renderCalendar(); renderEventList(); };
 yearSel.onchange=()=>{ currentDate.setFullYear(+yearSel.value); renderCalendar(); renderEventList(); };
 
-/* =========================
-   INITIAL LOAD
-========================= */
 loadEvents();
 </script>
 </body>
