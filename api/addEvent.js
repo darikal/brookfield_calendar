@@ -9,7 +9,7 @@ const PRIORITY = {
   smallGroup: 1
 };
 
-// Generates recurring dates
+// Generate recurring dates
 function generateRecurringDates(startDate, type, lengthNum) {
   const dates = [];
   const count = parseInt(lengthNum, 10) || 0;
@@ -17,7 +17,7 @@ function generateRecurringDates(startDate, type, lengthNum) {
 
   for (let i = 0; i < count; i++) {
     if (!isNaN(current.getTime())) {
-      dates.push(new Date(current)); // keep as Date object
+      dates.push(new Date(current)); // keep Date object
     }
     if (type === "week") current.setDate(current.getDate() + 7);
     else if (type === "biWeek") current.setDate(current.getDate() + 14);
@@ -57,20 +57,19 @@ export default async function handler(req, res) {
 
     const conflictBreakdown = {};
     for (const date of dates) {
-      const conflicts = await eventsCollection.find({ date: date.toISOString().split("T")[0] }).toArray();
+      const dateStr = date.toISOString().split("T")[0];
+      const conflicts = await eventsCollection.find({ date: dateStr }).toArray();
       const blocking = conflicts.filter(e =>
         PRIORITY[e.eType] >= PRIORITY[event.eType] &&
         e.startTime < event.endTime &&
         e.endTime > event.startTime
       );
-      if (blocking.length) {
-        conflictBreakdown[date.toISOString().split("T")[0]] = blocking.map(e => ({
-          title: e.title,
-          type: e.eType,
-          startTime: e.startTime,
-          endTime: e.endTime
-        }));
-      }
+      if (blocking.length) conflictBreakdown[dateStr] = blocking.map(e => ({
+        title: e.title,
+        type: e.eType,
+        startTime: e.startTime,
+        endTime: e.endTime
+      }));
     }
 
     if (Object.keys(conflictBreakdown).length && !event.overrideApproved) {
@@ -98,7 +97,7 @@ export default async function handler(req, res) {
         contactInfo: event.contactInfo || "",
         addedBy: event.addedBy || "unknown",
         recurring: !!event.recurring,
-        isParent: i === 0 && !!event.recurring, // only the first occurrence
+        isParent: i === 0 && !!event.recurring,
         seriesId: seriesId,
         recurWhen: event.recurWhen || null,
         recurLengthNum: event.recurLengthNum || null,
