@@ -54,6 +54,7 @@
     <option value="smallGroup">Small Group</option>
     <option value="noSocialnoPaid">Large Group</option>
     <option value="reservedPaid">Paid Reservation</option>
+    <option value="boardMeeting">Board Meeting</option>
   </select>
 
   <!-- EVENT FORM -->
@@ -139,12 +140,10 @@ window.addEventListener("DOMContentLoaded", async () => {
       currentUser = await res.json();
       loginWrapper.classList.add("hidden");
       adminWrapper.classList.remove("hidden");
-      resetForm(); // form hidden initially
+      resetForm();
       loadEvents();
     }
-  } catch (err) {
-    console.error("Session fetch error:", err);
-  }
+  } catch (err) { console.error("Session fetch error:", err); }
 });
 
 /* LOGIN */
@@ -154,10 +153,7 @@ loginForm.addEventListener("submit", async e => {
     const res = await fetch("/api/login", {
       method:"POST",
       headers:{ "Content-Type":"application/json" },
-      body: JSON.stringify({
-        username: username.value,
-        password: password.value
-      })
+      body: JSON.stringify({ username: username.value, password: password.value })
     });
     const data = await res.json();
     if(!res.ok){
@@ -165,23 +161,25 @@ loginForm.addEventListener("submit", async e => {
       return;
     }
     location.reload();
-  } catch(err) {
-    console.error("Login error:", err);
-    loginError.textContent = "Network error";
-  }
+  } catch(err) { console.error("Login error:", err); loginError.textContent = "Network error"; }
 });
 
 /* LOGOUT */
-async function logout(){
-  await fetch("/api/logout");
-  location.reload();
-}
+async function logout(){ await fetch("/api/logout"); location.reload(); }
 
 /* FORM VISIBILITY */
 eventType.addEventListener("change", ()=>{
   eventForm.classList.toggle("hidden", !eventType.value);
+
+  // Paid info only for reservedPaid
   paidInfo.classList.toggle("hidden", eventType.value !== "reservedPaid");
+
+  // Group size only for smallGroup or largeGroup
+  const showGroupSize = eventType.value === "smallGroup" || eventType.value === "noSocialnoPaid";
+  document.querySelector(".group-size-wrapper").classList.toggle("hidden", !showGroupSize);
 });
+
+// Recurring toggle
 recurCheckbox.addEventListener("change", ()=>{ recurringOptions.classList.toggle("hidden", !recurCheckbox.checked); });
 
 /* RESET FORM FUNCTION */
@@ -213,7 +211,6 @@ async function loadEvents(){
   try {
     const res = await fetch("/api/getEvents?admin=true");
     let events = await res.json();
-
     const search = searchEvent.value.toLowerCase();
     events = events.filter(e => e.title.toLowerCase().includes(search));
 
@@ -225,7 +222,7 @@ async function loadEvents(){
     });
 
     eventsTable.innerHTML = "";
-    events.forEach(ev => {
+    events.forEach(ev=>{
       eventsTable.innerHTML += `
         <tr>
           <td>${ev.date}</td>
@@ -267,6 +264,7 @@ function editEvent(id){
       recurLengthNum.value = ev.recurLengthNum || "";
       recurLength.value = ev.recurLength || "week";
       paidInfo.classList.toggle("hidden", ev.eType === "reservedPaid");
+      document.querySelector(".group-size-wrapper").classList.toggle("hidden", !(ev.eType === "smallGroup" || ev.eType === "noSocialnoPaid"));
       residentName.value = ev.residentName || "";
       residentAddress.value = ev.residentAddress || "";
       acceptTerms.checked = ev.acceptTerms || false;
@@ -281,20 +279,26 @@ saveBtn.addEventListener("click", async ()=>{
     date: eventDate.value,
     startTime: startTime.value,
     endTime: endTime.value,
-    groupSize: groupSize.value,
     title: eventTitle.value,
     description: eventDescription.value,
-    contactName: contactName.value,
-    contactInfo: contactInfo.value,
     recurring: recurCheckbox.checked,
     recurWhen: recurWhen.value,
     recurLengthNum: recurLengthNum.value,
     recurLength: recurLength.value,
-    addedBy: currentUser.username,
-    residentName: residentName.value,
-    residentAddress: residentAddress.value,
-    acceptTerms: acceptTerms.checked
+    addedBy: currentUser.username
   };
+
+  // Only include optional fields for specific types
+  if(eventType.value === "smallGroup" || eventType.value === "noSocialnoPaid"){
+    payload.groupSize = groupSize.value;
+  }
+  if(eventType.value === "reservedPaid"){
+    payload.contactName = contactName.value;
+    payload.contactInfo = contactInfo.value;
+    payload.residentName = residentName.value;
+    payload.residentAddress = residentAddress.value;
+    payload.acceptTerms = acceptTerms.checked;
+  }
 
   try {
     const res = await fetch("/api/addEvent", {
