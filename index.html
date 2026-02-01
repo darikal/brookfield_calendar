@@ -65,25 +65,26 @@ async function loadEvents() {
       date: e.date.split('T')[0]
     }));
 
-    // Group by series (parentId or _id if no parent)
+    // Group by seriesId (or _id if standalone)
     const seriesMap = {};
     events.forEach(e => {
-      const seriesId = e.parentId || e._id;
-      if(!seriesMap[seriesId]) seriesMap[seriesId] = [];
-      seriesMap[seriesId].push(e);
+      const seriesKey = e.seriesId || e._id;
+      if (!seriesMap[seriesKey]) seriesMap[seriesKey] = [];
+      seriesMap[seriesKey].push(e);
     });
 
     // Flatten: sort series by earliest date, children by date
     events = Object.values(seriesMap)
-      .sort((a,b) => new Date(a[0].date) - new Date(b[0].date)) // sort series by first occurrence
-      .flatMap(series => series.sort((x,y) => new Date(x.date) - new Date(y.date))); // sort within series
+      .sort((a, b) => new Date(a[0].date) - new Date(b[0].date)) // sort series by first occurrence
+      .flatMap(series => series.sort((x, y) => new Date(x.date) - new Date(y.date))); // sort within series
 
     renderCalendar();
     renderEventList();
-  } catch(err) {
-    console.error(err);
+  } catch (err) {
+    console.error("Load events error:", err);
   }
 }
+
 
 
 // ---------------------
