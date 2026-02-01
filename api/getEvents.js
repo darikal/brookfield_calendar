@@ -6,7 +6,7 @@ import { ObjectId } from "mongodb";
  * Only expands events where recurring === true AND isParent === true
  */
 function expandRecurringEvent(event) {
-  if (!event.recurring || event.isParent === false) return [event];
+  if (!event.recurring || !event.isParent) return [event];
 
   const results = [];
   const startDate = new Date(event.date);
@@ -15,16 +15,16 @@ function expandRecurringEvent(event) {
 
   for (let i = 0; i < total; i++) {
     const d = new Date(startDate);
-
-    if (event.recurWhen === "week") d.setDate(d.getDate() + i * 7);
-    else if (event.recurWhen === "biWeek") d.setDate(d.getDate() + i * 14);
-    else if (event.recurWhen === "month") d.setMonth(d.getMonth() + i);
+    if (event.recurWhen === "week") d.setDate(startDate.getDate() + i * 7);
+    else if (event.recurWhen === "biWeek") d.setDate(startDate.getDate() + i * 14);
+    else if (event.recurWhen === "month") d.setMonth(startDate.getMonth() + i);
     else continue;
 
     results.push({
       ...event,
       date: d.toISOString().split("T")[0],
-      _parentId: event._id // useful for debugging/future edits
+      _parentId: event._id,
+      isParent: i === 0 // keep first occurrence as parent
     });
   }
 
