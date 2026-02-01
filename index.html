@@ -59,13 +59,10 @@ async function loadEvents() {
     const res = await fetch("/api/getEvents");
     const raw = await res.json();
 
-    // Normalize dates
-    events = raw.map(e => ({
-      ...e,
-      date: e.date.split('T')[0]
-    }));
+    // normalize date strings
+    events = raw.map(e => ({ ...e, date: e.date.split("T")[0] }));
 
-    // Group by seriesId (or _id if standalone)
+    // group by seriesId (or _id if no series)
     const seriesMap = {};
     events.forEach(e => {
       const seriesKey = e.seriesId || e._id;
@@ -73,18 +70,27 @@ async function loadEvents() {
       seriesMap[seriesKey].push(e);
     });
 
-    // Flatten: sort series by earliest date, children by date
-    events = Object.values(seriesMap)
-      .sort((a, b) => new Date(a[0].date) - new Date(b[0].date)) // sort series by first occurrence
-      .flatMap(series => series.sort((x, y) => new Date(x.date) - new Date(y.date))); // sort within series
+    // sort series by first event date
+    const sortedSeries = Object.values(seriesMap)
+      .sort((a, b) => new Date(a[0].date) - new Date(b[0].date))
+      .map(series =>
+        // sort within series: parent first, then by date
+        series.sort((x, y) => {
+          if (x.isParent && !y.isParent) return -1;
+          if (!x.isParent && y.isParent) return 1;
+          return new Date(x.date) - new Date(y.date);
+        })
+      );
+
+    // flatten to single array for rendering
+    events = sortedSeries.flat();
 
     renderCalendar();
     renderEventList();
   } catch (err) {
-    console.error("Load events error:", err);
+    console.error(err);
   }
 }
-
 
 
 // ---------------------
