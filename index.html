@@ -59,26 +59,32 @@ async function loadEvents() {
     const res = await fetch("/api/getEvents");
     const raw = await res.json();
 
-    // Normalize dates and ensure parent comes first
+    // Normalize dates
     events = raw.map(e => ({
       ...e,
-      date: e.date.split('T')[0] // remove time component
+      date: e.date.split('T')[0]
     }));
 
-    // Stable sort: first by date, then parent before child
-    events.sort((a,b)=>{
-      if(a.date !== b.date) return new Date(a.date) - new Date(b.date);
-      if(a.parentId && !b.parentId) return 1;  // child after parent
-      if(!a.parentId && b.parentId) return -1; // parent before child
-      return 0;
+    // Group by series (parentId or _id if no parent)
+    const seriesMap = {};
+    events.forEach(e => {
+      const seriesId = e.parentId || e._id;
+      if(!seriesMap[seriesId]) seriesMap[seriesId] = [];
+      seriesMap[seriesId].push(e);
     });
+
+    // Flatten: sort series by earliest date, children by date
+    events = Object.values(seriesMap)
+      .sort((a,b) => new Date(a[0].date) - new Date(b[0].date)) // sort series by first occurrence
+      .flatMap(series => series.sort((x,y) => new Date(x.date) - new Date(y.date))); // sort within series
 
     renderCalendar();
     renderEventList();
   } catch(err) {
-    console.error("Load events error:", err);
+    console.error(err);
   }
 }
+
 
 // ---------------------
 // EVENT LIST
