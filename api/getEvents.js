@@ -3,10 +3,10 @@ import { ObjectId } from "mongodb";
 
 /**
  * Expand recurring events based on stored schema
- * Only expands events marked recurring === true
+ * Only expands events where recurring === true AND isParent === true
  */
 function expandRecurringEvent(event) {
-  if (!event.recurring) return [event];
+  if (!event.recurring || event.isParent === false) return [event];
 
   const results = [];
   const startDate = new Date(event.date);
@@ -16,15 +16,10 @@ function expandRecurringEvent(event) {
   for (let i = 0; i < total; i++) {
     const d = new Date(startDate);
 
-    if (event.recurWhen === "week") {
-      d.setDate(startDate.getDate() + i * 7);
-    } else if (event.recurWhen === "biWeek") {
-      d.setDate(startDate.getDate() + i * 14);
-    } else if (event.recurWhen === "month") {
-      d.setMonth(startDate.getMonth() + i);
-    } else {
-      continue;
-    }
+    if (event.recurWhen === "week") d.setDate(d.getDate() + i * 7);
+    else if (event.recurWhen === "biWeek") d.setDate(d.getDate() + i * 14);
+    else if (event.recurWhen === "month") d.setMonth(d.getMonth() + i);
+    else continue;
 
     results.push({
       ...event,
@@ -37,7 +32,7 @@ function expandRecurringEvent(event) {
 }
 
 /**
- * Get user from session cookie
+ * Get user from session cookie (optional)
  */
 async function getUserFromSession(req, db) {
   const cookie = req.headers.cookie || "";
@@ -63,24 +58,22 @@ export default async function handler(req, res) {
     const isAdminView = req.query.admin === "true";
 
     const client = await clientPromise;
-
-    // ✅ Connect to correct database
     const db = client.db("calendarDB");
 
-    // ALWAYS fetch all events from calendarDB.events
+    // Fetch all events from DB
     const rawEvents = await db.collection("events").find({}).toArray();
 
-    // Expand recurring events
+    // Expand recurring parent events only
     let events = rawEvents.flatMap(ev => expandRecurringEvent(ev));
 
-    // Auth-based sanitization
+    // Optional: remove private fields for non-admin users
     const user = await getUserFromSession(req, db);
     const role = user?.role || "guest";
 
     events = events.map(ev => {
       if (isAdminView || role === "admin" || role === "subAdmin") return ev;
 
-      // Public view: remove private fields
+      // Public view: hide sensitive info
       const clean = { ...ev };
       delete clean.contactName;
       delete clean.contactInfo;
@@ -92,7 +85,6 @@ export default async function handler(req, res) {
     res.status(200).json(events);
   } catch (err) {
     console.error("GET EVENTS ERROR:", err);
-    // Always return an array to prevent frontend crashes
-    res.status(200).json([]);
+    res.status(200).json([]); // always return array to prevent frontend crash
   }
 }
