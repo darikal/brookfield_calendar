@@ -16,12 +16,12 @@ body {
   color: var(--text-default);
 }
 
+.hidden { display: none; }
+
 input, select, button, textarea {
   font-family: Arial, sans-serif;
   box-sizing: border-box;
 }
-
-.hidden { display: none; }
 
 /* =========================
    WRAPPER
@@ -33,7 +33,7 @@ input, select, button, textarea {
 }
 
 /* =========================
-   CALENDAR
+   CALENDAR CONTAINER
 ========================= */
 .container-calendar {
   background: white;
@@ -42,6 +42,7 @@ input, select, button, textarea {
   border-radius: 8px;
 }
 
+/* Month / Year */
 #monthAndYear {
   text-align: center;
   font-size: 2rem;
@@ -50,13 +51,17 @@ input, select, button, textarea {
   color: var(--blue-dark);
 }
 
+/* =========================
+   CALENDAR TABLE
+========================= */
 .table-calendar {
   width: 100%;
   border-collapse: collapse;
   table-layout: fixed;
+  background: white;
 }
 
-.table-calendar th {
+.table-calendar thead th {
   background-color: var(--blue-dark);
   color: white;
   padding: 8px;
@@ -70,22 +75,15 @@ input, select, button, textarea {
   height: 65px;
   padding: 6px;
   position: relative;
-  cursor: pointer;
-  overflow: hidden;
 }
 
-/* Diagonal line for event days */
-.table-calendar td.has-events::after {
-  content: "";
-  position: absolute;
-  inset: 4px;
-  background: linear-gradient(
-    to bottom right, /* FIXED diagonal */
-    transparent 49%,
-    rgba(0,0,0,0.2) 50%,
-    transparent 51%
-  );
-  pointer-events: none;
+.calendar-day {
+  cursor: pointer;
+}
+
+.calendar-day span {
+  font-weight: bold;
+  font-size: 0.9rem;
 }
 
 /* Event dots */
@@ -107,7 +105,6 @@ input, select, button, textarea {
   flex-shrink: 0;
 }
 
-/* Event colors */
 .event-social  { background-color: #59fb41; }
 .event-small   { background-color: #340be9; }
 .event-paid    { background-color: #ffaf47; }
@@ -115,8 +112,14 @@ input, select, button, textarea {
 .event-board   { background-color: #ed1000; }
 .event-default { background-color: #ff0b36; }
 
-/* Navigation */
-.button-container-calendar { margin-bottom: 12px; overflow: hidden; }
+/* =========================
+   NAV BUTTONS
+========================= */
+.button-container-calendar {
+  margin-bottom: 12px;
+  overflow: hidden;
+}
+
 .button-container-calendar button {
   cursor: pointer;
   background: var(--blue-dark);
@@ -126,23 +129,35 @@ input, select, button, textarea {
   padding: 6px 12px;
   font-size: 14px;
 }
-#previous { float: left; }
-#next { float: right; }
 
-/* Jump To */
-.footer-container-calendar { margin-top: 1em; border-top: 1px solid #dadada; padding: 10px 0; }
+#previous { float: left; }
+#next     { float: right; }
+
+/* =========================
+   FOOTER (Jump To)
+========================= */
+.footer-container-calendar {
+  margin-top: 1em;
+  border-top: 1px solid #dadada;
+  padding: 10px 0;
+}
+
 .footer-container-calendar select {
   cursor: pointer;
-  background: #fff;
+  background: #ffffff;
   color: #585858;
   border: 1px solid #bfc5c5;
   border-radius: 3px;
   padding: 5px 10px;
 }
 
-/* Reminder list */
+/* =========================
+   REMINDER / EVENT LIST
+========================= */
 #reminder-section { margin-top: 25px; }
+
 .reminder-item { margin-bottom: 6px; }
+
 .reminder-header {
   padding: 6px;
   font-weight: bold;
@@ -150,6 +165,7 @@ input, select, button, textarea {
   color: white;
   cursor: pointer;
 }
+
 .reminder-header.event-social  { background-color: #59fb41; }
 .reminder-header.event-small   { background-color: #340be9; }
 .reminder-header.event-paid    { background-color: #ffaf47; }
@@ -168,16 +184,21 @@ input, select, button, textarea {
   overflow: hidden;
   transition: max-height 0.3s ease, padding 0.3s ease;
 }
+
 .reminder-details.show {
   max-height: 200px;
   padding: 6px;
 }
 
-/* Highlighting */
-.reminder-item.highlight { outline: 2px solid var(--blue-mid); }
+.reminder-item.highlight {
+  outline: 2px solid var(--blue-mid);
+}
+
 .reminder-item.dimmed { opacity: 0.4; }
 
-/* Mobile adjustments */
+/* =========================
+   MOBILE
+========================= */
 @media (max-width: 600px) {
   .table-calendar th,
   .table-calendar td { font-size: 11px; height: 45px; padding: 3px; }

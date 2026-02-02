@@ -1,4 +1,5 @@
 let events = [];
+
 const reminderList = document.getElementById("reminderList");
 const calendarBody = document.getElementById("calendar-body");
 const monthAndYear = document.getElementById("monthAndYear");
@@ -33,8 +34,8 @@ function renderCalendar(month, year) {
   calendarBody.innerHTML = "";
   monthAndYear.textContent = `${months[month]} ${year}`;
 
-  const firstDay = new Date(year, month, 1).getDay();
-  const daysInMonth = new Date(year, month + 1, 0).getDate();
+  const firstDay = new Date(year, month).getDay();
+  const daysInMonth = 32 - new Date(year, month, 32).getDate();
 
   let date = 1;
 
@@ -55,42 +56,33 @@ function renderCalendar(month, year) {
         cell.dataset.date = dateStr;
         cell.innerHTML = `<span>${date}</span>`;
 
-        const dayEvents = events.filter(e => eventMatchesDate(e, dateStr));
+        const dayEvents = events.filter(e => e.date === dateStr);
 
         if (dayEvents.length) {
-          cell.classList.add("has-events");
-
           const amDots = document.createElement("div");
-          amDots.className = "event-dots-am";
           const pmDots = document.createElement("div");
+          amDots.className = "event-dots-am";
           pmDots.className = "event-dots-pm";
 
           dayEvents.forEach(ev => {
             const dot = document.createElement("span");
-            dot.className = `event-dot event-${ev.eType || "default"}`;
+            dot.className = `event-dot event-${ev.eventTypeMajor || "default"}`;
 
-            // Dot click scrolls to the specific event
-            dot.addEventListener("click", evClick => {
-              evClick.stopPropagation();
-              const li = document.querySelector(`[data-key='${ev._id}-${ev.date}']`);
-              if (li) {
-                li.scrollIntoView({ behavior: "smooth", block: "start" });
-                li.classList.add("reminder-highlight");
-                setTimeout(() => li.classList.remove("reminder-highlight"), 2000);
-              }
-            });
-
-            const hour = getStartHour(ev.startTime);
+            const hour = ev.startTime ? parseInt(ev.startTime.split(":")[0], 10) : 12;
             if (hour < 12) amDots.appendChild(dot);
             else pmDots.appendChild(dot);
+
+            // Dot click scrolls to reminder
+            dot.onclick = (evnt) => {
+              evnt.stopPropagation();
+              const li = document.querySelector(`[data-date='${dateStr}']`);
+              if (li) li.scrollIntoView({ behavior: "smooth" });
+            };
           });
 
           if (amDots.children.length) cell.appendChild(amDots);
           if (pmDots.children.length) cell.appendChild(pmDots);
         }
-
-        // Clicking the cell opens all events for that date
-        cell.addEventListener("click", () => openEventsForDate(dateStr));
 
         date++;
       }
@@ -104,56 +96,6 @@ function renderCalendar(month, year) {
 }
 
 /* =========================
-   PARSE START HOUR
-========================= */
-function getStartHour(time) {
-  if (!time) return 12;
-  return parseInt(time.split(":")[0], 10);
-}
-
-/* =========================
-   OPEN / CLOSE EVENTS
-========================= */
-function openEventsForDate(dateStr) {
-  document.querySelectorAll(".reminder-item").forEach(item => {
-    const details = item.querySelector(".reminder-details");
-
-    if (item.dataset.date === dateStr) {
-      item.classList.add("highlight");
-      item.classList.remove("dimmed");
-      details?.classList.add("show");
-    } else {
-      item.classList.remove("highlight");
-      item.classList.add("dimmed");
-      details?.classList.remove("show");
-    }
-  });
-
-  document.getElementById("reminder-section")
-    .scrollIntoView({ behavior: "smooth" });
-}
-
-/* =========================
-   EVENT MATCHING
-========================= */
-function eventMatchesDate(event, dateStr) {
-  if (event.date === dateStr) return true;
-  if (!event.recurring) return false;
-
-  const start = new Date(event.date);
-  const target = new Date(dateStr);
-  if (target < start) return false;
-
-  const diffDays = Math.floor((target - start) / 86400000);
-
-  if (event.recurWhen === "week") return diffDays % 7 === 0;
-  if (event.recurWhen === "biWeek") return diffDays % 14 === 0;
-  if (event.recurWhen === "month") return start.getDate() === target.getDate();
-
-  return false;
-}
-
-/* =========================
    EVENT LIST
 ========================= */
 function renderEventList() {
@@ -163,24 +105,21 @@ function renderEventList() {
     .sort((a,b) => new Date(a.date) - new Date(b.date))
     .forEach(ev => {
       const li = document.createElement("li");
-      li.className = `reminder-item event-${ev.eType || "default"}`;
-      li.dataset.date = ev.date;          // match by date for calendar click
-      li.dataset.key = `${ev._id}-${ev.date}`; // match by key for dot click
+      li.className = `reminder-item event-${ev.eventTypeMajor || "default"}`;
+      li.dataset.date = ev.date;
 
       li.innerHTML = `
-        <div class="reminder-header">
-          ${ev.title} – ${ev.date}
-        </div>
+        <div class="reminder-header">${ev.eventTitle}</div>
         <div class="reminder-details">
-          <small>${ev.startTime || ""}–${ev.endTime || ""}</small><br>
-          ${ev.contactName || ""} ${ev.contactInfo || ""}<br>
-          ${ev.description || ""}
+          <small>${ev.date} • ${ev.startTime || ""}–${ev.endTime || ""}</small><br>
+          ${ev.eventDescription || ""}
         </div>
       `;
 
-      li.querySelector(".reminder-header").addEventListener("click", () => {
+      // Toggle details on header click
+      li.querySelector(".reminder-header").onclick = () => {
         li.querySelector(".reminder-details").classList.toggle("show");
-      });
+      };
 
       reminderList.appendChild(li);
     });
