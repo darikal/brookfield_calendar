@@ -51,6 +51,15 @@ async function loadEvents() {
   } catch (err) { console.error(err); }
 }
 
+function formatTime12h(timeStr) {
+  if (!timeStr) return "";
+  const [h, m] = timeStr.split(":").map(Number);
+  const period = h >= 12 ? "PM" : "AM";
+  const hour12 = h % 12 || 12;
+  return `${hour12}:${String(m).padStart(2, "0")} ${period}`;
+}
+
+
 function renderEventList() {
   const ul = document.getElementById("reminderList");
   ul.innerHTML = "";
@@ -80,7 +89,10 @@ function renderEventList() {
         ${e.title} – ${e.date} ${e.seriesId ? '<span class="series-label">(Series)</span>':''}
       </div>
       <div class="reminder-details">
-        <div>${e.startTime||""} ${e.endTime||""}</div>
+        <div>
+          ${formatTime12h(e.startTime)}
+          ${e.endTime ? "– " + formatTime12h(e.endTime) : ""}
+        </div>
         <div>${e.contactName||""} ${e.contactInfo||""}</div>
         <div>${e.description||""}</div>
       </div>
