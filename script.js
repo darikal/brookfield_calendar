@@ -71,20 +71,16 @@ function renderCalendar(month, year) {
             const dot = document.createElement("span");
             dot.className = `event-dot event-${ev.eventTypeMajor || "default"}`;
 
-            const hour = getEventStartHour(ev.startTime);
-
-            if (hour < 12) {
-              amDots.appendChild(dot);
-            } else {
-              pmDots.appendChild(dot);
-            }
+            const hour = getStartHour(ev.startTime);
+            if (hour < 12) amDots.appendChild(dot);
+            else pmDots.appendChild(dot);
           });
 
           if (amDots.children.length) cell.appendChild(amDots);
           if (pmDots.children.length) cell.appendChild(pmDots);
         }
 
-        cell.addEventListener("click", () => handleDateClick(dateStr));
+        cell.addEventListener("click", () => openEventsForDate(dateStr));
         date++;
       }
 
@@ -96,27 +92,28 @@ function renderCalendar(month, year) {
 }
 
 /* =========================
-   TIME HELPERS
+   TIME PARSER
 ========================= */
-function getEventStartHour(startTime) {
-  if (!startTime) return 12; // default to PM bucket
-  const parts = startTime.split(":");
-  return parseInt(parts[0], 10);
+function getStartHour(time) {
+  if (!time) return 12;
+  return parseInt(time.split(":")[0], 10);
 }
 
 /* =========================
-   DATE CLICK HANDLER
+   CLICK → OPEN EVENTS
 ========================= */
-function handleDateClick(dateStr) {
-  const items = document.querySelectorAll(".reminder-item");
+function openEventsForDate(dateStr) {
+  document.querySelectorAll(".reminder-item").forEach(item => {
+    const details = item.querySelector(".reminder-details");
 
-  items.forEach(item => {
     if (item.dataset.date === dateStr) {
       item.classList.add("highlight");
       item.classList.remove("dimmed");
+      details?.classList.add("show");
     } else {
       item.classList.remove("highlight");
       item.classList.add("dimmed");
+      details?.classList.remove("show");
     }
   });
 
@@ -126,7 +123,7 @@ function handleDateClick(dateStr) {
 }
 
 /* =========================
-   EVENT DATE MATCHING
+   EVENT MATCHING
 ========================= */
 function eventMatchesDate(event, dateStr) {
   if (event.date === dateStr) return true;
@@ -136,7 +133,7 @@ function eventMatchesDate(event, dateStr) {
   const target = new Date(dateStr);
   if (target < start) return false;
 
-  const diffDays = Math.floor((target - start) / (1000 * 60 * 60 * 24));
+  const diffDays = Math.floor((target - start) / 86400000);
 
   if (event.recurWhen === "week") return diffDays % 7 === 0;
   if (event.recurWhen === "biWeek") return diffDays % 14 === 0;
@@ -151,53 +148,45 @@ function eventMatchesDate(event, dateStr) {
 function renderEventList() {
   reminderList.innerHTML = "";
 
-  const sorted = [...events].sort(
-    (a, b) => new Date(a.date) - new Date(b.date)
-  );
+  [...events]
+    .sort((a,b) => new Date(a.date) - new Date(b.date))
+    .forEach(ev => {
+      const li = document.createElement("li");
+      li.className = `reminder-item event-${ev.eventTypeMajor || "default"}`;
+      li.dataset.date = ev.date;
 
-  sorted.forEach(ev => {
-    const li = document.createElement("li");
-    li.className = `reminder-item event-${ev.eventTypeMajor || "default"}`;
-    li.dataset.date = ev.date;
+      li.innerHTML = `
+        <div class="reminder-header">
+          ${ev.eventTitle}
+        </div>
+        <div class="reminder-details">
+          <small>${ev.date} • ${ev.startTime || ""}–${ev.endTime || ""}</small><br>
+          ${ev.eventDescription || ""}
+        </div>
+      `;
 
-    li.innerHTML = `
-      <strong>${ev.eventTitle}</strong><br>
-      <small>${ev.date} • ${ev.startTime || ""}–${ev.endTime || ""}</small><br>
-      ${ev.eventDescription || ""}
-    `;
+      li.querySelector(".reminder-header").onclick = () => {
+        li.querySelector(".reminder-details").classList.toggle("show");
+      };
 
-    reminderList.appendChild(li);
-  });
+      reminderList.appendChild(li);
+    });
 }
 
 /* =========================
-   NAV CONTROLS
+   NAV
 ========================= */
 document.getElementById("previous").onclick = () => {
   currentMonth--;
-  if (currentMonth < 0) {
-    currentMonth = 11;
-    currentYear--;
-  }
-  clearHighlights();
+  if (currentMonth < 0) { currentMonth = 11; currentYear--; }
   renderCalendar(currentMonth, currentYear);
 };
 
 document.getElementById("next").onclick = () => {
   currentMonth++;
-  if (currentMonth > 11) {
-    currentMonth = 0;
-    currentYear++;
-  }
-  clearHighlights();
+  if (currentMonth > 11) { currentMonth = 0; currentYear++; }
   renderCalendar(currentMonth, currentYear);
 };
-
-function clearHighlights() {
-  document.querySelectorAll(".reminder-item").forEach(i => {
-    i.classList.remove("highlight","dimmed");
-  });
-}
 
 /* =========================
    INIT

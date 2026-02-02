@@ -28,165 +28,74 @@ input, select, button, textarea {
 }
 
 /* =========================
-   LOGIN
+   WRAPPER
 ========================= */
-.login-wrapper {
-  max-width: 400px;
-  margin: 100px auto;
-  background: white;
-  padding: 30px 20px;
-  border-radius: 8px;
-  box-shadow: 0 4px 15px rgba(0,0,0,0.1);
-  text-align: center;
-}
-
-.login-wrapper h1 {
-  margin-bottom: 20px;
-  color: var(--blue-dark);
-}
-
-.login-wrapper input {
-  width: 100%;
-  padding: 10px;
-  margin-bottom: 15px;
-  border: 1px solid #ccc;
-  border-radius: 4px;
-}
-
-.login-wrapper button {
-  width: 100%;
-  padding: 10px;
-  background-color: var(--blue-dark);
-  color: white;
-  border: none;
-  border-radius: 4px;
-  cursor: pointer;
-}
-
-.login-wrapper button:hover {
-  background-color: var(--blue-mid);
+.wrapper {
+  max-width: 1100px;
+  padding: 0 20px;
+  margin: 20px auto;
+  box-sizing: border-box;
 }
 
 /* =========================
-   ADMIN PANEL
+   CALENDAR CONTAINER
 ========================= */
-.admin-wrapper {
-  max-width: 1100px;
-  margin: 40px auto;
-  background: var(--admin-bg);
+.container-calendar {
+  background: white;
+  border: 1px solid #ccc;
   padding: 20px;
   border-radius: 8px;
-  border: 1px solid var(--admin-border);
 }
 
-.admin-wrapper h1,
-.admin-wrapper h2 {
-  margin-top: 0;
+/* Month / Year */
+#monthAndYear {
+  text-align: center;
+  font-size: 2rem;
+  font-weight: 600;
+  margin: 10px 0 15px;
   color: var(--blue-dark);
 }
 
-.admin-wrapper input,
-.admin-wrapper select,
-.admin-wrapper button,
-.admin-wrapper textarea {
-  padding: 8px;
-  margin: 6px 0;
-  width: 100%;
-  border: 1px solid #ccc;
-  border-radius: 4px;
-}
-
-.admin-wrapper label {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin: 10px 0;
-}
-
-.admin-wrapper input[type="checkbox"] {
-  width: auto;
-  margin: 0;
-  transform: scale(1.1);
-}
-
-.admin-wrapper button {
-  background: var(--blue-dark);
-  color: white;
-  border: none;
-  border-radius: 4px;
-  cursor: pointer;
-}
-
-.admin-wrapper button.danger {
-  background: #d9534f;
-}
-
-.admin-toolbar {
-  display: flex;
-  gap: 10px;
-  flex-wrap: wrap;
-  margin-bottom: 12px;
-}
-
-.admin-toolbar input,
-.admin-toolbar select {
-  flex: 1;
-  min-width: 200px;
-}
-
-/* Admin events table */
-#eventsTable {
+/* =========================
+   CALENDAR TABLE
+========================= */
+.table-calendar {
   width: 100%;
   border-collapse: collapse;
-  margin-top: 10px;
+  table-layout: fixed;
+  background: white;
 }
 
-#eventsTable th,
-#eventsTable td {
-  border: 1px solid #ddd;
+.table-calendar thead th {
+  background-color: var(--blue-dark);
+  color: white;
   padding: 8px;
-  text-align: left;
 }
 
-#eventsTable th {
-  background: var(--admin-muted);
+.table-calendar th,
+.table-calendar td {
+  border: 1px solid #e2e2e2;
+  text-align: center;
+  vertical-align: top;
+  height: 65px;
+  padding: 6px;
+  position: relative;
+  overflow: hidden;
+}
+
+.calendar-day {
   cursor: pointer;
 }
 
-#eventsTable tr:nth-child(even) {
-  background: #f9f9f9;
-}
-
-#eventsTable tr:hover {
-  background: #eef3f6;
-}
-
-.admin-actions {
-  display: flex;
-  gap: 6px;
-}
-
-.admin-actions button {
-  padding: 4px 8px;
-  font-size: 12px;
+.calendar-day span {
+  font-weight: bold;
+  font-size: 0.9rem;
 }
 
 /* =========================
-   PUBLIC CALENDAR
+   DIAGONAL (EVENT DAYS ONLY)
 ========================= */
-#monthAndYear {
-  text-align: center;
-  font-size: 2rem;        /* bigger text */
-  font-weight: 600;
-  margin: 10px 0 15px;
-}
-
-.table-calendar td {
-  position: relative;
-}
-
-/* Diagonal divider */
-.table-calendar td::after {
+.table-calendar td.has-events::after {
   content: "";
   position: absolute;
   inset: 4px;
@@ -199,13 +108,16 @@ input, select, button, textarea {
   pointer-events: none;
 }
 
-/* Dot containers */
+/* =========================
+   EVENT DOTS (AM / PM)
+========================= */
 .event-dots-am,
 .event-dots-pm {
   position: absolute;
   display: flex;
   gap: 3px;
   flex-wrap: wrap;
+  max-width: 45%;
 }
 
 .event-dots-am {
@@ -216,65 +128,7 @@ input, select, button, textarea {
 .event-dots-pm {
   bottom: 4px;
   right: 4px;
-}
-
-.wrapper {
-  max-width: 1100px;
-  padding: 0 20px;
-  margin: 20px auto;
-  box-sizing: border-box;
-}
-
-.container-calendar {
-  background: white;
-  border: 1px solid #ccc;
-  padding: 20px;
-  border-radius: 8px;
-}
-
-.container-calendar #left h1 {
-  color: var(--blue-dark);
-  text-align: center;
-  background-color: #f2f2f2;
-  margin: 0 0 10px 0;
-  padding: 10px 0;
-}
-
-.table-calendar {
-  border-collapse: collapse;
-  width: 100%;
-  table-layout: fixed;
-  background: white;
-  position: relative;
-}
-
-.table-calendar th,
-.table-calendar td {
-  padding: 8px;
-  border: 1px solid #e2e2e2;
-  text-align: center;
-  vertical-align: top;
-  height: 65px;
-  position: relative;
-  overflow: hidden;
-}
-
-.table-calendar thead th {
-  background-color: var(--blue-dark);
-  color: white;
-}
-
-/* Event dots */
-.event-dots {
-  position: absolute;
-  bottom: 2px;
-  left: 2px;
-  display: flex;
-  flex-wrap: wrap-reverse;
-  gap: 2px;
-  max-width: calc(100% - 4px);
-  align-items: flex-end;
-  justify-content: flex-start;
+  justify-content: flex-end;
 }
 
 .event-dot {
@@ -284,17 +138,63 @@ input, select, button, textarea {
   flex-shrink: 0;
 }
 
-.event-social { background-color: #59fb41; }
-.event-small  { background-color: #340be9; }
-.event-paid   { background-color: #ffaf47; }
-.event-large  { background-color: #e80ce8; }
-.event-board  { background-color: #ed1000; }
-.event-default{ background-color: #ff0b36; }
+/* Event colors */
+.event-social  { background-color: #59fb41; }
+.event-small   { background-color: #340be9; }
+.event-paid    { background-color: #ffaf47; }
+.event-large   { background-color: #e80ce8; }
+.event-board   { background-color: #ed1000; }
+.event-default { background-color: #ff0b36; }
 
 /* =========================
-   REMINDER ACCORDION
+   NAV BUTTONS
 ========================= */
-.reminder-item { margin-bottom: 6px; }
+.button-container-calendar {
+  margin-bottom: 12px;
+  overflow: hidden;
+}
+
+.button-container-calendar button {
+  cursor: pointer;
+  background: var(--blue-dark);
+  color: white;
+  border: none;
+  border-radius: 4px;
+  padding: 6px 12px;
+  font-size: 14px;
+}
+
+#previous { float: left; }
+#next     { float: right; }
+
+/* =========================
+   JUMP TO
+========================= */
+.footer-container-calendar {
+  margin-top: 1em;
+  border-top: 1px solid #dadada;
+  padding: 10px 0;
+}
+
+.footer-container-calendar select {
+  cursor: pointer;
+  background: #ffffff;
+  color: #585858;
+  border: 1px solid #bfc5c5;
+  border-radius: 3px;
+  padding: 5px 10px;
+}
+
+/* =========================
+   REMINDER / EVENT LIST
+========================= */
+#reminder-section {
+  margin-top: 25px;
+}
+
+.reminder-item {
+  margin-bottom: 6px;
+}
 
 .reminder-header {
   padding: 6px;
@@ -304,12 +204,13 @@ input, select, button, textarea {
   cursor: pointer;
 }
 
-.reminder-header.event-social { background-color: #59fb41; }
-.reminder-header.event-small  { background-color: #340be9; }
-.reminder-header.event-paid   { background-color: #ffaf47; }
-.reminder-header.event-large  { background-color: #e80ce8; }
-.reminder-header.event-board  { background-color: #ed1000; }
-.reminder-header.event-default{ background-color: #ff0b36; }
+/* Match event colors */
+.reminder-header.event-social  { background-color: #59fb41; }
+.reminder-header.event-small   { background-color: #340be9; }
+.reminder-header.event-paid    { background-color: #ffaf47; }
+.reminder-header.event-large   { background-color: #e80ce8; }
+.reminder-header.event-board   { background-color: #ed1000; }
+.reminder-header.event-default { background-color: #ff0b36; }
 
 .reminder-details {
   background: #f0f0f0;
@@ -328,53 +229,37 @@ input, select, button, textarea {
   padding: 6px;
 }
 
-/* =========================
-   CALENDAR NAVIGATION
-========================= */
-.button-container-calendar {
-  margin-bottom: 1em;
-  overflow: hidden;
-  clear: both;
+/* Highlighting on calendar click */
+.reminder-item.highlight {
+  outline: 2px solid var(--blue-mid);
 }
 
-.button-container-calendar button {
-  cursor: pointer;
-  background: var(--blue-dark);
-  color: #fff;
-  border: 1px solid var(--blue-dark);
-  border-radius: 4px;
-  padding: 6px 12px;
-  font-size: 14px;
-}
-
-#previous { float: left; }
-#next     { float: right; }
-
-.footer-container-calendar {
-  margin-top: 1em;
-  border-top: 1px solid #dadada;
-  padding: 10px 0;
-}
-
-.footer-container-calendar select {
-  cursor: pointer;
-  background: #ffffff;
-  color: #585858;
-  border: 1px solid #bfc5c5;
-  border-radius: 3px;
-  padding: 5px 10px;
+.reminder-item.dimmed {
+  opacity: 0.4;
 }
 
 /* =========================
    MOBILE
 ========================= */
 @media (max-width: 600px) {
-  .admin-toolbar { flex-direction: column; }
-  #eventsTable th, #eventsTable td { font-size: 12px; }
-  .table-calendar th, .table-calendar td { font-size: 11px; height: 45px; padding: 3px; }
-  .event-dot { width: 7px; height: 7px; }
-  #monthAndYear { font-size: 18px; }
-  .button-container-calendar button { padding: 3px 8px; font-size: 12px; }
-  .time-input { flex-direction: column; gap: 5px; }
-  .group-size-wrapper { flex-direction: column; gap: 4px; }
+  .table-calendar th,
+  .table-calendar td {
+    font-size: 11px;
+    height: 45px;
+    padding: 3px;
+  }
+
+  .event-dot {
+    width: 7px;
+    height: 7px;
+  }
+
+  #monthAndYear {
+    font-size: 18px;
+  }
+
+  .button-container-calendar button {
+    padding: 3px 8px;
+    font-size: 12px;
+  }
 }
