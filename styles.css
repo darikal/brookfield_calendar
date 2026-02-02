@@ -94,13 +94,14 @@ input, select, button, textarea {
 
 /* =========================
    DIAGONAL (EVENT DAYS ONLY)
+   Fixed: bottom-left → top-right
 ========================= */
 .table-calendar td.has-events::after {
   content: "";
   position: absolute;
   inset: 4px;
   background: linear-gradient(
-    to bottom right,
+    to top right,        /* flipped direction */
     transparent 49%,
     rgba(0,0,0,0.15) 50%,
     transparent 51%
