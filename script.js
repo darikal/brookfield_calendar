@@ -1,171 +1,209 @@
-let currentDate = new Date();
 let events = [];
+const reminderList = document.getElementById("reminderList");
+const calendarBody = document.getElementById("calendar-body");
+const monthAndYear = document.getElementById("monthAndYear");
 
-/* ---------------- Helpers ---------------- */
-function formatTime12h(timeStr) {
-  if (!timeStr) return "";
-  const [h, m] = timeStr.split(":").map(Number);
-  const period = h >= 12 ? "PM" : "AM";
-  const hour12 = h % 12 || 12;
-  return `${hour12}:${String(m).padStart(2,"0")} ${period}`;
-}
-function isAM(time) { return !time || Number(time.split(":")[0]) < 12; }
+let today = new Date();
+let currentMonth = today.getMonth();
+let currentYear = today.getFullYear();
 
-/* ---------------- Load Events ---------------- */
+const months = [
+  "January","February","March","April","May","June",
+  "July","August","September","October","November","December"
+];
+
+/* =========================
+   FETCH EVENTS
+========================= */
 async function loadEvents() {
   try {
     const res = await fetch("/api/getEvents");
     events = await res.json();
-    renderCalendar();
+    renderCalendar(currentMonth, currentYear);
     renderEventList();
-  } catch(e) { console.error("Failed to load events:", e); }
+  } catch (e) {
+    console.error("Failed to load events", e);
+  }
 }
 
-/* ---------------- Render Event List ---------------- */
-function renderEventList() {
-  const ul = document.getElementById("reminderList");
-  ul.innerHTML = "";
-
-  events.sort((a,b)=> new Date(a.date)-new Date(b.date))
-    .forEach(ev => {
-      const li = document.createElement("li");
-      li.className = "reminder-item";
-      li.dataset.date = ev.date;
-
-      const cls = ev.eventTypeMajor || "default";
-
-      li.innerHTML = `
-        <div class="reminder-header event-${cls}">
-          ${ev.eventTitle || ev.title || "No Title"}
-        </div>
-        <div class="reminder-details">
-          <small>${ev.date} • ${ev.startTime||""}–${ev.endTime||""}</small><br>
-          ${ev.eventDescription||""}
-        </div>
-      `;
-
-      li.querySelector(".reminder-header").onclick = () => {
-        li.querySelector(".reminder-details").classList.toggle("show");
-      };
-
-      ul.appendChild(li);
-    });
-}
-
-/* ---------------- Render Calendar ---------------- */
-function renderCalendar() {
-  const month = currentDate.getMonth();
-  const year = currentDate.getFullYear();
-
-  document.getElementById("monthAndYear").textContent =
-    currentDate.toLocaleString("default",{month:"long"})+" "+year;
-
-  const body = document.getElementById("calendar-body");
-  body.innerHTML = "";
+/* =========================
+   RENDER CALENDAR
+========================= */
+function renderCalendar(month, year) {
+  calendarBody.innerHTML = "";
+  monthAndYear.textContent = `${months[month]} ${year}`;
 
   const firstDay = new Date(year, month, 1).getDay();
-  const daysInMonth = new Date(year, month+1, 0).getDate();
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+
   let date = 1;
 
-  for (let i=0;i<6;i++) {
+  for (let i = 0; i < 6; i++) {
     const row = document.createElement("tr");
 
-    for (let j=0;j<7;j++) {
+    for (let j = 0; j < 7; j++) {
       const cell = document.createElement("td");
 
-      if(i===0 && j<firstDay || date>daysInMonth){
+      if (i === 0 && j < firstDay) {
         cell.innerHTML = "";
+      } else if (date > daysInMonth) {
+        break;
       } else {
-        const dStr = `${year}-${String(month+1).padStart(2,"0")}-${String(date).padStart(2,"0")}`;
-        cell.dataset.date = dStr;
-        cell.textContent = date;
+        const dateStr = `${year}-${String(month + 1).padStart(2,"0")}-${String(date).padStart(2,"0")}`;
 
-        const dayEvents = events.filter(e => e.date === dStr);
-        if(dayEvents.length){
+        cell.classList.add("calendar-day");
+        cell.dataset.date = dateStr;
+        cell.innerHTML = `<span>${date}</span>`;
+
+        const dayEvents = events.filter(e => eventMatchesDate(e, dateStr));
+
+        if (dayEvents.length) {
           cell.classList.add("has-events");
 
-          const amDiv = document.createElement("div");
-          amDiv.className = "event-dots-am";
-          const pmDiv = document.createElement("div");
-          pmDiv.className = "event-dots-pm";
+          const amDots = document.createElement("div");
+          amDots.className = "event-dots-am";
+          const pmDots = document.createElement("div");
+          pmDots.className = "event-dots-pm";
 
-          dayEvents.forEach(e=>{
+          dayEvents.forEach(ev => {
             const dot = document.createElement("span");
-            const cls = e.eventTypeMajor || "default";
-            dot.className = "event-dot event-"+cls;
+            dot.className = `event-dot event-${ev.eType || "default"}`;
 
-            dot.onclick = ev=>{
-              ev.stopPropagation();
-              const li = document.querySelector(`[data-date='${e.date}']`);
-              if(li){
-                li.scrollIntoView({behavior:"smooth"});
-                li.classList.add("highlight");
-                setTimeout(()=>li.classList.remove("highlight"),2000);
+            // Dot click scrolls to the specific event
+            dot.addEventListener("click", evClick => {
+              evClick.stopPropagation();
+              const li = document.querySelector(`[data-key='${ev._id}-${ev.date}']`);
+              if (li) {
+                li.scrollIntoView({ behavior: "smooth", block: "start" });
+                li.classList.add("reminder-highlight");
+                setTimeout(() => li.classList.remove("reminder-highlight"), 2000);
               }
-            };
+            });
 
-            (isAM(e.startTime)?amDiv:pmDiv).appendChild(dot);
+            const hour = getStartHour(ev.startTime);
+            if (hour < 12) amDots.appendChild(dot);
+            else pmDots.appendChild(dot);
           });
 
-          if(amDiv.children.length) cell.appendChild(amDiv);
-          if(pmDiv.children.length) cell.appendChild(pmDiv);
+          if (amDots.children.length) cell.appendChild(amDots);
+          if (pmDots.children.length) cell.appendChild(pmDots);
         }
 
-        // Click anywhere on cell
-        cell.onclick = () => openEventsForDate(dStr);
+        // Clicking the cell opens all events for that date
+        cell.addEventListener("click", () => openEventsForDate(dateStr));
 
         date++;
       }
 
       row.appendChild(cell);
     }
-    body.appendChild(row);
-    if(date>daysInMonth) break;
+
+    calendarBody.appendChild(row);
+    if (date > daysInMonth) break;
   }
 }
 
-/* ---------------- Open/Close Events ---------------- */
-function openEventsForDate(dateStr){
-  const section = document.getElementById("reminder-section");
-  let anyOpen = false;
+/* =========================
+   PARSE START HOUR
+========================= */
+function getStartHour(time) {
+  if (!time) return 12;
+  return parseInt(time.split(":")[0], 10);
+}
 
-  document.querySelectorAll(".reminder-item").forEach(item=>{
+/* =========================
+   OPEN / CLOSE EVENTS
+========================= */
+function openEventsForDate(dateStr) {
+  document.querySelectorAll(".reminder-item").forEach(item => {
     const details = item.querySelector(".reminder-details");
-    if(item.dataset.date===dateStr){
-      details.classList.toggle("show");
-      item.classList.toggle("highlight");
+
+    if (item.dataset.date === dateStr) {
+      item.classList.add("highlight");
       item.classList.remove("dimmed");
-      anyOpen = true;
+      details?.classList.add("show");
     } else {
-      details.classList.remove("show");
       item.classList.remove("highlight");
       item.classList.add("dimmed");
+      details?.classList.remove("show");
     }
   });
 
-  if(anyOpen) section.scrollIntoView({behavior:"smooth"});
+  document.getElementById("reminder-section")
+    .scrollIntoView({ behavior: "smooth" });
 }
 
-/* ---------------- Navigation ---------------- */
-document.getElementById("previous").onclick = ()=>{
-  currentDate.setMonth(currentDate.getMonth()-1);
-  renderCalendar(); renderEventList();
-};
-document.getElementById("next").onclick = ()=>{
-  currentDate.setMonth(currentDate.getMonth()+1);
-  renderCalendar(); renderEventList();
+/* =========================
+   EVENT MATCHING
+========================= */
+function eventMatchesDate(event, dateStr) {
+  if (event.date === dateStr) return true;
+  if (!event.recurring) return false;
+
+  const start = new Date(event.date);
+  const target = new Date(dateStr);
+  if (target < start) return false;
+
+  const diffDays = Math.floor((target - start) / 86400000);
+
+  if (event.recurWhen === "week") return diffDays % 7 === 0;
+  if (event.recurWhen === "biWeek") return diffDays % 14 === 0;
+  if (event.recurWhen === "month") return start.getDate() === target.getDate();
+
+  return false;
+}
+
+/* =========================
+   EVENT LIST
+========================= */
+function renderEventList() {
+  reminderList.innerHTML = "";
+
+  [...events]
+    .sort((a,b) => new Date(a.date) - new Date(b.date))
+    .forEach(ev => {
+      const li = document.createElement("li");
+      li.className = `reminder-item event-${ev.eType || "default"}`;
+      li.dataset.date = ev.date;          // match by date for calendar click
+      li.dataset.key = `${ev._id}-${ev.date}`; // match by key for dot click
+
+      li.innerHTML = `
+        <div class="reminder-header">
+          ${ev.title} – ${ev.date}
+        </div>
+        <div class="reminder-details">
+          <small>${ev.startTime || ""}–${ev.endTime || ""}</small><br>
+          ${ev.contactName || ""} ${ev.contactInfo || ""}<br>
+          ${ev.description || ""}
+        </div>
+      `;
+
+      li.querySelector(".reminder-header").addEventListener("click", () => {
+        li.querySelector(".reminder-details").classList.toggle("show");
+      });
+
+      reminderList.appendChild(li);
+    });
+}
+
+/* =========================
+   NAVIGATION
+========================= */
+document.getElementById("previous").onclick = () => {
+  currentMonth--;
+  if (currentMonth < 0) { currentMonth = 11; currentYear--; }
+  renderCalendar(currentMonth, currentYear);
+  renderEventList();
 };
 
-const monthSel = document.getElementById("month");
-const yearSel = document.getElementById("year");
-for(let m=0;m<12;m++)
-  monthSel.innerHTML += `<option value="${m}">${new Date(0,m).toLocaleString("default",{month:"long"})}</option>`;
-for(let y=currentDate.getFullYear()-5;y<=currentDate.getFullYear()+5;y++)
-  yearSel.innerHTML += `<option value="${y}">${y}</option>`;
-monthSel.value = currentDate.getMonth();
-yearSel.value = currentDate.getFullYear();
-monthSel.onchange = ()=>{ currentDate.setMonth(+monthSel.value); renderCalendar(); renderEventList(); };
-yearSel.onchange = ()=>{ currentDate.setFullYear(+yearSel.value); renderCalendar(); renderEventList(); };
+document.getElementById("next").onclick = () => {
+  currentMonth++;
+  if (currentMonth > 11) { currentMonth = 0; currentYear++; }
+  renderCalendar(currentMonth, currentYear);
+  renderEventList();
+};
 
-/* ---------------- Init ---------------- */
+/* =========================
+   INIT
+========================= */
 loadEvents();
