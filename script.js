@@ -57,15 +57,31 @@ function renderCalendar(month, year) {
         cell.innerHTML = `<span>${date}</span>`;
 
         const dayEvents = events.filter(e => eventMatchesDate(e, dateStr));
+
         if (dayEvents.length) {
-          const dots = document.createElement("div");
-          dots.className = "event-dots";
+          cell.classList.add("has-events");
+
+          const amDots = document.createElement("div");
+          amDots.className = "event-dots-am";
+
+          const pmDots = document.createElement("div");
+          pmDots.className = "event-dots-pm";
+
           dayEvents.forEach(ev => {
             const dot = document.createElement("span");
-            dot.className = `dot ${ev.eventTypeMajor}`;
-            dots.appendChild(dot);
+            dot.className = `event-dot event-${ev.eventTypeMajor || "default"}`;
+
+            const hour = getEventStartHour(ev.startTime);
+
+            if (hour < 12) {
+              amDots.appendChild(dot);
+            } else {
+              pmDots.appendChild(dot);
+            }
           });
-          cell.appendChild(dots);
+
+          if (amDots.children.length) cell.appendChild(amDots);
+          if (pmDots.children.length) cell.appendChild(pmDots);
         }
 
         cell.addEventListener("click", () => handleDateClick(dateStr));
@@ -77,6 +93,15 @@ function renderCalendar(month, year) {
 
     calendarBody.appendChild(row);
   }
+}
+
+/* =========================
+   TIME HELPERS
+========================= */
+function getEventStartHour(startTime) {
+  if (!startTime) return 12; // default to PM bucket
+  const parts = startTime.split(":");
+  return parseInt(parts[0], 10);
 }
 
 /* =========================
@@ -95,7 +120,8 @@ function handleDateClick(dateStr) {
     }
   });
 
-  document.getElementById("reminder-section")
+  document
+    .getElementById("reminder-section")
     .scrollIntoView({ behavior: "smooth" });
 }
 
@@ -104,27 +130,17 @@ function handleDateClick(dateStr) {
 ========================= */
 function eventMatchesDate(event, dateStr) {
   if (event.date === dateStr) return true;
-
   if (!event.recurring) return false;
 
   const start = new Date(event.date);
   const target = new Date(dateStr);
-
   if (target < start) return false;
 
-  if (event.recurWhen === "week") {
-    const diff = Math.floor((target - start) / (1000 * 60 * 60 * 24));
-    return diff % 7 === 0;
-  }
+  const diffDays = Math.floor((target - start) / (1000 * 60 * 60 * 24));
 
-  if (event.recurWhen === "biWeek") {
-    const diff = Math.floor((target - start) / (1000 * 60 * 60 * 24));
-    return diff % 14 === 0;
-  }
-
-  if (event.recurWhen === "month") {
-    return start.getDate() === target.getDate();
-  }
+  if (event.recurWhen === "week") return diffDays % 7 === 0;
+  if (event.recurWhen === "biWeek") return diffDays % 14 === 0;
+  if (event.recurWhen === "month") return start.getDate() === target.getDate();
 
   return false;
 }
@@ -136,12 +152,12 @@ function renderEventList() {
   reminderList.innerHTML = "";
 
   const sorted = [...events].sort(
-    (a,b) => new Date(a.date) - new Date(b.date)
+    (a, b) => new Date(a.date) - new Date(b.date)
   );
 
   sorted.forEach(ev => {
     const li = document.createElement("li");
-    li.className = `reminder-item ${ev.eventTypeMajor}`;
+    li.className = `reminder-item event-${ev.eventTypeMajor || "default"}`;
     li.dataset.date = ev.date;
 
     li.innerHTML = `
