@@ -191,7 +191,7 @@ input, select, button, textarea {
   position: absolute;
   inset: 4px;
   background: linear-gradient(
-    to top right,
+    to bottom right,
     transparent 49%,
     rgba(0,0,0,0.15) 50%,
     transparent 51%
