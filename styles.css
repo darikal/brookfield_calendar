@@ -181,6 +181,43 @@ input, select, button, textarea {
   margin: 10px 0 15px;
 }
 
+.table-calendar td {
+  position: relative;
+}
+
+/* Diagonal divider */
+.table-calendar td::after {
+  content: "";
+  position: absolute;
+  inset: 4px;
+  background: linear-gradient(
+    to top right,
+    transparent 49%,
+    rgba(0,0,0,0.15) 50%,
+    transparent 51%
+  );
+  pointer-events: none;
+}
+
+/* Dot containers */
+.event-dots-am,
+.event-dots-pm {
+  position: absolute;
+  display: flex;
+  gap: 3px;
+  flex-wrap: wrap;
+}
+
+.event-dots-am {
+  top: 4px;
+  left: 4px;
+}
+
+.event-dots-pm {
+  bottom: 4px;
+  right: 4px;
+}
+
 .wrapper {
   max-width: 1100px;
   padding: 0 20px;
