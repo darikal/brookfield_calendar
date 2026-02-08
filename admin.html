@@ -227,7 +227,7 @@ async function loadEvents(){
         <tr>
           <td>${ev.date}</td>
           <td>${ev.title}</td>
-          <td>${ev.eType}</td>
+          <td>${EVENT_TYPE_LABELS[ev.eType] || ev.eType}</td>
           <td>${ev.addedBy||"—"}</td>
           <td>
             <button onclick="editEvent('${ev._id}')">Edit</button>
