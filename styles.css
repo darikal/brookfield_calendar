@@ -6,7 +6,7 @@
 }
 
 /* =========================
-   GLOBAL SAFETY
+   GLOBAL (SAFE ONLY)
 ========================= */
 .hidden { display: none; }
 
@@ -15,34 +15,34 @@ input, select, button, textarea {
   box-sizing: border-box;
 }
 
-/* =========================
-   CALENDAR APP ONLY
-========================= */
-.calendar-app {
-  font-family: Arial, sans-serif;
-  background-color: var(--blue-light);
+body {
   margin: 0;
   padding: 0;
+  font-family: Arial, sans-serif;
   color: var(--text-default);
 }
 
-/* WRAPPER */
-.calendar-app .wrapper {
+/* =========================
+   CALENDAR STYLES
+========================= */
+body {
+  background-color: var(--blue-light);
+}
+
+.wrapper {
   max-width: 1100px;
   padding: 0 20px;
   margin: 20px auto;
 }
 
-/* CALENDAR CONTAINER */
-.calendar-app .container-calendar {
+.container-calendar {
   background: white;
   border: 1px solid #ccc;
   padding: 20px;
   border-radius: 8px;
 }
 
-/* MONTH HEADER */
-.calendar-app #monthAndYear {
+#monthAndYear {
   text-align: center;
   font-size: 2rem;
   font-weight: 600;
@@ -50,21 +50,20 @@ input, select, button, textarea {
   color: var(--blue-dark);
 }
 
-/* CALENDAR TABLE */
-.calendar-app .table-calendar {
+.table-calendar {
   width: 100%;
   border-collapse: collapse;
   table-layout: fixed;
 }
 
-.calendar-app .table-calendar th {
+.table-calendar th {
   background-color: var(--blue-dark);
   color: white;
   padding: 8px;
 }
 
-.calendar-app .table-calendar th,
-.calendar-app .table-calendar td {
+.table-calendar th,
+.table-calendar td {
   border: 1px solid #e2e2e2;
   text-align: center;
   vertical-align: top;
@@ -75,8 +74,8 @@ input, select, button, textarea {
   overflow: hidden;
 }
 
-/* DIAGONAL LINE */
-.calendar-app .table-calendar td.has-events::after {
+/* Diagonal marker */
+.table-calendar td.has-events::after {
   content: "";
   position: absolute;
   inset: 4px;
@@ -89,39 +88,39 @@ input, select, button, textarea {
   pointer-events: none;
 }
 
-/* EVENT DOTS */
-.calendar-app .event-dots-am,
-.calendar-app .event-dots-pm {
+/* Event dots */
+.event-dots-am,
+.event-dots-pm {
   position: absolute;
   display: flex;
   gap: 3px;
   flex-wrap: wrap;
 }
 
-.calendar-app .event-dots-am { top: 4px; left: 4px; }
-.calendar-app .event-dots-pm { bottom: 4px; right: 4px; justify-content: flex-end; }
+.event-dots-am { top: 4px; left: 4px; }
+.event-dots-pm { bottom: 4px; right: 4px; justify-content: flex-end; }
 
-.calendar-app .event-dot {
+.event-dot {
   width: 12px;
   height: 12px;
   border-radius: 50%;
 }
 
-/* EVENT COLORS */
-.calendar-app .event-social  { background-color: #59fb41; }
-.calendar-app .event-small   { background-color: #340be9; }
-.calendar-app .event-paid    { background-color: #ffaf47; }
-.calendar-app .event-large   { background-color: #e80ce8; }
-.calendar-app .event-board   { background-color: #ed1000; }
-.calendar-app .event-default { background-color: #ff0b36; }
+/* Event colors */
+.event-social  { background-color: #59fb41; }
+.event-small   { background-color: #340be9; }
+.event-paid    { background-color: #ffaf47; }
+.event-large   { background-color: #e80ce8; }
+.event-board   { background-color: #ed1000; }
+.event-default { background-color: #ff0b36; }
 
-/* CALENDAR NAV */
-.calendar-app .button-container-calendar {
+/* Calendar navigation */
+.button-container-calendar {
   margin-bottom: 12px;
   overflow: hidden;
 }
 
-.calendar-app .button-container-calendar button {
+.button-container-calendar button {
   cursor: pointer;
   background: var(--blue-dark);
   color: white;
@@ -131,17 +130,17 @@ input, select, button, textarea {
   font-size: 14px;
 }
 
-.calendar-app #previous { float: left; }
-.calendar-app #next { float: right; }
+#previous { float: left; }
+#next { float: right; }
 
-/* JUMP TO */
-.calendar-app .footer-container-calendar {
+/* Jump To */
+.footer-container-calendar {
   margin-top: 1em;
   border-top: 1px solid #dadada;
   padding: 10px 0;
 }
 
-.calendar-app .footer-container-calendar select {
+.footer-container-calendar select {
   cursor: pointer;
   background: #fff;
   color: #585858;
@@ -150,10 +149,10 @@ input, select, button, textarea {
   padding: 5px 10px;
 }
 
-/* REMINDERS */
-.calendar-app #reminder-section { margin-top: 25px; }
+/* Reminders */
+#reminder-section { margin-top: 25px; }
 
-.calendar-app .reminder-header {
+.reminder-header {
   padding: 6px;
   font-weight: bold;
   border-radius: 4px;
@@ -161,7 +160,7 @@ input, select, button, textarea {
   cursor: pointer;
 }
 
-.calendar-app .reminder-details {
+.reminder-details {
   background: #f0f0f0;
   border: 1px solid #ccc;
   padding: 0 6px;
@@ -173,21 +172,47 @@ input, select, button, textarea {
   transition: max-height 0.3s ease, padding 0.3s ease;
 }
 
-.calendar-app .reminder-details.show {
+.reminder-details.show {
   max-height: 200px;
   padding: 6px;
 }
 
 /* =========================
-   ADMIN APP ONLY
+   ADMIN FIX OVERRIDES
+   (NO HTML CHANGES)
 ========================= */
-.admin-app {
+
+/* Admin page background reset */
+.login-wrapper,
+.admin-wrapper {
   background: #f7f7f7;
   color: #222;
-  font-family: Arial, sans-serif;
 }
 
-.admin-app button {
+/* Fix admin tables */
+.admin-events-table {
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: auto;
+}
+
+.admin-events-table th,
+.admin-events-table td {
+  border: 1px solid #ccc;
+  padding: 6px;
+  height: auto;
+  cursor: default;
+  vertical-align: middle;
+}
+
+.admin-events-table th {
+  background: #e0e0e0;
+  color: #000;
+}
+
+/* Fix admin buttons */
+.admin-wrapper button,
+.login-wrapper button {
   background: #444;
   color: white;
   border: none;
@@ -196,68 +221,47 @@ input, select, button, textarea {
   cursor: pointer;
 }
 
-.admin-app button:hover {
+.admin-wrapper button:hover,
+.login-wrapper button:hover {
   background: #333;
 }
 
-.admin-app table {
+/* Fix admin inputs */
+.admin-wrapper input,
+.admin-wrapper select,
+.admin-wrapper textarea,
+.login-wrapper input {
   width: 100%;
-  border-collapse: collapse;
-  table-layout: auto;
-}
-
-.admin-app th,
-.admin-app td {
-  border: 1px solid #ccc;
-  padding: 6px;
-  height: auto;
-  cursor: default;
-  vertical-align: middle;
-}
-
-.admin-app th {
-  background: #e0e0e0;
-  font-weight: bold;
-}
-
-.admin-app input,
-.admin-app select,
-.admin-app textarea {
-  width: 100%;
-  margin-bottom: 6px;
   padding: 5px;
+  margin-bottom: 6px;
 }
 
-.admin-app .admin-toolbar {
+/* Admin toolbar spacing */
+.admin-toolbar {
   margin: 10px 0;
 }
 
-/* LOCK ADMIN HIDDEN */
-.admin-app .hidden {
-  display: none !important;
-}
-
 /* =========================
-   MOBILE (CALENDAR ONLY)
+   MOBILE
 ========================= */
 @media (max-width: 600px) {
-  .calendar-app .table-calendar th,
-  .calendar-app .table-calendar td {
+  .table-calendar th,
+  .table-calendar td {
     font-size: 11px;
     height: 45px;
     padding: 3px;
   }
 
-  .calendar-app .event-dot {
+  .event-dot {
     width: 7px;
     height: 7px;
   }
 
-  .calendar-app #monthAndYear {
+  #monthAndYear {
     font-size: 18px;
   }
 
-  .calendar-app .button-container-calendar button {
+  .button-container-calendar button {
     padding: 3px 8px;
     font-size: 12px;
   }
