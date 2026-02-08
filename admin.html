@@ -132,6 +132,14 @@
 let currentUser = null;
 let editId = null;
 
+const EVENT_TYPE_LABELS = {
+  socialCommitteeEvent: "Social Committee",
+  smallGroup: "Small Group",
+  noSocialnoPaid: "Large Group",
+  reservedPaid: "Paid Reservation",
+  boardMeeting: "Board Meeting"
+};
+
 /* SESSION */
 window.addEventListener("DOMContentLoaded", async () => {
   try {
