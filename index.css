@@ -200,3 +200,37 @@ body {
     font-size: 12px;
   }
 }
+/* =========================
+   LEGEND
+========================= */
+.calendar-legend {
+  margin-top: 20px;
+  background: white;
+  padding: 15px;
+  border-radius: 8px;
+  border: 1px solid #ccc;
+}
+
+.calendar-legend h3 {
+  margin-top: 0;
+  color: var(--blue-dark);
+}
+
+.legend-items {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 15px 25px;
+}
+
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+}
+
+.legend-dot {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+}
