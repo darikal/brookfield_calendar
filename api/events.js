@@ -14,7 +14,7 @@ function expandRecurringEvent(event, fromDate, toDate) {
     else if (event.recurWhen === "biWeek") d.setDate(startDate.getDate() + i * 14);
     else if (event.recurWhen === "month") d.setMonth(startDate.getMonth() + i);
 
-    if (d < fromDate || d > toDate) continue; // only occurrences in view
+    if (d < fromDate || d > toDate) continue;
 
     results.push({
       ...event,
@@ -36,27 +36,22 @@ export default async function handler(req, res) {
     const client = await clientPromise;
     const db = client.db("calendarDB");
 
-    // Only next 3 months for admin view
-    const fromDate = new Date();
+    const adminView = req.query.admin === "true";
+    const cutoff = adminView ? new Date() : new Date("1970-01-01"); // default today for admin, all for frontend
+    if (req.query.cutoff) cutoff.setTime(new Date(req.query.cutoff).getTime());
+
     const toDate = new Date();
     toDate.setMonth(toDate.getMonth() + 3);
 
-    const rawEvents = await db.collection("events")
-      .find({}, { projection: {
-        _id: 1, title: 1, date: 1, startTime: 1, endTime: 1,
-        eType: 1, groupSize: 1, contactName: 1, contactInfo: 1,
-        description: 1, recurring: 1, isParent: 1, recurWhen: 1,
-        recurLengthNum: 1, depositPaid: 1, feePaid: 1
-      }})
-      .toArray();
+    const rawEvents = await db.collection("events").find({}).toArray();
 
     const events = rawEvents
       .filter(ev => ev.isParent || !ev.recurring)
-      .flatMap(ev => expandRecurringEvent(ev, fromDate, toDate));
+      .flatMap(ev => expandRecurringEvent(ev, cutoff, toDate));
 
     res.status(200).json(events);
   } catch (err) {
     console.error("GET EVENTS ERROR:", err);
-    res.status(200).json([]);
+    res.status(500).json([]);
   }
 }
