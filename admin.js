@@ -1,13 +1,9 @@
 let events = [];
+let showOld = false;
 
 const tableBody = document.querySelector("#eventsTable tbody");
 const searchInput = document.getElementById("searchInput");
-const showOlderToggle = document.getElementById("showOlderToggle");
-const cutoffDateInput = document.getElementById("cutoffDateInput");
-
-// Set default cutoff date to today
-const todayStr = new Date().toISOString().split("T")[0];
-cutoffDateInput.value = todayStr;
+const toggleOldBtn = document.getElementById("toggleOldBtn");
 
 // Modal elements
 const modal = document.getElementById("editModal");
@@ -28,25 +24,23 @@ const recurringEditSection = document.getElementById("recurringEditSection");
 const modalSaveBtn = document.getElementById("modalSaveBtn");
 const modalCancelBtn = document.getElementById("modalCancelBtn");
 
-/* LOAD EVENTS */
+/* =========================
+   LOAD EVENTS
+========================= */
 async function loadEvents() {
   try {
-    const res = await fetch("/api/getEvents");
+    const res = await fetch(`/api/events?admin=true${showOld ? "" : "&cutoff=" + new Date().toISOString()}`);
     events = await res.json();
-
-    events.sort((a, b) => {
-      const aDate = new Date(`${a.date}T${a.startTime || "00:00"}`);
-      const bDate = new Date(`${b.date}T${b.startTime || "00:00"}`);
-      return aDate - bDate;
-    });
-
+    events.sort((a, b) => new Date(a.date + "T" + (a.startTime || "00:00")) - new Date(b.date + "T" + (b.startTime || "00:00")));
     renderTable(events);
   } catch (err) {
     console.error("Failed to load events:", err);
   }
 }
 
-/* RENDER TABLE */
+/* =========================
+   RENDER TABLE
+========================= */
 function renderTable(data) {
   tableBody.innerHTML = "";
 
@@ -55,15 +49,7 @@ function renderTable(data) {
     return;
   }
 
-  const now = new Date();
-  const hideOld = !showOlderToggle.checked;
-  const cutoffDate = cutoffDateInput.value ? new Date(cutoffDateInput.value) : new Date();
-
   data.forEach(event => {
-    const eventDate = new Date(event.date);
-
-    if (hideOld && eventDate < cutoffDate) return;
-
     const typeNormalized = (event.eType || "").toLowerCase();
     const time = event.startTime && event.endTime ? `${event.startTime} – ${event.endTime}` : event.startTime || "";
     const contact = event.contactName ? `${event.contactName}<br><small>${event.contactInfo || ""}</small>` : "";
@@ -106,9 +92,12 @@ function renderTable(data) {
   });
 }
 
-/* EDIT MODAL */
+/* =========================
+   EDIT MODAL
+========================= */
 function openModal(event, singleEdit = false) {
   modalEventId.value = event._id;
+
   modalTitleInput.value = event.title || "";
   modalDate.value = event.date || "";
   modalStartTime.value = event.startTime || "";
@@ -118,6 +107,7 @@ function openModal(event, singleEdit = false) {
   modalContactName.value = event.contactName || "";
   modalContactInfo.value = event.contactInfo || "";
   modalDescription.value = event.description || "";
+
   modalRecurring.checked = !!event.recurring;
 
   if (event.recurring && event.isParent && !singleEdit) {
@@ -132,7 +122,9 @@ function openModal(event, singleEdit = false) {
   modal.classList.remove("hidden");
 }
 
-/* SAVE EVENT */
+/* =========================
+   SAVE EVENT
+========================= */
 modalSaveBtn.onclick = async () => {
   const id = modalEventId.value;
   const singleEdit = modal.dataset.singleEdit === "true";
@@ -154,8 +146,8 @@ modalSaveBtn.onclick = async () => {
   };
 
   try {
-    await fetch("/api/updateEvent", {
-      method: "PUT",
+    await fetch("/api/event", {
+      method: id ? "PUT" : "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload)
     });
@@ -167,11 +159,13 @@ modalSaveBtn.onclick = async () => {
   loadEvents();
 };
 
-/* PAYMENT TOGGLE */
+/* =========================
+   PAYMENT TOGGLE
+========================= */
 window.togglePayment = async (id, field) => {
   try {
-    await fetch("/api/togglePayment", {
-      method: "POST",
+    await fetch("/api/event", {
+      method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ id, field })
     });
@@ -181,12 +175,14 @@ window.togglePayment = async (id, field) => {
   }
 };
 
-/* DELETE */
+/* =========================
+   DELETE EVENT
+========================= */
 window.deleteEvent = async id => {
   if (!confirm("Delete this event?")) return;
   try {
-    await fetch("/api/deleteEvent", {
-      method: "POST",
+    await fetch("/api/event", {
+      method: "DELETE",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ id })
     });
@@ -196,7 +192,9 @@ window.deleteEvent = async id => {
   }
 };
 
-/* SEARCH */
+/* =========================
+   SEARCH EVENTS
+========================= */
 searchInput.addEventListener("input", () => {
   const q = searchInput.value.toLowerCase();
   const filtered = events.filter(e =>
@@ -209,7 +207,18 @@ searchInput.addEventListener("input", () => {
   renderTable(filtered);
 });
 
-/* MODAL CLOSE */
+/* =========================
+   SHOW/OMIT OLDER EVENTS
+========================= */
+toggleOldBtn.onclick = () => {
+  showOld = !showOld;
+  toggleOldBtn.textContent = showOld ? "Hide Older Events" : "Show Older Events";
+  loadEvents();
+};
+
+/* =========================
+   MODAL CANCEL
+========================= */
 modalCancelBtn.onclick = () => modal.classList.add("hidden");
 
 /* =========================
@@ -236,10 +245,6 @@ addEventBtn.onclick = () => {
 };
 
 /* =========================
-   TOGGLE EVENTS
+   INITIAL LOAD
 ========================= */
-showOlderToggle.addEventListener("change", () => renderTable(events));
-cutoffDateInput.addEventListener("change", () => renderTable(events));
-
-/* INITIAL LOAD */
 loadEvents();

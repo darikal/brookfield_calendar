@@ -21,7 +21,7 @@ const nextBtn = document.getElementById("next");
 ========================= */
 async function loadEvents() {
   try {
-    const res = await fetch("/api/getEvents");
+    const res = await fetch("/api/getEventsFront");
     events = await res.json();
     renderCalendar();
     renderEventList();

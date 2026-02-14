@@ -7,107 +7,84 @@
 <link rel="stylesheet" href="admin.css">
 </head>
 <body>
-
 <div class="admin-wrapper">
 
   <h1>Brookfield Events Admin</h1>
 
+  <!-- Toolbar -->
   <div class="admin-toolbar">
     <input type="text" id="searchInput" placeholder="Search events..." />
     <button id="addEventBtn">Add New Event</button>
-
-    <label class="toggle-label">
-      <input type="checkbox" id="showOlderToggle">
-      Show Older Events
-    </label>
-
-    <label class="toggle-label">
-      Cutoff Date:
-      <input type="date" id="cutoffDateInput">
-    </label>
+    <button id="toggleOldBtn">Show Older Events</button>
   </div>
 
-  <table id="eventsTable" class="admin-events-table">
+  <!-- Events Table -->
+  <table id="eventsTable">
     <thead>
       <tr>
         <th>Date</th>
         <th>Time</th>
         <th>Title</th>
         <th>Type</th>
-        <th>Size</th>
+        <th>Group Size</th>
         <th>Contact</th>
         <th>Payments</th>
         <th>Actions</th>
       </tr>
     </thead>
-    <tbody></tbody>
+    <tbody>
+      <!-- Populated dynamically -->
+    </tbody>
   </table>
 
-</div>
+  <!-- Edit Modal -->
+  <div id="editModal" class="modal hidden">
+    <div class="modal-content">
+      <h2>Edit Event</h2>
+      <input type="hidden" id="modalEventId">
 
-<!-- Event Modal -->
-<div id="editModal" class="modal hidden">
-  <div class="modal-content">
-    <span class="modal-close" id="modalCancelBtn">&times;</span>
-    <h2 id="modalTitle">Add / Edit Event</h2>
+      <label>Title: <input type="text" id="modalTitle"></label>
+      <label>Date: <input type="date" id="modalDate"></label>
+      <label>Start Time: <input type="time" id="modalStartTime"></label>
+      <label>End Time: <input type="time" id="modalEndTime"></label>
+      <label>Type:
+        <select id="modalType">
+          <option value="socialCommitteeEvent">Social Committee</option>
+          <option value="smallGroup">Small Group</option>
+          <option value="boardMeeting">Board Meeting</option>
+          <option value="reservedPaid">Reserved/Paid Event</option>
+          <option value="noSocialnoPaid">Other</option>
+        </select>
+      </label>
+      <label>Group Size: <input type="number" id="modalGroupSize"></label>
+      <label>Contact Name: <input type="text" id="modalContactName"></label>
+      <label>Contact Info: <input type="text" id="modalContactInfo"></label>
+      <label>Description:<br>
+        <textarea id="modalDescription" rows="3"></textarea>
+      </label>
 
-    <input type="hidden" id="modalEventId" />
+      <label>
+        Recurring: <input type="checkbox" id="modalRecurring">
+      </label>
 
-    <label>Title</label>
-    <input type="text" id="modalTitle" />
+      <div id="recurringEditSection" class="hidden">
+        <label>Repeat every:
+          <select id="modalRecurWhen">
+            <option value="week">Week</option>
+            <option value="biWeek">2 Weeks</option>
+            <option value="month">Month</option>
+          </select>
+        </label>
+        <label>Number of occurrences: <input type="number" id="modalRecurLengthNum"></label>
+      </div>
 
-    <label>Date</label>
-    <input type="date" id="modalDate" />
-
-    <label>Start Time</label>
-    <input type="time" id="modalStartTime" />
-
-    <label>End Time</label>
-    <input type="time" id="modalEndTime" />
-
-    <label>Type</label>
-    <select id="modalType">
-      <option value="socialCommitteeEvent">Social Event</option>
-      <option value="smallGroup">Small Group</option>
-      <option value="paid">Paid Event</option>
-      <option value="large">Large Event</option>
-      <option value="boardMeeting">Board Meeting</option>
-      <option value="noSocialnoPaid">Other</option>
-    </select>
-
-    <label>Group Size</label>
-    <input type="number" id="modalGroupSize" />
-
-    <label>Contact Name</label>
-    <input type="text" id="modalContactName" />
-
-    <label>Contact Info</label>
-    <input type="text" id="modalContactInfo" />
-
-    <label>Description</label>
-    <textarea id="modalDescription"></textarea>
-
-    <hr>
-
-    <label>
-      <input type="checkbox" id="modalRecurring" />
-      Recurring Event
-    </label>
-
-    <div id="recurringEditSection" class="hidden">
-      <label>Repeat Every</label>
-      <select id="modalRecurWhen">
-        <option value="week">Weekly</option>
-        <option value="biWeek">Bi-Weekly</option>
-        <option value="month">Monthly</option>
-      </select>
-
-      <label>Number of Occurrences</label>
-      <input type="number" id="modalRecurLengthNum" min="2" />
+      <div class="modal-buttons">
+        <button id="modalSaveBtn">Save</button>
+        <button id="modalCancelBtn">Cancel</button>
+      </div>
     </div>
-
-    <button id="modalSaveBtn">Save Event</button>
   </div>
+
 </div>
 
 <script type="module" src="admin.js"></script>
