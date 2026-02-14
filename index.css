@@ -80,18 +80,22 @@ body {
   table-layout: fixed;
 }
 
+/* Days of week header — reduced height */
 .table-calendar th {
   background-color: var(--blue-dark);
   color: white;
-  padding: 8px;
+  padding: 4px 6px;     /* smaller padding */
+  height: auto;         /* allow natural height */
+  line-height: 1.2;     /* tighten vertical spacing */
+  font-weight: 600;
 }
 
-.table-calendar th,
+/* Date cells only */
 .table-calendar td {
   border: 1px solid #e2e2e2;
   text-align: center;
   vertical-align: top;
-  height: 65px;
+  height: 65px;         /* unchanged */
   padding: 6px;
   position: relative;
   cursor: pointer;
@@ -134,12 +138,12 @@ body {
 }
 
 /* Event colors */
-.event-socialEvent  { background-color: #59fb41; }
+.event-socialEvent  { background-color: #1f7a1f; }  /* darker green */
 .event-smallGroup   { background-color: #340be9; }
 .event-largeGroup   { background-color: #e80ce8; }
 .event-boardMeeting { background-color: #ed1000; }
-.event-paidEvent    { background-color: #ffaf47; }
-.event-default      { background-color: #999; }
+.event-paidEvent    { background-color: #d97706; }
+.event-default      { background-color: #999;    }
 
 /* =========================
    REMINDERS
@@ -173,6 +177,7 @@ body {
    MOBILE
 ========================= */
 @media (max-width: 600px) {
+
   .table-calendar td {
     height: 45px;
     font-size: 11px;
@@ -187,5 +192,11 @@ body {
     width: 28px;
     height: 28px;
     font-size: 1.2rem;
+  }
+
+  /* Keep header compact on mobile too */
+  .table-calendar th {
+    padding: 3px;
+    font-size: 12px;
   }
 }
