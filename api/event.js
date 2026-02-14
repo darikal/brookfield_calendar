@@ -10,6 +10,7 @@ const PRIORITY = {
   boardMeeting: 5
 };
 
+// Generate recurring dates for an event
 function generateRecurringDates(startDate, type, lengthNum) {
   const dates = [];
   const count = parseInt(lengthNum, 10) || 0;
@@ -30,24 +31,26 @@ export default async function handler(req, res) {
     const eventsCollection = db.collection("events");
 
     switch (req.method) {
-
       /* =========================
          GET EVENTS
       ========================= */
       case "GET": {
         const { admin, cutoff } = req.query;
-
         const query = {};
 
-        if (!admin) {
-          // Public front-end: only future events
-          if (cutoff) query.date = { $gte: cutoff.split("T")[0] };
+        // Only for admin panel: omit older events if cutoff is provided
+        if (admin === "true" && cutoff) {
+          query.date = { $gte: cutoff.split("T")[0] }; // YYYY-MM-DD
         }
 
         const events = await eventsCollection.find(query).toArray();
 
         // Sort by date + startTime
-        events.sort((a, b) => new Date(a.date + "T" + (a.startTime || "00:00")) - new Date(b.date + "T" + (b.startTime || "00:00")));
+        events.sort(
+          (a, b) =>
+            new Date(a.date + "T" + (a.startTime || "00:00")) -
+            new Date(b.date + "T" + (b.startTime || "00:00"))
+        );
 
         return res.status(200).json(events);
       }
@@ -84,8 +87,8 @@ export default async function handler(req, res) {
             recurWhen: event.recurWhen || null,
             recurLengthNum: event.recurLengthNum || null,
             createdAt: new Date(),
-            depositPaid: event.eType.toLowerCase() === "paid" ? false : null,
-            feePaid: event.eType.toLowerCase() === "paid" ? false : null
+            depositPaid: event.eType.toLowerCase() === "reservedpaid" ? false : null,
+            feePaid: event.eType.toLowerCase() === "reservedpaid" ? false : null
           };
 
           const result = await eventsCollection.insertOne(doc);
