@@ -3,11 +3,11 @@
   --blue-light: #e1e6e6;
   --blue-mid:  #4fa3c6;
   --text-default: #333;
+  --btn-color: #4fa3c6;
+  --btn-hover: #357a8a;
+  --btn-size: 36px;
 }
 
-/* =========================
-   GLOBAL
-========================= */
 .hidden { display: none; }
 
 input, select, button, textarea {
@@ -24,7 +24,7 @@ body {
 }
 
 /* =========================
-   CALENDAR
+   WRAPPER / CALENDAR
 ========================= */
 .wrapper {
   max-width: 1100px;
@@ -39,14 +39,41 @@ body {
   border-radius: 8px;
 }
 
-#monthAndYear {
-  text-align: center;
-  font-size: 2rem;
-  font-weight: 600;
-  margin: 10px 0 15px;
-  color: var(--blue-dark);
+.calendar-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
 }
 
+#monthAndYear {
+  text-align: center;
+  font-size: 1.8rem;
+  font-weight: 600;
+  color: var(--blue-dark);
+  margin: 0;
+}
+
+.nav-btn {
+  background-color: var(--btn-color);
+  color: white;
+  border: none;
+  border-radius: 6px;
+  width: var(--btn-size);
+  height: var(--btn-size);
+  font-size: 1.5rem;
+  font-weight: bold;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.nav-btn:hover {
+  background-color: var(--btn-hover);
+}
+
+/* =========================
+   CALENDAR TABLE
+========================= */
 .table-calendar {
   width: 100%;
   border-collapse: collapse;
@@ -71,10 +98,7 @@ body {
   overflow: hidden;
 }
 
-/* =========================
-   DIAGONAL SLASH
-   bottom-left → top-right
-========================= */
+/* Diagonal slash */
 .has-events::after {
   content: "";
   position: absolute;
@@ -87,11 +111,10 @@ body {
       #cfcfcf 50%,
       transparent 51%
     );
+  z-index: 0;
 }
 
-/* =========================
-   EVENT DOTS
-========================= */
+/* Event dots */
 .event-dots-am,
 .event-dots-pm {
   position: absolute;
@@ -110,16 +133,13 @@ body {
   border-radius: 50%;
 }
 
-/* =========================
-   EVENT COLORS
-========================= */
+/* Event colors */
 .event-socialEvent  { background-color: #59fb41; }
 .event-smallGroup   { background-color: #340be9; }
 .event-largeGroup   { background-color: #e80ce8; }
 .event-boardMeeting { background-color: #ed1000; }
 .event-paidEvent    { background-color: #ffaf47; }
-
-.event-default { background-color: #999; }
+.event-default      { background-color: #999; }
 
 /* =========================
    REMINDERS
@@ -161,5 +181,11 @@ body {
   .event-dot {
     width: 7px;
     height: 7px;
+  }
+
+  .nav-btn {
+    width: 28px;
+    height: 28px;
+    font-size: 1.2rem;
   }
 }

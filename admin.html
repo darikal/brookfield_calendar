@@ -4,362 +4,112 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Brookfield Admin Console</title>
-<link rel="stylesheet" href="styles.css">
-<style>
-/* Simple visibility helpers */
-.hidden { display: none; }
-.admin-wrapper { padding: 20px; }
-.admin-toolbar { margin: 10px 0; }
-.time-input input { margin: 0 5px; }
-.group-size-wrapper { margin: 5px 0; }
-.admin-events-table { width: 100%; border-collapse: collapse; margin-top: 20px; }
-.admin-events-table th, .admin-events-table td { border: 1px solid #ccc; padding: 5px; }
-</style>
+<link rel="stylesheet" href="admin.css">
 </head>
 <body>
 
-<!-- LOGIN -->
-<div class="login-wrapper" id="loginWrapper">
-  <h1>Admin Login</h1>
-  <form id="loginForm">
-    <input type="text" id="username" placeholder="Username" required />
-    <input type="password" id="password" placeholder="Password" required />
-    <button type="submit">Login</button>
-  </form>
-  <p id="loginError" style="color:red"></p>
-</div>
+<div class="admin-wrapper">
 
-<!-- ADMIN -->
-<div class="admin-wrapper hidden" id="adminWrapper">
-  <h1>Admin Console</h1>
-  <button onclick="logout()">Logout</button>
+  <h1>Brookfield Events Admin</h1>
 
-  <h2>Create / Edit Event</h2>
-
-  <!-- SEARCH / SORT -->
   <div class="admin-toolbar">
-    <input type="text" id="searchEvent" placeholder="Search events…">
-    <select id="sortEvent">
-      <option value="dateAsc">Date ↑</option>
-      <option value="dateDesc">Date ↓</option>
-      <option value="title">Title</option>
-      <option value="type">Type</option>
-    </select>
+    <input type="text" id="searchInput" placeholder="Search events..." />
+    <button id="addEventBtn">Add New Event</button>
+
+    <label class="toggle-label">
+      <input type="checkbox" id="showOlderToggle">
+      Show Older Events
+    </label>
+
+    <label class="toggle-label">
+      Cutoff Date:
+      <input type="date" id="cutoffDateInput">
+    </label>
   </div>
 
-  <!-- EVENT TYPE -->
-  <select id="eventType">
-    <option value="" hidden>--- Select Event Type ---</option>
-    <option value="socialCommitteeEvent">Social Committee</option>
-    <option value="smallGroup">Small Group</option>
-    <option value="noSocialnoPaid">Large Group</option>
-    <option value="reservedPaid">Paid Reservation</option>
-    <option value="boardMeeting">Board Meeting</option>
-  </select>
+  <table id="eventsTable" class="admin-events-table">
+    <thead>
+      <tr>
+        <th>Date</th>
+        <th>Time</th>
+        <th>Title</th>
+        <th>Type</th>
+        <th>Size</th>
+        <th>Contact</th>
+        <th>Payments</th>
+        <th>Actions</th>
+      </tr>
+    </thead>
+    <tbody></tbody>
+  </table>
 
-  <!-- EVENT FORM -->
-  <div id="eventForm" class="hidden">
-    <input type="date" id="eventDate">
+</div>
 
-    <div class="time-input">
-      <label>Start</label>
-      <input type="time" id="startTime">
-      <label>End</label>
-      <input type="time" id="endTime">
-    </div>
+<!-- Event Modal -->
+<div id="editModal" class="modal hidden">
+  <div class="modal-content">
+    <span class="modal-close" id="modalCancelBtn">&times;</span>
+    <h2 id="modalTitle">Add / Edit Event</h2>
 
-    <div class="group-size-wrapper">
-      <label>Group Size</label>
-      <input type="text" id="groupSize" placeholder="10–15">
-    </div>
+    <input type="hidden" id="modalEventId" />
 
-    <h4>Contact Information</h4>
-    <input type="text" id="contactName" placeholder="Contact Name">
-    <input type="text" id="contactInfo" placeholder="Phone or Email">
+    <label>Title</label>
+    <input type="text" id="modalTitle" />
+
+    <label>Date</label>
+    <input type="date" id="modalDate" />
+
+    <label>Start Time</label>
+    <input type="time" id="modalStartTime" />
+
+    <label>End Time</label>
+    <input type="time" id="modalEndTime" />
+
+    <label>Type</label>
+    <select id="modalType">
+      <option value="socialCommitteeEvent">Social Event</option>
+      <option value="smallGroup">Small Group</option>
+      <option value="paid">Paid Event</option>
+      <option value="large">Large Event</option>
+      <option value="boardMeeting">Board Meeting</option>
+      <option value="noSocialnoPaid">Other</option>
+    </select>
+
+    <label>Group Size</label>
+    <input type="number" id="modalGroupSize" />
+
+    <label>Contact Name</label>
+    <input type="text" id="modalContactName" />
+
+    <label>Contact Info</label>
+    <input type="text" id="modalContactInfo" />
+
+    <label>Description</label>
+    <textarea id="modalDescription"></textarea>
+
+    <hr>
 
     <label>
-      <input type="checkbox" id="recurCheckbox">
+      <input type="checkbox" id="modalRecurring" />
       Recurring Event
     </label>
 
-    <div id="recurringOptions" class="hidden">
-      <select id="recurWhen">
+    <div id="recurringEditSection" class="hidden">
+      <label>Repeat Every</label>
+      <select id="modalRecurWhen">
         <option value="week">Weekly</option>
         <option value="biWeek">Bi-Weekly</option>
         <option value="month">Monthly</option>
       </select>
 
-      <label>For the next</label>
-      <input type="number" id="recurLengthNum" min="1" max="52">
-      <select id="recurLength">
-        <option value="week">Weeks</option>
-        <option value="month">Months</option>
-      </select>
+      <label>Number of Occurrences</label>
+      <input type="number" id="modalRecurLengthNum" min="2" />
     </div>
 
-    <input type="text" id="eventTitle" placeholder="Event Title">
-    <input type="text" id="eventDescription" placeholder="Event Description">
-
-    <div id="paidInfo" class="hidden">
-      <h4>Paid Reservation</h4>
-      <input type="text" id="residentName" placeholder="Resident Name">
-      <input type="text" id="residentAddress" placeholder="Resident Address">
-      <label>
-        <input type="checkbox" id="acceptTerms">
-        Accept Terms
-      </label>
-    </div>
-
-    <button id="saveBtn">Save Event</button>
+    <button id="modalSaveBtn">Save Event</button>
   </div>
-
-  <h2>Existing Events</h2>
-  <table class="admin-events-table">
-    <thead>
-      <tr>
-        <th>Date</th>
-        <th>Title</th>
-        <th>Type</th>
-        <th>Added By</th>
-        <th>Actions</th>
-      </tr>
-    </thead>
-    <tbody id="eventsTable"></tbody>
-  </table>
 </div>
 
-<script>
-let currentUser = null;
-let editId = null;
-
-const EVENT_TYPE_LABELS = {
-  socialCommitteeEvent: "Social Committee",
-  smallGroup: "Small Group",
-  noSocialnoPaid: "Large Group",
-  reservedPaid: "Paid Reservation",
-  boardMeeting: "Board Meeting"
-};
-
-/* SESSION */
-window.addEventListener("DOMContentLoaded", async () => {
-  try {
-    const res = await fetch("/api/session");
-    if(res.ok){
-      currentUser = await res.json();
-      loginWrapper.classList.add("hidden");
-      adminWrapper.classList.remove("hidden");
-      resetForm();
-      loadEvents();
-    }
-  } catch (err) { console.error("Session fetch error:", err); }
-});
-
-/* LOGIN */
-loginForm.addEventListener("submit", async e => {
-  e.preventDefault();
-  try {
-    const res = await fetch("/api/login", {
-      method:"POST",
-      headers:{ "Content-Type":"application/json" },
-      body: JSON.stringify({ username: username.value, password: password.value })
-    });
-    const data = await res.json();
-    if(!res.ok){
-      loginError.textContent = data.error || "Login failed";
-      return;
-    }
-    location.reload();
-  } catch(err) { console.error("Login error:", err); loginError.textContent = "Network error"; }
-});
-
-/* LOGOUT */
-async function logout(){ await fetch("/api/logout"); location.reload(); }
-
-/* FORM VISIBILITY */
-eventType.addEventListener("change", ()=>{
-  eventForm.classList.toggle("hidden", !eventType.value);
-
-  // Paid info only for reservedPaid
-  paidInfo.classList.toggle("hidden", eventType.value !== "reservedPaid");
-
-  // Group size only for smallGroup or largeGroup
-  const showGroupSize = eventType.value === "smallGroup" || eventType.value === "noSocialnoPaid";
-  document.querySelector(".group-size-wrapper").classList.toggle("hidden", !showGroupSize);
-});
-
-// Recurring toggle
-recurCheckbox.addEventListener("change", ()=>{ recurringOptions.classList.toggle("hidden", !recurCheckbox.checked); });
-
-/* RESET FORM FUNCTION */
-function resetForm(){
-  editId = null;
-  eventForm.classList.add("hidden");
-  eventType.value = "";
-  eventDate.value = "";
-  startTime.value = "";
-  endTime.value = "";
-  groupSize.value = "";
-  contactName.value = "";
-  contactInfo.value = "";
-  eventTitle.value = "";
-  eventDescription.value = "";
-  recurCheckbox.checked = false;
-  recurringOptions.classList.add("hidden");
-  recurWhen.value = "week";
-  recurLengthNum.value = "";
-  recurLength.value = "week";
-  paidInfo.classList.add("hidden");
-  residentName.value = "";
-  residentAddress.value = "";
-  acceptTerms.checked = false;
-}
-
-/* LOAD EVENTS */
-async function loadEvents(){
-  try {
-    const res = await fetch("/api/getEvents?admin=true");
-    let events = await res.json();
-    const search = searchEvent.value.toLowerCase();
-    events = events.filter(e => e.title.toLowerCase().includes(search));
-
-    events.sort((a,b)=>{
-      if(sortEvent.value==="dateAsc") return new Date(a.date)-new Date(b.date);
-      if(sortEvent.value==="dateDesc") return new Date(b.date)-new Date(a.date);
-      if(sortEvent.value==="title") return a.title.localeCompare(b.title);
-      return a.eType.localeCompare(b.eType);
-    });
-
-    eventsTable.innerHTML = "";
-    events.forEach(ev=>{
-      eventsTable.innerHTML += `
-        <tr>
-          <td>${ev.date}</td>
-          <td>${ev.title}</td>
-          <td>${EVENT_TYPE_LABELS[ev.eType] || ev.eType}</td>
-          <td>${ev.addedBy||"—"}</td>
-          <td>
-            <button onclick="editEvent('${ev._id}')">Edit</button>
-            <button onclick="deleteEvent('${ev._id}')">Delete</button>
-          </td>
-        </tr>`;
-    });
-  } catch(err){ console.error("Load events error:", err); }
-}
-
-/* EDIT */
-function editEvent(id){
-  fetch("/api/getEvents?admin=true")
-    .then(r=>r.json())
-    .then(events=>{
-      const ev = events.find(e=>e._id===id);
-      if(!ev) return;
-
-      editId = id;
-      eventType.value = ev.eType;
-      eventForm.classList.remove("hidden");
-      eventForm.scrollIntoView({behavior:"smooth"});
-      eventDate.value = ev.date;
-      startTime.value = ev.startTime || "";
-      endTime.value = ev.endTime || "";
-      groupSize.value = ev.groupSize || "";
-      contactName.value = ev.contactName || "";
-      contactInfo.value = ev.contactInfo || "";
-      eventTitle.value = ev.title;
-      eventDescription.value = ev.description || "";
-      recurCheckbox.checked = !!ev.recurring;
-      recurringOptions.classList.toggle("hidden", !ev.recurring);
-      recurWhen.value = ev.recurWhen || "week";
-      recurLengthNum.value = ev.recurLengthNum || "";
-      recurLength.value = ev.recurLength || "week";
-      paidInfo.classList.toggle("hidden", ev.eType === "reservedPaid");
-      document.querySelector(".group-size-wrapper").classList.toggle("hidden", !(ev.eType === "smallGroup" || ev.eType === "noSocialnoPaid"));
-      residentName.value = ev.residentName || "";
-      residentAddress.value = ev.residentAddress || "";
-      acceptTerms.checked = ev.acceptTerms || false;
-    });
-}
-
-/* SAVE */
-saveBtn.addEventListener("click", async ()=>{
-  const payload = {
-    id: editId,
-    eType: eventType.value,
-    date: eventDate.value,
-    startTime: startTime.value,
-    endTime: endTime.value,
-    title: eventTitle.value,
-    description: eventDescription.value,
-    recurring: recurCheckbox.checked,
-    recurWhen: recurWhen.value,
-    recurLengthNum: recurLengthNum.value,
-    recurLength: recurLength.value,
-    addedBy: currentUser.username
-  };
-
-  // Only include optional fields for specific types
-  if(eventType.value === "smallGroup" || eventType.value === "noSocialnoPaid"){
-    payload.groupSize = groupSize.value;
-  }
-  if(eventType.value === "reservedPaid"){
-    payload.contactName = contactName.value;
-    payload.contactInfo = contactInfo.value;
-    payload.residentName = residentName.value;
-    payload.residentAddress = residentAddress.value;
-    payload.acceptTerms = acceptTerms.checked;
-  }
-
-  try {
-    const res = await fetch("/api/addEvent", {
-      method:"POST",
-      headers: {"Content-Type":"application/json"},
-      body: JSON.stringify(payload)
-    });
-
-    const text = await res.text();
-    let data;
-    try { data = JSON.parse(text); } 
-    catch(err) { console.error("Invalid JSON:", text); alert("Server returned invalid JSON"); return; }
-
-    if(!res.ok){
-      if(data.error === "conflict"){
-        let msg = "Conflicts detected:\n";
-        for(const date in data.conflicts){
-          msg += `\n${date}:\n`;
-          data.conflicts[date].forEach(c=>{
-            msg += `  ${c.title} (${c.type}) ${c.startTime}-${c.endTime}\n`;
-          });
-        }
-        alert(msg);
-      } else alert("Error: "+(data.error||"Unknown"));
-      return;
-    }
-
-    alert(`Event saved! ${data.inserted.length} occurrence(s).`);
-    resetForm();
-    loadEvents();
-
-  } catch(err){
-    console.error("Save event error:", err);
-    alert("Network or server error. See console.");
-  }
-});
-
-/* DELETE */
-async function deleteEvent(id){
-  if(!confirm("Delete this event?")) return;
-  try {
-    await fetch("/api/deleteEvent", {
-      method:"POST",
-      headers: {"Content-Type":"application/json"},
-      body: JSON.stringify({id})
-    });
-    resetForm();
-    loadEvents();
-  } catch(err){ console.error("Delete event error:", err); }
-}
-
-searchEvent.addEventListener("input", loadEvents);
-sortEvent.addEventListener("change", loadEvents);
-</script>
+<script type="module" src="admin.js"></script>
 </body>
 </html>

@@ -1,0 +1,215 @@
+:root {
+  --blue-dark: #4a90e2;
+  --blue-light: #e9f1fb;
+  --blue-mid:  #6fa8dc;
+  --text-default: #333;
+  --admin-bg: #ffffff;
+  --admin-border: #d0d0d0;
+  --btn-hover: #357ABD;
+  --btn-paid: #4caf50;
+  --btn-pending: orange;
+}
+
+body {
+  margin: 0;
+  font-family: "Segoe UI", Arial, sans-serif;
+  background-color: var(--blue-light);
+  color: var(--text-default);
+}
+
+input, select, button, textarea {
+  font-family: inherit;
+  box-sizing: border-box;
+  outline: none;
+}
+
+.admin-wrapper {
+  max-width: 1200px;
+  margin: 20px auto;
+  padding: 25px;
+  background: var(--admin-bg);
+  border-radius: 10px;
+  box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+}
+
+.admin-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 20px;
+}
+
+.admin-toolbar input[type="text"] {
+  flex: 1;
+  padding: 8px 12px;
+  border-radius: 6px;
+  border: 1px solid #ccc;
+}
+
+.admin-toolbar button {
+  background-color: var(--blue-dark);
+  color: white;
+  border: none;
+  border-radius: 6px;
+  padding: 8px 14px;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.admin-toolbar button:hover {
+  background-color: var(--btn-hover);
+}
+
+.admin-events-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+
+.admin-events-table th {
+  background-color: var(--blue-dark);
+  color: white;
+  padding: 10px;
+  text-align: left;
+  position: sticky;
+  top: 0;
+}
+
+.admin-events-table td {
+  border: 1px solid var(--admin-border);
+  padding: 10px;
+  vertical-align: top;
+}
+
+.admin-events-table tr:nth-child(even) td {
+  background-color: #f5f9ff;
+}
+
+.admin-events-table tr:hover td {
+  background-color: #e1f0ff;
+  transition: 0.2s;
+}
+
+button {
+  cursor: pointer;
+  font-size: 13px;
+}
+
+.depositBtn,
+.feeBtn {
+  color: white;
+  border: none;
+  border-radius: 4px;
+  padding: 5px 10px;
+  margin-right: 5px;
+  font-weight: 500;
+  transition: all 0.2s;
+}
+
+.depositBtn {
+  background-color: var(--btn-pending);
+}
+
+.feeBtn {
+  background-color: var(--btn-pending);
+}
+
+.depositBtn.paid,
+.feeBtn.paid {
+  background-color: var(--btn-paid);
+}
+
+.depositBtn:hover,
+.feeBtn:hover {
+  filter: brightness(90%);
+}
+
+.modal {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 999;
+  overflow-y: auto;
+}
+
+.modal.hidden {
+  display: none;
+}
+
+.modal-content {
+  background-color: var(--admin-bg);
+  padding: 30px;
+  border-radius: 10px;
+  width: 100%;
+  max-width: 550px;
+  position: relative;
+  box-shadow: 0 8px 20px rgba(0,0,0,0.2);
+  max-height: 90vh;
+  overflow-y: auto;
+}
+
+.modal-close {
+  position: absolute;
+  top: 15px;
+  right: 20px;
+  font-size: 24px;
+  cursor: pointer;
+  color: #666;
+  transition: color 0.2s;
+}
+
+.modal-close:hover {
+  color: #000;
+}
+
+.modal-content input,
+.modal-content select,
+.modal-content textarea {
+  width: 100%;
+  margin-bottom: 12px;
+  padding: 8px;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  font-size: 14px;
+}
+
+#recurringEditSection {
+  margin-top: 15px;
+  padding: 12px;
+  background: #f0f6ff;
+  border-radius: 6px;
+  border: 1px dashed var(--blue-mid);
+}
+
+@media (max-width: 768px) {
+  .admin-toolbar {
+    flex-direction: column;
+  }
+
+  .admin-events-table th,
+  .admin-events-table td {
+    font-size: 13px;
+    padding: 8px;
+  }
+
+  .modal-content {
+    padding: 20px;
+  }
+}
+.toggle-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 14px;
+  margin-left: 10px;
+  cursor: pointer;
+}
+
+.toggle-label input[type="checkbox"],
+.toggle-label input[type="date"] {
+  transform: scale(1.1);
+  cursor: pointer;
+}

@@ -91,7 +91,9 @@ export default async function handler(req, res) {
         seriesId: seriesId,
         recurWhen: event.recurWhen || null,
         recurLengthNum: event.recurLengthNum || null,
-        createdAt: new Date()
+        createdAt: new Date(),
+        depositPaid: event.eType.toLowerCase() === "paid" ? false : null,
+        feePaid: event.eType.toLowerCase() === "paid" ? false : null
       };
 
       if (event.id && ObjectId.isValid(event.id)) {
