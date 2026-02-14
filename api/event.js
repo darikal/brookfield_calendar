@@ -30,7 +30,32 @@ export default async function handler(req, res) {
     const eventsCollection = db.collection("events");
 
     switch (req.method) {
-      case "POST": { // create
+
+      /* =========================
+         GET EVENTS
+      ========================= */
+      case "GET": {
+        const { admin, cutoff } = req.query;
+
+        const query = {};
+
+        if (!admin) {
+          // Public front-end: only future events
+          if (cutoff) query.date = { $gte: cutoff.split("T")[0] };
+        }
+
+        const events = await eventsCollection.find(query).toArray();
+
+        // Sort by date + startTime
+        events.sort((a, b) => new Date(a.date + "T" + (a.startTime || "00:00")) - new Date(b.date + "T" + (b.startTime || "00:00")));
+
+        return res.status(200).json(events);
+      }
+
+      /* =========================
+         CREATE EVENT
+      ========================= */
+      case "POST": {
         const event = typeof req.body === "string" ? JSON.parse(req.body) : req.body;
         const required = ["eType", "date", "startTime", "endTime", "title"];
         for (const f of required) if (!event[f]) return res.status(400).json({ error: `Missing field: ${f}` });
@@ -70,7 +95,10 @@ export default async function handler(req, res) {
         return res.status(200).json({ success: true, inserted: insertedIds });
       }
 
-      case "PUT": { // update
+      /* =========================
+         UPDATE EVENT
+      ========================= */
+      case "PUT": {
         const { id, ...fields } = req.body;
         if (!id || !ObjectId.isValid(id)) return res.status(400).json({ error: "Invalid ID" });
 
@@ -78,6 +106,9 @@ export default async function handler(req, res) {
         return res.status(200).json({ success: true, id });
       }
 
+      /* =========================
+         DELETE EVENT
+      ========================= */
       case "DELETE": {
         const { id } = req.body;
         if (!id || !ObjectId.isValid(id)) return res.status(400).json({ error: "Invalid ID" });
@@ -86,7 +117,10 @@ export default async function handler(req, res) {
         return res.status(200).json({ success: true });
       }
 
-      case "PATCH": { // toggle payment
+      /* =========================
+         TOGGLE PAYMENT
+      ========================= */
+      case "PATCH": {
         const { id, field } = req.body;
         if (!id || !["depositPaid", "feePaid"].includes(field)) return res.status(400).json({ error: "Invalid request" });
 
@@ -97,6 +131,9 @@ export default async function handler(req, res) {
         return res.status(200).json({ success: true });
       }
 
+      /* =========================
+         METHOD NOT ALLOWED
+      ========================= */
       default:
         return res.status(405).json({ error: "Method not allowed" });
     }

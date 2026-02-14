@@ -23,20 +23,25 @@ const modalRecurLengthNum = document.getElementById("modalRecurLengthNum");
 const recurringEditSection = document.getElementById("recurringEditSection");
 const modalSaveBtn = document.getElementById("modalSaveBtn");
 const modalCancelBtn = document.getElementById("modalCancelBtn");
+const addEventBtn = document.getElementById("addEventBtn");
 
 /* =========================
-   LOAD EVENTS
+   LOAD EVENTS (Admin)
 ========================= */
 async function loadEvents() {
   try {
-    const res = await fetch(`/api/events?admin=true${showOld ? "" : "&cutoff=" + new Date().toISOString()}`);
+    const cutoffParam = showOld ? "" : `&cutoff=${new Date().toISOString()}`;
+    const res = await fetch(`/api/event?admin=true${cutoffParam}`);
     events = await res.json();
+
+    // Sort events by date & time
     events.sort((a, b) => new Date(a.date + "T" + (a.startTime || "00:00")) - new Date(b.date + "T" + (b.startTime || "00:00")));
     renderTable(events);
   } catch (err) {
     console.error("Failed to load events:", err);
   }
 }
+
 
 /* =========================
    RENDER TABLE
@@ -97,7 +102,6 @@ function renderTable(data) {
 ========================= */
 function openModal(event, singleEdit = false) {
   modalEventId.value = event._id;
-
   modalTitleInput.value = event.title || "";
   modalDate.value = event.date || "";
   modalStartTime.value = event.startTime || "";
@@ -107,7 +111,6 @@ function openModal(event, singleEdit = false) {
   modalContactName.value = event.contactName || "";
   modalContactInfo.value = event.contactInfo || "";
   modalDescription.value = event.description || "";
-
   modalRecurring.checked = !!event.recurring;
 
   if (event.recurring && event.isParent && !singleEdit) {
@@ -224,7 +227,6 @@ modalCancelBtn.onclick = () => modal.classList.add("hidden");
 /* =========================
    ADD NEW EVENT
 ========================= */
-const addEventBtn = document.getElementById("addEventBtn");
 addEventBtn.onclick = () => {
   modalEventId.value = "";
   modalTitleInput.value = "";

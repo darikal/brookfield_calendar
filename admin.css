@@ -9,6 +9,8 @@
   --modal-bg: #fff;
   --modal-overlay: rgba(0,0,0,0.4);
   --border-color: #ccc;
+  --payment-paid: #59fb41;
+  --payment-unpaid: #ed1000;
 }
 
 /* GLOBAL */
@@ -84,21 +86,28 @@ h1 {
 }
 
 /* PAYMENTS BUTTONS */
-.payment-btn {
-  padding: 2px 6px;
+.depositBtn, .feeBtn {
+  padding: 4px 8px;
   border-radius: 4px;
   border: none;
   cursor: pointer;
   font-size: 12px;
+  margin-right: 4px;
+  transition: background 0.2s;
 }
 
-.payment-paid {
-  background: #59fb41;
+.depositBtn.paid, .feeBtn.paid {
+  background: var(--payment-paid);
+  color: #000;
 }
 
-.payment-unpaid {
-  background: #ed1000;
+.depositBtn:not(.paid), .feeBtn:not(.paid) {
+  background: var(--payment-unpaid);
   color: #fff;
+}
+
+.depositBtn:hover, .feeBtn:hover {
+  filter: brightness(1.1);
 }
 
 /* MODAL */
