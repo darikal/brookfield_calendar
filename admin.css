@@ -283,3 +283,42 @@ h1 {
     flex-direction: column;
   }
 }
+
+/* BUMPED EVENTS */
+.bumped-event {
+  background-color: #fff3cd;
+}
+
+.bumped-event td {
+  border: 1px solid #ffeeba;
+}
+
+/* Notify / Reschedule buttons */
+.notifyBtn,
+.rescheduleBtn {
+  padding: 4px 6px;
+  margin-left: 4px;
+  border-radius: 4px;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.notifyBtn {
+  background-color: #ffc107;
+  color: #000;
+  border: none;
+}
+
+.rescheduleBtn {
+  background-color: #17a2b8;
+  color: #fff;
+  border: none;
+}
+
+.notifyBtn:hover {
+  filter: brightness(1.1);
+}
+
+.rescheduleBtn:hover {
+  filter: brightness(1.1);
+}

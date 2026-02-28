@@ -1,3 +1,5 @@
+import { normalizeType, TYPE_LABELS, EVENT_TYPE_CLASSES } from "./common.js";
+
 let events = [];
 let showOld = false;
 
@@ -26,30 +28,26 @@ const modalSaveBtn = document.getElementById("modalSaveBtn");
 const modalCancelBtn = document.getElementById("modalCancelBtn");
 
 /* =========================
-   MODAL OPEN / CLOSE HELPERS
+   MODAL OPEN/CLOSE HELPERS
 ========================= */
 function showModal() {
   modal.classList.remove("hidden");
-  document.body.classList.add("modal-open"); // lock background scroll
+  document.body.classList.add("modal-open");
 }
 
 function hideModal() {
   modal.classList.add("hidden");
-  document.body.classList.remove("modal-open"); // unlock background scroll
+  document.body.classList.remove("modal-open");
 }
 
-/* Close when clicking outside modal-content */
+// Close when clicking outside modal-content
 modal.addEventListener("click", (e) => {
-  if (e.target === modal) {
-    hideModal();
-  }
+  if (e.target === modal) hideModal();
 });
 
-/* Close on ESC key */
+// Close on ESC key
 document.addEventListener("keydown", (e) => {
-  if (e.key === "Escape" && !modal.classList.contains("hidden")) {
-    hideModal();
-  }
+  if (e.key === "Escape" && !modal.classList.contains("hidden")) hideModal();
 });
 
 /* =========================
@@ -62,10 +60,23 @@ async function loadEvents() {
 
     const res = await fetch(`/api/event?${params.toString()}`);
     events = await res.json();
+
     renderTable(events);
+    renderBumpedAlert(events);
   } catch (err) {
     console.error("Failed to load events:", err);
     showAdminMessage("Failed to load events.", "error");
+  }
+}
+
+/* =========================
+   RENDER BUMP ALERT
+========================= */
+function renderBumpedAlert(data) {
+  const pending = data.filter(e => e.bumped && e.notificationRequired);
+  if (pending.length) {
+    const msg = `⚠ ${pending.length} bumped event(s) require notification.`;
+    showAdminMessage(msg, "error", true);
   }
 }
 
@@ -76,8 +87,7 @@ function renderTable(data) {
   tableBody.innerHTML = "";
 
   if (!data.length) {
-    tableBody.innerHTML =
-      `<tr><td colspan="8" style="text-align:center">No events found</td></tr>`;
+    tableBody.innerHTML = `<tr><td colspan="9" style="text-align:center">No events found</td></tr>`;
     return;
   }
 
@@ -92,6 +102,10 @@ function renderTable(data) {
       : "";
 
     const tr = document.createElement("tr");
+
+    // Add class if event is bumped
+    if (event.bumped) tr.classList.add("bumped-event");
+
     tr.innerHTML = `
       <td>${event.date || ""}</td>
       <td>${time}</td>
@@ -103,6 +117,8 @@ function renderTable(data) {
       <td>
         <button class="editBtn">Edit</button>
         <button class="deleteBtn">Delete</button>
+        ${event.bumped && event.notificationRequired ? '<button class="notifyBtn">Mark Notified</button>' : ''}
+        ${event.bumped ? '<button class="rescheduleBtn">Reschedule</button>' : ''}
       </td>
     `;
 
@@ -110,7 +126,6 @@ function renderTable(data) {
     tr.querySelector(".deleteBtn").onclick = () => deleteEvent(event._id);
 
     const isPaidEvent = event.eType === "reservedPaid";
-
     if (isPaidEvent) {
       const depositBtn = document.createElement("button");
       depositBtn.textContent = "Deposit";
@@ -126,12 +141,45 @@ function renderTable(data) {
       tr.children[6].appendChild(feeBtn);
     }
 
+    if (event.bumped && event.notificationRequired) {
+      tr.querySelector(".notifyBtn").onclick = () => markNotified(event._id);
+    }
+
+    if (event.bumped) {
+      tr.querySelector(".rescheduleBtn").onclick = () => {
+        openModal(event, true); // allow reschedule
+      };
+    }
+
     tableBody.appendChild(tr);
   });
 }
 
 /* =========================
-   EDIT MODAL
+   MARK NOTIFIED
+========================= */
+async function markNotified(id) {
+  try {
+    const res = await fetch("/api/event", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id, field: "notificationRequired", value: false, bumpedNotified: true })
+    });
+
+    const data = await res.json();
+
+    if (res.ok && data.success) showAdminMessage("Marked as notified!", "success");
+    else showAdminMessage(data.error || "Failed to update.", "error");
+
+    loadEvents();
+  } catch (err) {
+    console.error("Mark notified error:", err);
+    showAdminMessage("Server error: Could not update.", "error");
+  }
+}
+
+/* =========================
+   OPEN MODAL
 ========================= */
 function openModal(event, singleEdit = false) {
   modalEventId.value = event._id || "";
@@ -144,7 +192,6 @@ function openModal(event, singleEdit = false) {
   modalContactName.value = event.contactName || "";
   modalContactInfo.value = event.contactInfo || "";
   modalDescription.value = event.description || "";
-
   modalRecurring.checked = !!event.recurring;
 
   if (event.recurring && event.isParent && !singleEdit) {
@@ -156,7 +203,6 @@ function openModal(event, singleEdit = false) {
   }
 
   modal.dataset.singleEdit = singleEdit ? "true" : "false";
-
   showModal();
 }
 
@@ -192,10 +238,8 @@ modalSaveBtn.onclick = async () => {
 
     const data = await res.json();
 
-    if (res.ok && data.success)
-      showAdminMessage("Event saved successfully!", "success");
-    else
-      showAdminMessage(data.error || "Failed to save event.", "error");
+    if (res.ok && data.success) showAdminMessage("Event saved successfully!", "success");
+    else showAdminMessage(data.error || "Failed to save event.", "error");
   } catch (err) {
     console.error("Failed to save event:", err);
     showAdminMessage("Server error: Could not save event.", "error");
@@ -218,10 +262,8 @@ window.togglePayment = async (id, field) => {
 
     const data = await res.json();
 
-    if (res.ok && data.success)
-      showAdminMessage("Payment status updated!", "success");
-    else
-      showAdminMessage(data.error || "Failed to update payment.", "error");
+    if (res.ok && data.success) showAdminMessage("Payment status updated!", "success");
+    else showAdminMessage(data.error || "Failed to update payment.", "error");
 
     loadEvents();
   } catch (err) {
@@ -245,10 +287,8 @@ window.deleteEvent = async id => {
 
     const data = await res.json();
 
-    if (res.ok && data.success)
-      showAdminMessage("Event deleted successfully!", "success");
-    else
-      showAdminMessage(data.error || "Failed to delete event.", "error");
+    if (res.ok && data.success) showAdminMessage("Event deleted successfully!", "success");
+    else showAdminMessage(data.error || "Failed to delete event.", "error");
 
     loadEvents();
   } catch (err) {
@@ -262,7 +302,6 @@ window.deleteEvent = async id => {
 ========================= */
 searchInput.addEventListener("input", () => {
   const q = searchInput.value.toLowerCase();
-
   const filtered = events.filter(e =>
     (e.title && e.title.toLowerCase().includes(q)) ||
     (e.contactName && e.contactName.toLowerCase().includes(q)) ||
@@ -270,7 +309,6 @@ searchInput.addEventListener("input", () => {
     (e.date && e.date.includes(q)) ||
     (e.eType && e.eType.toLowerCase().includes(q))
   );
-
   renderTable(filtered);
 });
 
@@ -309,20 +347,18 @@ addEventBtn.onclick = () => {
   modalRecurWhen.value = "week";
   modalRecurLengthNum.value = "";
   recurringEditSection.classList.add("hidden");
-
   modal.dataset.singleEdit = "false";
-
   showModal();
 };
 
 /* =========================
    SHOW ADMIN MESSAGE
 ========================= */
-function showAdminMessage(msg, type = "success") {
+function showAdminMessage(msg, type = "success", persistent = false) {
   adminMessage.textContent = msg;
   adminMessage.className = `admin-message ${type}`;
   adminMessage.classList.remove("hidden");
-  setTimeout(() => adminMessage.classList.add("hidden"), 4000);
+  if (!persistent) setTimeout(() => adminMessage.classList.add("hidden"), 4000);
 }
 
 /* =========================
