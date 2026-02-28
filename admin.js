@@ -26,6 +26,33 @@ const modalSaveBtn = document.getElementById("modalSaveBtn");
 const modalCancelBtn = document.getElementById("modalCancelBtn");
 
 /* =========================
+   MODAL OPEN / CLOSE HELPERS
+========================= */
+function showModal() {
+  modal.classList.remove("hidden");
+  document.body.classList.add("modal-open"); // lock background scroll
+}
+
+function hideModal() {
+  modal.classList.add("hidden");
+  document.body.classList.remove("modal-open"); // unlock background scroll
+}
+
+/* Close when clicking outside modal-content */
+modal.addEventListener("click", (e) => {
+  if (e.target === modal) {
+    hideModal();
+  }
+});
+
+/* Close on ESC key */
+document.addEventListener("keydown", (e) => {
+  if (e.key === "Escape" && !modal.classList.contains("hidden")) {
+    hideModal();
+  }
+});
+
+/* =========================
    LOAD EVENTS
 ========================= */
 async function loadEvents() {
@@ -35,7 +62,6 @@ async function loadEvents() {
 
     const res = await fetch(`/api/event?${params.toString()}`);
     events = await res.json();
-
     renderTable(events);
   } catch (err) {
     console.error("Failed to load events:", err);
@@ -50,7 +76,8 @@ function renderTable(data) {
   tableBody.innerHTML = "";
 
   if (!data.length) {
-    tableBody.innerHTML = `<tr><td colspan="8" style="text-align:center">No events found</td></tr>`;
+    tableBody.innerHTML =
+      `<tr><td colspan="8" style="text-align:center">No events found</td></tr>`;
     return;
   }
 
@@ -82,8 +109,6 @@ function renderTable(data) {
     tr.querySelector(".editBtn").onclick = () => openModal(event, false);
     tr.querySelector(".deleteBtn").onclick = () => deleteEvent(event._id);
 
-    // ONLY show payment buttons for true paid events
-    // Strict match to prevent buttons showing on wrong event types
     const isPaidEvent = event.eType === "reservedPaid";
 
     if (isPaidEvent) {
@@ -110,7 +135,6 @@ function renderTable(data) {
 ========================= */
 function openModal(event, singleEdit = false) {
   modalEventId.value = event._id || "";
-
   modalTitleInput.value = event.title || "";
   modalDate.value = event.date || "";
   modalStartTime.value = event.startTime || "";
@@ -132,7 +156,8 @@ function openModal(event, singleEdit = false) {
   }
 
   modal.dataset.singleEdit = singleEdit ? "true" : "false";
-  modal.classList.remove("hidden");
+
+  showModal();
 }
 
 /* =========================
@@ -176,7 +201,7 @@ modalSaveBtn.onclick = async () => {
     showAdminMessage("Server error: Could not save event.", "error");
   }
 
-  modal.classList.add("hidden");
+  hideModal();
   loadEvents();
 };
 
@@ -263,7 +288,7 @@ toggleOldBtn.onclick = () => {
 /* =========================
    MODAL CANCEL
 ========================= */
-modalCancelBtn.onclick = () => modal.classList.add("hidden");
+modalCancelBtn.onclick = hideModal;
 
 /* =========================
    ADD NEW EVENT
@@ -286,7 +311,8 @@ addEventBtn.onclick = () => {
   recurringEditSection.classList.add("hidden");
 
   modal.dataset.singleEdit = "false";
-  modal.classList.remove("hidden");
+
+  showModal();
 };
 
 /* =========================
