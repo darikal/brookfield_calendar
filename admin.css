@@ -7,7 +7,7 @@
   --button-hover: #6c95a6;
   --button-text: #fff;
   --modal-bg: #fff;
-  --modal-overlay: rgba(0,0,0,0.4);
+  --modal-overlay: rgba(0,0,0,0.45);
   --border-color: #ccc;
   --payment-paid: #59fb41;
   --payment-unpaid: #ed1000;
@@ -19,6 +19,11 @@ body {
   font-family: Arial, sans-serif;
   background: var(--blue-light);
   color: var(--text-default);
+}
+
+/* Prevent background scroll when modal open */
+body.modal-open {
+  overflow: hidden;
 }
 
 .admin-wrapper {
@@ -63,13 +68,38 @@ h1 {
   background: var(--button-hover);
 }
 
+/* MESSAGE */
+.admin-message {
+  margin: 10px 0;
+  padding: 8px 12px;
+  border-radius: 4px;
+  font-size: 14px;
+}
+
+.admin-message.success {
+  background-color: #d4edda;
+  color: #155724;
+  border: 1px solid #c3e6cb;
+}
+
+.admin-message.error {
+  background-color: #f8d7da;
+  color: #721c24;
+  border: 1px solid #f5c6cb;
+}
+
+.admin-message.hidden {
+  display: none;
+}
+
 /* EVENTS TABLE */
 #eventsTable {
   width: 100%;
   border-collapse: collapse;
 }
 
-#eventsTable th, #eventsTable td {
+#eventsTable th,
+#eventsTable td {
   border: 1px solid var(--border-color);
   padding: 6px;
   text-align: left;
@@ -86,7 +116,8 @@ h1 {
 }
 
 /* PAYMENTS BUTTONS */
-.depositBtn, .feeBtn {
+.depositBtn,
+.feeBtn {
   padding: 4px 8px;
   border-radius: 4px;
   border: none;
@@ -96,55 +127,88 @@ h1 {
   transition: background 0.2s;
 }
 
-.depositBtn.paid, .feeBtn.paid {
+.depositBtn.paid,
+.feeBtn.paid {
   background: var(--payment-paid);
   color: #000;
 }
 
-.depositBtn:not(.paid), .feeBtn:not(.paid) {
+.depositBtn:not(.paid),
+.feeBtn:not(.paid) {
   background: var(--payment-unpaid);
   color: #fff;
 }
 
-.depositBtn:hover, .feeBtn:hover {
+.depositBtn:hover,
+.feeBtn:hover {
   filter: brightness(1.1);
 }
 
-/* MODAL */
+/* =========================
+   MODAL
+========================= */
+
 .modal {
   position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
+  inset: 0;
   background: var(--modal-overlay);
   display: flex;
-  align-items: center;
   justify-content: center;
+  align-items: flex-start;
+  padding: 40px 15px;
+  overflow-y: auto;
   z-index: 100;
+
+  /* Fade animation */
+  opacity: 0;
+  animation: fadeIn 0.2s ease forwards;
 }
 
 .modal.hidden {
   display: none;
 }
 
+@keyframes fadeIn {
+  to { opacity: 1; }
+}
+
 .modal-content {
   background: var(--modal-bg);
-  padding: 20px;
-  border-radius: 8px;
+  border-radius: 12px;
   max-width: 500px;
-  width: 90%;
-  box-shadow: 0 0 10px rgba(0,0,0,0.3);
+  width: 100%;
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: 0 15px 35px rgba(0,0,0,0.3);
+
+  /* Smooth pop animation */
+  transform: translateY(-10px) scale(0.98);
+  animation: popIn 0.2s ease forwards;
+
+  display: flex;
+  flex-direction: column;
+}
+
+@keyframes popIn {
+  to {
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* Modal body spacing */
+.modal-content > * {
+  padding-left: 20px;
+  padding-right: 20px;
 }
 
 .modal-content h2 {
-  margin-top: 0;
+  margin-top: 20px;
   color: var(--blue-dark);
 }
 
 .modal-content label {
   display: block;
-  margin: 8px 0;
+  margin: 10px 0;
   font-size: 14px;
 }
 
@@ -152,26 +216,34 @@ h1 {
 .modal-content select,
 .modal-content textarea {
   width: 100%;
-  padding: 4px 6px;
-  margin-top: 2px;
+  padding: 6px 8px;
+  margin-top: 4px;
   border: 1px solid var(--border-color);
-  border-radius: 4px;
+  border-radius: 6px;
+  font-size: 14px;
 }
 
+/* Sticky buttons */
 .modal-buttons {
-  margin-top: 15px;
+  margin-top: auto;
+  padding: 15px 20px;
+  background: #fff;
+  border-top: 1px solid var(--border-color);
   display: flex;
   justify-content: flex-end;
   gap: 10px;
+  position: sticky;
+  bottom: 0;
 }
 
 .modal-buttons button {
-  padding: 6px 12px;
-  border-radius: 4px;
+  padding: 8px 14px;
+  border-radius: 6px;
   border: none;
   cursor: pointer;
   background: var(--button-bg);
   color: var(--button-text);
+  transition: background 0.2s;
 }
 
 .modal-buttons button:hover {
@@ -181,9 +253,33 @@ h1 {
 /* RECURRING SECTION */
 #recurringEditSection {
   margin-top: 10px;
-  padding: 6px;
+  padding: 10px;
   border: 1px solid var(--border-color);
-  border-radius: 4px;
+  border-radius: 6px;
   background: #f9f9f9;
   font-size: 13px;
+}
+
+/* MOBILE IMPROVEMENTS */
+@media (max-width: 600px) {
+  .modal {
+    padding: 20px 10px;
+  }
+
+  .modal-content {
+    max-height: 95vh;
+    border-radius: 10px;
+  }
+
+  .modal-content label {
+    font-size: 13px;
+  }
+
+  .modal-buttons button {
+    width: 100%;
+  }
+
+  .modal-buttons {
+    flex-direction: column;
+  }
 }

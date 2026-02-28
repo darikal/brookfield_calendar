@@ -131,14 +131,28 @@ function renderEventList(dayFilter = null, openAll = false) {
     li.className = "reminder-item";
     li.dataset.key = e.date;
 
+    // Recurring indicator
+    const recurringText = e.recurring ? " 🔁" : "";
+
+    // Walk-in status display
+    let walkInText = "";
+    if (e.walkInStatus) {
+      if (e.walkInStatus === "contact" && e.contactInfo) {
+        walkInText = `Walk-ins: Contact (${e.contactInfo})`;
+      } else {
+        walkInText = `Walk-ins: ${e.walkInStatus.charAt(0).toUpperCase() + e.walkInStatus.slice(1)}`;
+      }
+    }
+
     li.innerHTML = `
       <div class="reminder-header ${EVENT_TYPE_CLASSES[normalized] || ""}">
-        ${e.title} – ${e.date}
+        ${e.title}${recurringText} – ${e.date}
       </div>
       <div class="reminder-details ${openAll ? "show" : ""}">
         ${formatTime12h(e.startTime)}
         ${e.endTime ? " – " + formatTime12h(e.endTime) : ""}
         <br>${e.description || ""}
+        ${walkInText ? "<br>" + walkInText : ""}
       </div>
     `;
 
@@ -149,6 +163,7 @@ function renderEventList(dayFilter = null, openAll = false) {
     reminderList.appendChild(li);
   });
 }
+
 
 /* =========================
    MONTH NAVIGATION

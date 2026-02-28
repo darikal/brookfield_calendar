@@ -38,14 +38,12 @@ export default async function handler(req, res) {
         const { admin, cutoff } = req.query;
         const query = {};
 
-        // Only for admin panel: omit older events if cutoff is provided
         if (admin === "true" && cutoff) {
-          query.date = { $gte: cutoff.split("T")[0] }; // YYYY-MM-DD
+          query.date = { $gte: cutoff.split("T")[0] };
         }
 
         const events = await eventsCollection.find(query).toArray();
 
-        // Sort by date + startTime
         events.sort(
           (a, b) =>
             new Date(a.date + "T" + (a.startTime || "00:00")) -
@@ -88,7 +86,11 @@ export default async function handler(req, res) {
             recurLengthNum: event.recurLengthNum || null,
             createdAt: new Date(),
             depositPaid: event.eType.toLowerCase() === "reservedpaid" ? false : null,
-            feePaid: event.eType.toLowerCase() === "reservedpaid" ? false : null
+            feePaid: event.eType.toLowerCase() === "reservedpaid" ? false : null,
+            // ===== WALK-INS FIELDS =====
+            walkIns: !!event.walkIns,
+            walkInStatus: event.walkInStatus || "open",
+            walkInContact: event.walkInContact || ""
           };
 
           const result = await eventsCollection.insertOne(doc);
@@ -104,6 +106,11 @@ export default async function handler(req, res) {
       case "PUT": {
         const { id, ...fields } = req.body;
         if (!id || !ObjectId.isValid(id)) return res.status(400).json({ error: "Invalid ID" });
+
+        // Ensure walk-ins fields are booleans / strings
+        if ("walkIns" in fields) fields.walkIns = !!fields.walkIns;
+        if ("walkInStatus" in fields) fields.walkInStatus = fields.walkInStatus || "open";
+        if ("walkInContact" in fields) fields.walkInContact = fields.walkInContact || "";
 
         await eventsCollection.updateOne({ _id: new ObjectId(id) }, { $set: fields });
         return res.status(200).json({ success: true, id });

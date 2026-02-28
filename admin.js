@@ -4,6 +4,7 @@ let showOld = false;
 const tableBody = document.querySelector("#eventsTable tbody");
 const searchInput = document.getElementById("searchInput");
 const toggleOldBtn = document.getElementById("toggleOldBtn");
+const adminMessage = document.getElementById("adminMessage");
 
 // Modal elements
 const modal = document.getElementById("editModal");
@@ -29,7 +30,6 @@ const modalCancelBtn = document.getElementById("modalCancelBtn");
 ========================= */
 async function loadEvents() {
   try {
-    // For admin, append cutoff date unless "showOld" is true
     const params = new URLSearchParams({ admin: "true" });
     if (!showOld) params.set("cutoff", new Date().toISOString());
 
@@ -39,6 +39,7 @@ async function loadEvents() {
     renderTable(events);
   } catch (err) {
     console.error("Failed to load events:", err);
+    showAdminMessage("Failed to load events.", "error");
   }
 }
 
@@ -54,15 +55,20 @@ function renderTable(data) {
   }
 
   data.forEach(event => {
-    const typeNormalized = (event.eType || "").toLowerCase();
-    const time = event.startTime && event.endTime ? `${event.startTime} – ${event.endTime}` : event.startTime || "";
-    const contact = event.contactName ? `${event.contactName}<br><small>${event.contactInfo || ""}</small>` : "";
+    const time =
+      event.startTime && event.endTime
+        ? `${event.startTime} – ${event.endTime}`
+        : event.startTime || "";
+
+    const contact = event.contactName
+      ? `${event.contactName}<br><small>${event.contactInfo || ""}</small>`
+      : "";
 
     const tr = document.createElement("tr");
     tr.innerHTML = `
-      <td>${event.date}</td>
+      <td>${event.date || ""}</td>
       <td>${time}</td>
-      <td>${event.title}</td>
+      <td>${event.title || ""}</td>
       <td>${event.eType || ""}</td>
       <td>${event.groupSize || ""}</td>
       <td>${contact}</td>
@@ -76,8 +82,11 @@ function renderTable(data) {
     tr.querySelector(".editBtn").onclick = () => openModal(event, false);
     tr.querySelector(".deleteBtn").onclick = () => deleteEvent(event._id);
 
-    // Paid buttons
-    if (typeNormalized.includes("paid")) {
+    // ONLY show payment buttons for true paid events
+    // Strict match to prevent buttons showing on wrong event types
+    const isPaidEvent = event.eType === "reservedPaid";
+
+    if (isPaidEvent) {
       const depositBtn = document.createElement("button");
       depositBtn.textContent = "Deposit";
       depositBtn.className = `depositBtn ${event.depositPaid ? "paid" : ""}`;
@@ -100,7 +109,7 @@ function renderTable(data) {
    EDIT MODAL
 ========================= */
 function openModal(event, singleEdit = false) {
-  modalEventId.value = event._id;
+  modalEventId.value = event._id || "";
 
   modalTitleInput.value = event.title || "";
   modalDate.value = event.date || "";
@@ -150,13 +159,21 @@ modalSaveBtn.onclick = async () => {
   };
 
   try {
-    await fetch("/api/event", {
+    const res = await fetch("/api/event", {
       method: id ? "PUT" : "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload)
     });
+
+    const data = await res.json();
+
+    if (res.ok && data.success)
+      showAdminMessage("Event saved successfully!", "success");
+    else
+      showAdminMessage(data.error || "Failed to save event.", "error");
   } catch (err) {
     console.error("Failed to save event:", err);
+    showAdminMessage("Server error: Could not save event.", "error");
   }
 
   modal.classList.add("hidden");
@@ -168,14 +185,23 @@ modalSaveBtn.onclick = async () => {
 ========================= */
 window.togglePayment = async (id, field) => {
   try {
-    await fetch("/api/event", {
+    const res = await fetch("/api/event", {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ id, field })
     });
+
+    const data = await res.json();
+
+    if (res.ok && data.success)
+      showAdminMessage("Payment status updated!", "success");
+    else
+      showAdminMessage(data.error || "Failed to update payment.", "error");
+
     loadEvents();
   } catch (err) {
     console.error("Payment toggle error:", err);
+    showAdminMessage("Server error: Could not toggle payment.", "error");
   }
 };
 
@@ -184,15 +210,25 @@ window.togglePayment = async (id, field) => {
 ========================= */
 window.deleteEvent = async id => {
   if (!confirm("Delete this event?")) return;
+
   try {
-    await fetch("/api/event", {
+    const res = await fetch("/api/event", {
       method: "DELETE",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ id })
     });
+
+    const data = await res.json();
+
+    if (res.ok && data.success)
+      showAdminMessage("Event deleted successfully!", "success");
+    else
+      showAdminMessage(data.error || "Failed to delete event.", "error");
+
     loadEvents();
   } catch (err) {
     console.error("Delete event error:", err);
+    showAdminMessage("Server error: Could not delete event.", "error");
   }
 };
 
@@ -201,6 +237,7 @@ window.deleteEvent = async id => {
 ========================= */
 searchInput.addEventListener("input", () => {
   const q = searchInput.value.toLowerCase();
+
   const filtered = events.filter(e =>
     (e.title && e.title.toLowerCase().includes(q)) ||
     (e.contactName && e.contactName.toLowerCase().includes(q)) ||
@@ -208,6 +245,7 @@ searchInput.addEventListener("input", () => {
     (e.date && e.date.includes(q)) ||
     (e.eType && e.eType.toLowerCase().includes(q))
   );
+
   renderTable(filtered);
 });
 
@@ -216,7 +254,9 @@ searchInput.addEventListener("input", () => {
 ========================= */
 toggleOldBtn.onclick = () => {
   showOld = !showOld;
-  toggleOldBtn.textContent = showOld ? "Hide Older Events" : "Show Older Events";
+  toggleOldBtn.textContent = showOld
+    ? "Hide Older Events"
+    : "Show Older Events";
   loadEvents();
 };
 
@@ -244,9 +284,20 @@ addEventBtn.onclick = () => {
   modalRecurWhen.value = "week";
   modalRecurLengthNum.value = "";
   recurringEditSection.classList.add("hidden");
+
   modal.dataset.singleEdit = "false";
   modal.classList.remove("hidden");
 };
+
+/* =========================
+   SHOW ADMIN MESSAGE
+========================= */
+function showAdminMessage(msg, type = "success") {
+  adminMessage.textContent = msg;
+  adminMessage.className = `admin-message ${type}`;
+  adminMessage.classList.remove("hidden");
+  setTimeout(() => adminMessage.classList.add("hidden"), 4000);
+}
 
 /* =========================
    INITIAL LOAD

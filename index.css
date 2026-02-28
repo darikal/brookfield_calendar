@@ -217,9 +217,9 @@ body {
 }
 
 .legend-items {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 15px 25px;
+  display: grid;
+  grid-template-columns: repeat(5, auto);
+  gap: 15px 30px;
 }
 
 .legend-item {
@@ -233,4 +233,47 @@ body {
   width: 14px;
   height: 14px;
   border-radius: 50%;
+}
+
+/* MOBILE */
+@media (max-width: 600px) {
+  .legend-items {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+/* WALK-IN BADGES */
+.walkin-badge {
+  display: inline-block;
+  margin-left: 8px;
+  padding: 2px 8px;
+  font-size: 11px;
+  font-weight: bold;
+  border-radius: 12px;
+  color: #fff;
+}
+
+.walkin-badge.open {
+  background: #2ecc71;
+}
+
+.walkin-badge.closed {
+  background: #e74c3c;
+}
+
+.walkin-badge.contact {
+  background: #3498db;
+}
+
+.event-time {
+  margin-bottom: 6px;
+  font-weight: 600;
+}
+
+.event-description {
+  margin-bottom: 6px;
+}
+
+.walkin-contact {
+  font-size: 13px;
+  margin-top: 4px;
 }

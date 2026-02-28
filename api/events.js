@@ -1,57 +1,182 @@
-import clientPromise from "./_db.js";
+import { getDB } from "./_db.js";
+import { ObjectId } from "mongodb";
+import { v4 as uuidv4 } from "uuid";
 
-// Expand recurring events only within a date range
-function expandRecurringEvent(event, fromDate, toDate) {
-  if (!event.recurring || !event.isParent) return [event];
+const PRIORITY = {
+  reservedPaid: 4,
+  socialCommitteeEvent: 3,
+  noSocialnoPaid: 2,
+  smallGroup: 1,
+  boardMeeting: 5
+};
 
-  const results = [];
-  const startDate = new Date(event.date);
-  const total = parseInt(event.recurLengthNum, 10) || 0;
+function generateRecurringDates(startDate, type, lengthNum) {
+  const dates = [];
+  const count = parseInt(lengthNum, 10) || 0;
+  let current = new Date(startDate);
 
-  for (let i = 0; i < total; i++) {
-    let d = new Date(startDate);
-    if (event.recurWhen === "week") d.setDate(startDate.getDate() + i * 7);
-    else if (event.recurWhen === "biWeek") d.setDate(startDate.getDate() + i * 14);
-    else if (event.recurWhen === "month") d.setMonth(startDate.getMonth() + i);
-
-    if (d < fromDate || d > toDate) continue;
-
-    results.push({
-      ...event,
-      date: d.toISOString().split("T")[0],
-      _parentId: event._id,
-      isParent: i === 0,
-      depositPaid: event.depositPaid || false,
-      feePaid: event.feePaid || false,
-      contactName: event.contactName || "",
-      contactInfo: event.contactInfo || ""
-    });
+  for (let i = 0; i < count; i++) {
+    if (!isNaN(current.getTime())) dates.push(new Date(current));
+    if (type === "week") current.setDate(current.getDate() + 7);
+    else if (type === "biWeek") current.setDate(current.getDate() + 14);
+    else if (type === "month") current.setMonth(current.getMonth() + 1);
   }
-
-  return results;
+  return dates;
 }
 
 export default async function handler(req, res) {
   try {
-    const client = await clientPromise;
-    const db = client.db("calendarDB");
+    const db = await getDB();
+    const eventsCollection = db.collection("events");
 
-    const adminView = req.query.admin === "true";
-    const cutoff = adminView ? new Date() : new Date("1970-01-01"); // default today for admin, all for frontend
-    if (req.query.cutoff) cutoff.setTime(new Date(req.query.cutoff).getTime());
+    switch (req.method) {
 
-    const toDate = new Date();
-    toDate.setMonth(toDate.getMonth() + 3);
+      /* =========================
+         GET EVENTS
+      ========================= */
+      case "GET": {
+        const { admin, cutoff } = req.query;
+        const query = {};
 
-    const rawEvents = await db.collection("events").find({}).toArray();
+        if (admin === "true" && cutoff) {
+          query.date = { $gte: cutoff.split("T")[0] };
+        }
 
-    const events = rawEvents
-      .filter(ev => ev.isParent || !ev.recurring)
-      .flatMap(ev => expandRecurringEvent(ev, cutoff, toDate));
+        const events = await eventsCollection.find(query).toArray();
 
-    res.status(200).json(events);
+        events.sort(
+          (a, b) =>
+            new Date(a.date + "T" + (a.startTime || "00:00")) -
+            new Date(b.date + "T" + (b.startTime || "00:00"))
+        );
+
+        return res.status(200).json(events);
+      }
+
+      /* =========================
+         CREATE EVENT
+      ========================= */
+      case "POST": {
+        const event = typeof req.body === "string"
+          ? JSON.parse(req.body)
+          : req.body;
+
+        const required = ["eType", "date", "startTime", "endTime", "title"];
+        for (const f of required) {
+          if (!event[f]) {
+            return res.status(400).json({ error: `Missing field: ${f}` });
+          }
+        }
+
+        if (!PRIORITY[event.eType]) {
+          return res.status(400).json({ error: `Unknown event type` });
+        }
+
+        const dates = event.recurring
+          ? generateRecurringDates(event.date, event.recurWhen, event.recurLengthNum)
+          : [new Date(event.date)];
+
+        const seriesId = event.recurring ? uuidv4() : null;
+        const insertedIds = [];
+
+        for (let i = 0; i < dates.length; i++) {
+          const dateStr = dates[i].toISOString().split("T")[0];
+
+          const doc = {
+            eType: event.eType,
+            date: dateStr,
+            startTime: event.startTime,
+            endTime: event.endTime,
+            title: event.title,
+            description: event.description || "",
+            groupSize: event.groupSize || "",
+            contactName: event.contactName || "",
+            contactInfo: event.contactInfo || "",
+            addedBy: event.addedBy || "unknown",
+
+            recurring: !!event.recurring,
+            isParent: i === 0 && !!event.recurring,
+            seriesId: seriesId,
+            recurWhen: event.recurWhen || null,
+            recurLengthNum: event.recurLengthNum || null,
+
+            // Walk-in fields
+            walkIns: event.walkIns || false,
+            walkInStatus: event.walkInStatus || null,
+            walkInContact: event.walkInContact || null,
+
+            createdAt: new Date(),
+            depositPaid: event.eType === "reservedPaid" ? false : null,
+            feePaid: event.eType === "reservedPaid" ? false : null
+          };
+
+          const result = await eventsCollection.insertOne(doc);
+          insertedIds.push(result.insertedId);
+        }
+
+        return res.status(200).json({ success: true, inserted: insertedIds });
+      }
+
+      /* =========================
+         UPDATE EVENT
+      ========================= */
+      case "PUT": {
+        const { id, ...fields } = req.body;
+
+        if (!id || !ObjectId.isValid(id)) {
+          return res.status(400).json({ error: "Invalid ID" });
+        }
+
+        await eventsCollection.updateOne(
+          { _id: new ObjectId(id) },
+          { $set: fields }
+        );
+
+        return res.status(200).json({ success: true });
+      }
+
+      /* =========================
+         DELETE EVENT
+      ========================= */
+      case "DELETE": {
+        const { id } = req.body;
+
+        if (!id || !ObjectId.isValid(id)) {
+          return res.status(400).json({ error: "Invalid ID" });
+        }
+
+        await eventsCollection.deleteOne({ _id: new ObjectId(id) });
+
+        return res.status(200).json({ success: true });
+      }
+
+      /* =========================
+         TOGGLE PAYMENT
+      ========================= */
+      case "PATCH": {
+        const { id, field } = req.body;
+
+        if (!id || !["depositPaid", "feePaid"].includes(field)) {
+          return res.status(400).json({ error: "Invalid request" });
+        }
+
+        await eventsCollection.updateOne(
+          { _id: new ObjectId(id) },
+          [{ $set: { [field]: { $not: `$${field}` } } }]
+        );
+
+        return res.status(200).json({ success: true });
+      }
+
+      default:
+        return res.status(405).json({ error: "Method not allowed" });
+    }
+
   } catch (err) {
-    console.error("GET EVENTS ERROR:", err);
-    res.status(500).json([]);
+    console.error("EVENT API ERROR:", err);
+    return res.status(500).json({
+      error: "Server error",
+      details: err.message
+    });
   }
 }
