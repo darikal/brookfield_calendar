@@ -10,11 +10,31 @@ const PRIORITY = {
   boardMeeting: 5
 };
 
-// Generate recurring dates for an event
+// ------------------------
+// LOCAL DATE HELPERS
+// ------------------------
+
+// Parse "YYYY-MM-DD" as local Date
+function parseLocalDate(dateStr) {
+  const [year, month, day] = dateStr.split("-").map(Number);
+  return new Date(year, month - 1, day);
+}
+
+// Format Date object as "YYYY-MM-DD"
+function formatLocalDate(date) {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, "0");
+  const d = String(date.getDate()).padStart(2, "0");
+  return `${y}-${m}-${d}`;
+}
+
+// ------------------------
+// RECURRING DATES GENERATOR
+// ------------------------
 function generateRecurringDates(startDate, type, lengthNum) {
   const dates = [];
   const count = parseInt(lengthNum, 10) || 0;
-  let current = new Date(startDate);
+  let current = parseLocalDate(startDate);
 
   for (let i = 0; i < count; i++) {
     if (!isNaN(current.getTime())) dates.push(new Date(current));
@@ -25,6 +45,9 @@ function generateRecurringDates(startDate, type, lengthNum) {
   return dates;
 }
 
+// ------------------------
+// API HANDLER
+// ------------------------
 export default async function handler(req, res) {
   try {
     const db = await getDB();
@@ -43,11 +66,16 @@ export default async function handler(req, res) {
         }
 
         const events = await eventsCollection.find(query).toArray();
+
+        // Sort by local date + time
         events.sort(
           (a, b) =>
-            new Date(a.date + "T" + (a.startTime || "00:00")) -
-            new Date(b.date + "T" + (b.startTime || "00:00"))
+            parseLocalDate(a.date).getTime() +
+            ((a.startTime || "00:00").split(":")[0] * 3600000 + (a.startTime || "00:00").split(":")[1] * 60000) -
+            (parseLocalDate(b.date).getTime() +
+            ((b.startTime || "00:00").split(":")[0] * 3600000 + (b.startTime || "00:00").split(":")[1] * 60000))
         );
+
         return res.status(200).json(events);
       }
 
@@ -63,12 +91,12 @@ export default async function handler(req, res) {
         if (!PRIORITY[event.eType]) return res.status(400).json({ error: `Unknown event type: ${event.eType}` });
 
         const isRecurring = !!event.recurring;
-        const dates = isRecurring ? generateRecurringDates(event.date, event.recurWhen, event.recurLengthNum) : [new Date(event.date)];
+        const dates = isRecurring ? generateRecurringDates(event.date, event.recurWhen, event.recurLengthNum) : [parseLocalDate(event.date)];
         const seriesId = isRecurring ? uuidv4() : null;
         const insertedIds = [];
 
         for (let i = 0; i < dates.length; i++) {
-          const dateStr = dates[i].toISOString().split("T")[0];
+          const dateStr = formatLocalDate(dates[i]);
           const doc = {
             eType: event.eType,
             date: dateStr,
@@ -112,7 +140,6 @@ export default async function handler(req, res) {
         if ("walkInContact" in fields) fields.walkInContact = fields.walkInContact || "";
 
         const parent = await eventsCollection.findOne({ _id: new ObjectId(id) });
-
         if (!parent) return res.status(404).json({ error: "Event not found" });
 
         // Update single event
@@ -120,7 +147,6 @@ export default async function handler(req, res) {
 
         // Update entire series if parent and not singleEdit
         if (!singleEdit && parent.recurring && parent.isParent) {
-
           // Delete old children
           await eventsCollection.deleteMany({ seriesId: parent.seriesId, _id: { $ne: parent._id } });
 
@@ -128,7 +154,7 @@ export default async function handler(req, res) {
           const dates = generateRecurringDates(fields.date || parent.date, fields.recurWhen || parent.recurWhen, fields.recurLengthNum || parent.recurLengthNum);
           for (let i = 0; i < dates.length; i++) {
             if (i === 0) continue; // skip parent
-            const dateStr = dates[i].toISOString().split("T")[0];
+            const dateStr = formatLocalDate(dates[i]);
             const child = {
               ...fields,
               date: dateStr,
@@ -153,7 +179,6 @@ export default async function handler(req, res) {
         if (!id || !ObjectId.isValid(id)) return res.status(400).json({ error: "Invalid ID" });
 
         const event = await eventsCollection.findOne({ _id: new ObjectId(id) });
-
         if (!event) return res.status(404).json({ error: "Event not found" });
 
         if (event.isParent && event.recurring) {
