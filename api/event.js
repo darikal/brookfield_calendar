@@ -31,35 +31,35 @@ export default async function handler(req, res) {
     const eventsCollection = db.collection("events");
 
     switch (req.method) {
-      /* =========================
-         GET EVENTS
-      ========================= */
+
+      // ------------------------
+      // GET EVENTS
+      // ------------------------
       case "GET": {
         const { admin, cutoff } = req.query;
         const query = {};
-
         if (admin === "true" && cutoff) {
           query.date = { $gte: cutoff.split("T")[0] };
         }
 
         const events = await eventsCollection.find(query).toArray();
-
         events.sort(
           (a, b) =>
             new Date(a.date + "T" + (a.startTime || "00:00")) -
             new Date(b.date + "T" + (b.startTime || "00:00"))
         );
-
         return res.status(200).json(events);
       }
 
-      /* =========================
-         CREATE EVENT
-      ========================= */
+      // ------------------------
+      // CREATE EVENT
+      // ------------------------
       case "POST": {
         const event = typeof req.body === "string" ? JSON.parse(req.body) : req.body;
         const required = ["eType", "date", "startTime", "endTime", "title"];
-        for (const f of required) if (!event[f]) return res.status(400).json({ error: `Missing field: ${f}` });
+        for (const f of required) {
+          if (!event[f]) return res.status(400).json({ error: `Missing field: ${f}` });
+        }
         if (!PRIORITY[event.eType]) return res.status(400).json({ error: `Unknown event type: ${event.eType}` });
 
         const isRecurring = !!event.recurring;
@@ -88,12 +88,10 @@ export default async function handler(req, res) {
             createdAt: new Date(),
             depositPaid: event.eType.toLowerCase() === "reservedpaid" ? false : null,
             feePaid: event.eType.toLowerCase() === "reservedpaid" ? false : null,
-            // ===== WALK-INS FIELDS =====
             walkIns: !!event.walkIns,
             walkInStatus: event.walkInStatus || "open",
             walkInContact: event.walkInContact || ""
           };
-
           const result = await eventsCollection.insertOne(doc);
           insertedIds.push(result.insertedId);
         }
@@ -101,9 +99,9 @@ export default async function handler(req, res) {
         return res.status(200).json({ success: true, inserted: insertedIds });
       }
 
-      /* =========================
-         UPDATE EVENT
-      ========================= */
+      // ------------------------
+      // UPDATE EVENT
+      // ------------------------
       case "PUT": {
         const { id, singleEdit, ...fields } = req.body;
         if (!id || !ObjectId.isValid(id)) return res.status(400).json({ error: "Invalid ID" });
@@ -113,50 +111,64 @@ export default async function handler(req, res) {
         if ("walkInStatus" in fields) fields.walkInStatus = fields.walkInStatus || "open";
         if ("walkInContact" in fields) fields.walkInContact = fields.walkInContact || "";
 
+        const parent = await eventsCollection.findOne({ _id: new ObjectId(id) });
+
+        if (!parent) return res.status(404).json({ error: "Event not found" });
+
         // Update single event
         await eventsCollection.updateOne({ _id: new ObjectId(id) }, { $set: fields });
 
-        // If editing a recurring parent and editing the whole series
-        if (!singleEdit && fields.recurring) {
-          const parent = await eventsCollection.findOne({ _id: new ObjectId(id) });
-          if (parent && parent.seriesId) {
-            await eventsCollection.updateMany(
-              { seriesId: parent.seriesId, _id: { $ne: parent._id } },
-              { $set: {
-                  eType: fields.eType,
-                  startTime: fields.startTime,
-                  endTime: fields.endTime,
-                  title: fields.title,
-                  description: fields.description,
-                  groupSize: fields.groupSize,
-                  contactName: fields.contactName,
-                  contactInfo: fields.contactInfo,
-                  recurring: fields.recurring,
-                  recurWhen: fields.recurWhen,
-                  recurLengthNum: fields.recurLengthNum
-                }
-              }
-            );
+        // Update entire series if parent and not singleEdit
+        if (!singleEdit && parent.recurring && parent.isParent) {
+
+          // Delete old children
+          await eventsCollection.deleteMany({ seriesId: parent.seriesId, _id: { $ne: parent._id } });
+
+          // Regenerate children
+          const dates = generateRecurringDates(fields.date || parent.date, fields.recurWhen || parent.recurWhen, fields.recurLengthNum || parent.recurLengthNum);
+          for (let i = 0; i < dates.length; i++) {
+            if (i === 0) continue; // skip parent
+            const dateStr = dates[i].toISOString().split("T")[0];
+            const child = {
+              ...fields,
+              date: dateStr,
+              isParent: false,
+              seriesId: parent.seriesId,
+              createdAt: new Date(),
+              depositPaid: fields.eType.toLowerCase() === "reservedpaid" ? false : null,
+              feePaid: fields.eType.toLowerCase() === "reservedpaid" ? false : null
+            };
+            await eventsCollection.insertOne(child);
           }
         }
 
         return res.status(200).json({ success: true, id });
       }
 
-      /* =========================
-         DELETE EVENT
-      ========================= */
+      // ------------------------
+      // DELETE EVENT
+      // ------------------------
       case "DELETE": {
         const { id } = req.body;
         if (!id || !ObjectId.isValid(id)) return res.status(400).json({ error: "Invalid ID" });
 
-        await eventsCollection.deleteOne({ _id: new ObjectId(id) });
+        const event = await eventsCollection.findOne({ _id: new ObjectId(id) });
+
+        if (!event) return res.status(404).json({ error: "Event not found" });
+
+        if (event.isParent && event.recurring) {
+          // Delete entire series
+          await eventsCollection.deleteMany({ seriesId: event.seriesId });
+        } else {
+          await eventsCollection.deleteOne({ _id: new ObjectId(id) });
+        }
+
         return res.status(200).json({ success: true });
       }
 
-      /* =========================
-         TOGGLE PAYMENT
-      ========================= */
+      // ------------------------
+      // TOGGLE PAYMENT
+      // ------------------------
       case "PATCH": {
         const { id, field } = req.body;
         if (!id || !["depositPaid", "feePaid"].includes(field)) return res.status(400).json({ error: "Invalid request" });
@@ -168,9 +180,9 @@ export default async function handler(req, res) {
         return res.status(200).json({ success: true });
       }
 
-      /* =========================
-         METHOD NOT ALLOWED
-      ========================= */
+      // ------------------------
+      // METHOD NOT ALLOWED
+      // ------------------------
       default:
         return res.status(405).json({ error: "Method not allowed" });
     }

@@ -1,14 +1,14 @@
-// /api/getEventsFront.js
-import clientPromise from "./_db.js";
+import { getDB } from "./_db.js";
 
 export default async function handler(req, res) {
   try {
-    const client = await clientPromise;
-    const db = client.db("calendarDB");
+    const db = await getDB();
 
+    // Get today at midnight
     const fromDate = new Date();
-    fromDate.setHours(0, 0, 0, 0); // normalize to start of today
+    fromDate.setHours(0, 0, 0, 0);
 
+    // Fetch all events
     const rawEvents = await db.collection("events")
       .find({}, {
         projection: {
@@ -32,7 +32,7 @@ export default async function handler(req, res) {
       })
       .toArray();
 
-    // ✅ Only future + today events
+    // Filter out past events
     const events = rawEvents
       .filter(ev => {
         if (!ev.date) return false;
@@ -45,7 +45,20 @@ export default async function handler(req, res) {
         return aDate - bDate;
       });
 
-    res.status(200).json(events);
+    // ✅ Ensure recurring icon shows for all series
+    const seriesMap = {};
+    events.forEach(ev => {
+      if (ev.seriesId) seriesMap[ev.seriesId] = true;
+    });
+
+    const processedEvents = events.map(ev => {
+      if (ev.seriesId && seriesMap[ev.seriesId]) {
+        ev.recurring = true; // force recurring icon
+      }
+      return ev;
+    });
+
+    res.status(200).json(processedEvents);
 
   } catch (err) {
     console.error("GET EVENTS FRONT ERROR:", err);

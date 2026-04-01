@@ -27,9 +27,9 @@ const recurringEditSection = document.getElementById("recurringEditSection");
 const modalSaveBtn = document.getElementById("modalSaveBtn");
 const modalCancelBtn = document.getElementById("modalCancelBtn");
 
-// =========================
-// MODAL OPEN/CLOSE HELPERS
-// =========================
+/* =========================
+   MODAL OPEN/CLOSE HELPERS
+========================= */
 function showModal() {
   modal.classList.remove("hidden");
   document.body.classList.add("modal-open");
@@ -50,9 +50,9 @@ document.addEventListener("keydown", (e) => {
   if (e.key === "Escape" && !modal.classList.contains("hidden")) hideModal();
 });
 
-// =========================
-// LOAD EVENTS
-// =========================
+/* =========================
+   LOAD EVENTS
+========================= */
 async function loadEvents() {
   try {
     const params = new URLSearchParams({ admin: "true" });
@@ -68,9 +68,9 @@ async function loadEvents() {
   }
 }
 
-// =========================
-// RENDER TABLE
-// =========================
+/* =========================
+   RENDER TABLE
+========================= */
 function renderTable(data) {
   tableBody.innerHTML = "";
 
@@ -91,6 +91,7 @@ function renderTable(data) {
 
     const tr = document.createElement("tr");
 
+    // Add class if event is bumped
     if (event.bumped) tr.classList.add("bumped-event");
 
     tr.innerHTML = `
@@ -133,16 +134,18 @@ function renderTable(data) {
     }
 
     if (event.bumped) {
-      tr.querySelector(".rescheduleBtn").onclick = () => openModal(event, true);
+      tr.querySelector(".rescheduleBtn").onclick = () => {
+        openModal(event, true);
+      };
     }
 
     tableBody.appendChild(tr);
   });
 }
 
-// =========================
-// OPEN MODAL
-// =========================
+/* =========================
+   OPEN MODAL
+========================= */
 function openModal(event, singleEdit = false) {
   modalEventId.value = event._id || "";
   modalTitleInput.value = event.title || "";
@@ -170,46 +173,23 @@ function openModal(event, singleEdit = false) {
   showModal();
 }
 
-// =========================
-// SAVE EVENT WITH VALIDATION + HIGHLIGHT
-// =========================
+/* =========================
+   SAVE EVENT WITH RECURRING FIX
+========================= */
 modalSaveBtn.onclick = async () => {
   const id = modalEventId.value;
   const singleEdit = modal.dataset.singleEdit === "true";
 
-  // Clear previous highlights
-  [modalTitleInput, modalDate, modalStartTime, modalEndTime, modalType, modalRecurWhen, modalRecurLengthNum].forEach(el => {
-    el.classList.remove("missing-field");
-  });
-
-  // Required fields
-  const requiredFields = [
-    { el: modalTitleInput, name: "Title" },
-    { el: modalDate, name: "Date" },
-    { el: modalStartTime, name: "Start Time" },
-    { el: modalEndTime, name: "End Time" },
-    { el: modalType, name: "Type" }
-  ];
-
-  if (modalRecurring.checked) {
-    requiredFields.push(
-      { el: modalRecurWhen, name: "Repeat Interval" },
-      { el: modalRecurLengthNum, name: "Number of occurrences" }
-    );
-  }
-
-  const missing = requiredFields.filter(f => !f.el.value.trim());
-  if (missing.length) {
-    missing.forEach(f => f.el.classList.add("missing-field"));
-    const fieldNames = missing.map(f => f.name).join(", ");
-    showAdminMessage(`Please fill in: ${fieldNames}`, "error", true);
-    return; // Stop modal from closing
+  // Basic validation
+  if (!modalTitleInput.value.trim() || !modalDate.value || !modalStartTime.value || !modalEndTime.value || !modalType.value) {
+    alert("Please fill in all required fields: Title, Date, Start Time, End Time, Type.");
+    return; // stop saving
   }
 
   const payload = {
     id,
     singleEdit,
-    title: modalTitleInput.value,
+    title: modalTitleInput.value.trim(),
     date: modalDate.value,
     startTime: modalStartTime.value,
     endTime: modalEndTime.value,
@@ -220,7 +200,7 @@ modalSaveBtn.onclick = async () => {
     description: modalDescription.value,
     recurring: modalRecurring.checked,
     recurWhen: modalRecurWhen.value,
-    recurLengthNum: modalRecurLengthNum.value
+    recurLengthNum: parseInt(modalRecurLengthNum.value, 10) || 1
   };
 
   try {
@@ -234,40 +214,20 @@ modalSaveBtn.onclick = async () => {
 
     if (res.ok && data.success) {
       showAdminMessage("Event saved successfully!", "success");
+      await loadEvents();
       hideModal();
-      loadEvents();
     } else {
-      showAdminMessage(data.error || "Failed to save event.", "error", true);
+      showAdminMessage(data.error || "Failed to save event.", "error");
     }
   } catch (err) {
     console.error("Failed to save event:", err);
-    showAdminMessage("Server error: Could not save event.", "error", true);
+    showAdminMessage("Server error: Could not save event.", "error");
   }
 };
 
-// =========================
-// VISUAL STYLING FOR MISSING FIELDS
-// Add CSS class dynamically
-// =========================
-const style = document.createElement('style');
-style.innerHTML = `
-.missing-field {
-  border: 2px solid red !important;
-  animation: shake 0.25s;
-}
-@keyframes shake {
-  0% { transform: translateX(0px); }
-  25% { transform: translateX(-5px); }
-  50% { transform: translateX(5px); }
-  75% { transform: translateX(-5px); }
-  100% { transform: translateX(0px); }
-}
-`;
-document.head.appendChild(style);
-
-// =========================
-// PAYMENT TOGGLE
-// =========================
+/* =========================
+   PAYMENT TOGGLE
+========================= */
 window.togglePayment = async (id, field) => {
   try {
     const res = await fetch("/api/event", {
@@ -287,9 +247,9 @@ window.togglePayment = async (id, field) => {
   }
 };
 
-// =========================
-// DELETE EVENT
-// =========================
+/* =========================
+   DELETE EVENT
+========================= */
 window.deleteEvent = async id => {
   if (!confirm("Delete this event?")) return;
 
@@ -311,9 +271,9 @@ window.deleteEvent = async id => {
   }
 };
 
-// =========================
-// SEARCH EVENTS
-// =========================
+/* =========================
+   SEARCH EVENTS
+========================= */
 searchInput.addEventListener("input", () => {
   const q = searchInput.value.toLowerCase();
   const filtered = events.filter(e =>
@@ -326,23 +286,23 @@ searchInput.addEventListener("input", () => {
   renderTable(filtered);
 });
 
-// =========================
-// SHOW/OMIT OLDER EVENTS
-// =========================
+/* =========================
+   SHOW/OMIT OLDER EVENTS
+========================= */
 toggleOldBtn.onclick = () => {
   showOld = !showOld;
   toggleOldBtn.textContent = showOld ? "Hide Older Events" : "Show Older Events";
   loadEvents();
 };
 
-// =========================
-// MODAL CANCEL
-// =========================
+/* =========================
+   MODAL CANCEL
+========================= */
 modalCancelBtn.onclick = hideModal;
 
-// =========================
-// ADD NEW EVENT
-// =========================
+/* =========================
+   ADD NEW EVENT
+========================= */
 const addEventBtn = document.getElementById("addEventBtn");
 addEventBtn.onclick = () => {
   modalEventId.value = "";
@@ -363,9 +323,9 @@ addEventBtn.onclick = () => {
   showModal();
 };
 
-// =========================
-// SHOW ADMIN MESSAGE
-// =========================
+/* =========================
+   SHOW ADMIN MESSAGE
+========================= */
 function showAdminMessage(msg, type = "success", persistent = false) {
   adminMessage.textContent = msg;
   adminMessage.className = `admin-message ${type}`;
@@ -373,7 +333,7 @@ function showAdminMessage(msg, type = "success", persistent = false) {
   if (!persistent) setTimeout(() => adminMessage.classList.add("hidden"), 4000);
 }
 
-// =========================
-// INITIAL LOAD
-// =========================
+/* =========================
+   INITIAL LOAD
+========================= */
 loadEvents();
