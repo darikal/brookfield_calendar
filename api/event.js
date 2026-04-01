@@ -62,8 +62,9 @@ export default async function handler(req, res) {
         for (const f of required) if (!event[f]) return res.status(400).json({ error: `Missing field: ${f}` });
         if (!PRIORITY[event.eType]) return res.status(400).json({ error: `Unknown event type: ${event.eType}` });
 
-        const dates = event.recurring ? generateRecurringDates(event.date, event.recurWhen, event.recurLengthNum) : [new Date(event.date)];
-        const seriesId = event.recurring ? uuidv4() : null;
+        const isRecurring = !!event.recurring;
+        const dates = isRecurring ? generateRecurringDates(event.date, event.recurWhen, event.recurLengthNum) : [new Date(event.date)];
+        const seriesId = isRecurring ? uuidv4() : null;
         const insertedIds = [];
 
         for (let i = 0; i < dates.length; i++) {
@@ -79,8 +80,8 @@ export default async function handler(req, res) {
             contactName: event.contactName || "",
             contactInfo: event.contactInfo || "",
             addedBy: event.addedBy || "unknown",
-            recurring: !!event.recurring,
-            isParent: i === 0 && !!event.recurring,
+            recurring: isRecurring,
+            isParent: i === 0 && isRecurring,
             seriesId: seriesId,
             recurWhen: event.recurWhen || null,
             recurLengthNum: event.recurLengthNum || null,
@@ -104,15 +105,41 @@ export default async function handler(req, res) {
          UPDATE EVENT
       ========================= */
       case "PUT": {
-        const { id, ...fields } = req.body;
+        const { id, singleEdit, ...fields } = req.body;
         if (!id || !ObjectId.isValid(id)) return res.status(400).json({ error: "Invalid ID" });
 
-        // Ensure walk-ins fields are booleans / strings
+        // Normalize booleans / strings
         if ("walkIns" in fields) fields.walkIns = !!fields.walkIns;
         if ("walkInStatus" in fields) fields.walkInStatus = fields.walkInStatus || "open";
         if ("walkInContact" in fields) fields.walkInContact = fields.walkInContact || "";
 
+        // Update single event
         await eventsCollection.updateOne({ _id: new ObjectId(id) }, { $set: fields });
+
+        // If editing a recurring parent and editing the whole series
+        if (!singleEdit && fields.recurring) {
+          const parent = await eventsCollection.findOne({ _id: new ObjectId(id) });
+          if (parent && parent.seriesId) {
+            await eventsCollection.updateMany(
+              { seriesId: parent.seriesId, _id: { $ne: parent._id } },
+              { $set: {
+                  eType: fields.eType,
+                  startTime: fields.startTime,
+                  endTime: fields.endTime,
+                  title: fields.title,
+                  description: fields.description,
+                  groupSize: fields.groupSize,
+                  contactName: fields.contactName,
+                  contactInfo: fields.contactInfo,
+                  recurring: fields.recurring,
+                  recurWhen: fields.recurWhen,
+                  recurLengthNum: fields.recurLengthNum
+                }
+              }
+            );
+          }
+        }
+
         return res.status(200).json({ success: true, id });
       }
 

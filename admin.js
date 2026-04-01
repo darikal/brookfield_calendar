@@ -62,21 +62,9 @@ async function loadEvents() {
     events = await res.json();
 
     renderTable(events);
-    renderBumpedAlert(events);
   } catch (err) {
     console.error("Failed to load events:", err);
     showAdminMessage("Failed to load events.", "error");
-  }
-}
-
-/* =========================
-   RENDER BUMP ALERT
-========================= */
-function renderBumpedAlert(data) {
-  const pending = data.filter(e => e.bumped && e.notificationRequired);
-  if (pending.length) {
-    const msg = `⚠ ${pending.length} bumped event(s) require notification.`;
-    showAdminMessage(msg, "error", true);
   }
 }
 
@@ -147,35 +135,12 @@ function renderTable(data) {
 
     if (event.bumped) {
       tr.querySelector(".rescheduleBtn").onclick = () => {
-        openModal(event, true); // allow reschedule
+        openModal(event, true);
       };
     }
 
     tableBody.appendChild(tr);
   });
-}
-
-/* =========================
-   MARK NOTIFIED
-========================= */
-async function markNotified(id) {
-  try {
-    const res = await fetch("/api/event", {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ id, field: "notificationRequired", value: false, bumpedNotified: true })
-    });
-
-    const data = await res.json();
-
-    if (res.ok && data.success) showAdminMessage("Marked as notified!", "success");
-    else showAdminMessage(data.error || "Failed to update.", "error");
-
-    loadEvents();
-  } catch (err) {
-    console.error("Mark notified error:", err);
-    showAdminMessage("Server error: Could not update.", "error");
-  }
 }
 
 /* =========================
@@ -200,6 +165,8 @@ function openModal(event, singleEdit = false) {
     modalRecurLengthNum.value = event.recurLengthNum || "";
   } else {
     recurringEditSection.classList.add("hidden");
+    modalRecurWhen.value = "week";
+    modalRecurLengthNum.value = "";
   }
 
   modal.dataset.singleEdit = singleEdit ? "true" : "false";
@@ -225,6 +192,7 @@ modalSaveBtn.onclick = async () => {
     contactName: modalContactName.value,
     contactInfo: modalContactInfo.value,
     description: modalDescription.value,
+    recurring: modalRecurring.checked,
     recurWhen: modalRecurWhen.value,
     recurLengthNum: modalRecurLengthNum.value
   };
@@ -261,7 +229,6 @@ window.togglePayment = async (id, field) => {
     });
 
     const data = await res.json();
-
     if (res.ok && data.success) showAdminMessage("Payment status updated!", "success");
     else showAdminMessage(data.error || "Failed to update payment.", "error");
 
@@ -286,7 +253,6 @@ window.deleteEvent = async id => {
     });
 
     const data = await res.json();
-
     if (res.ok && data.success) showAdminMessage("Event deleted successfully!", "success");
     else showAdminMessage(data.error || "Failed to delete event.", "error");
 
@@ -317,9 +283,7 @@ searchInput.addEventListener("input", () => {
 ========================= */
 toggleOldBtn.onclick = () => {
   showOld = !showOld;
-  toggleOldBtn.textContent = showOld
-    ? "Hide Older Events"
-    : "Show Older Events";
+  toggleOldBtn.textContent = showOld ? "Hide Older Events" : "Show Older Events";
   loadEvents();
 };
 
