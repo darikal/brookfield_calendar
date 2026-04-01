@@ -17,6 +17,23 @@ const prevBtn = document.getElementById("previous");
 const nextBtn = document.getElementById("next");
 
 /* =========================
+   LOCAL DATE PARSING
+========================= */
+function parseLocalDate(dateStr) {
+  if (!dateStr) return null;
+  const [year, month, day] = dateStr.split("-").map(Number);
+  return new Date(year, month - 1, day);
+}
+
+function parseLocalDateTime(dateStr, timeStr) {
+  const date = parseLocalDate(dateStr);
+  if (!timeStr) return date;
+  const [h, m] = timeStr.split(":").map(Number);
+  date.setHours(h || 0, m || 0, 0, 0);
+  return date;
+}
+
+/* =========================
    LOAD EVENTS
 ========================= */
 async function loadEvents() {
@@ -55,7 +72,7 @@ function renderCalendar() {
       if ((i === 0 && j < firstDay) || date > daysInMonth) {
         cell.innerHTML = "";
       } else {
-        const dStr = `${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2, "0")}-${String(date).padStart(2, "0")}`;
+        const dStr = `${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2,"0")}-${String(date).padStart(2,"0")}`;
         cell.textContent = date;
 
         const dayEvents = events.filter(e => e.date === dStr);
@@ -112,15 +129,15 @@ function renderEventList(dayFilter = null, openAll = false) {
   reminderList.innerHTML = "";
 
   const monthEvents = events.filter(e => {
-    const d = new Date(e.date);
+    const d = parseLocalDate(e.date);
     return d.getMonth() === currentDate.getMonth() && d.getFullYear() === currentDate.getFullYear();
   });
 
   const listToRender = dayFilter ? monthEvents.filter(e => e.date === dayFilter) : monthEvents;
 
   listToRender.sort((a, b) => {
-    const dateA = new Date(`${a.date}T${a.startTime || "00:00"}`);
-    const dateB = new Date(`${b.date}T${b.startTime || "00:00"}`);
+    const dateA = parseLocalDateTime(a.date, a.startTime);
+    const dateB = parseLocalDateTime(b.date, b.startTime);
     return dateA - dateB;
   });
 
@@ -131,10 +148,8 @@ function renderEventList(dayFilter = null, openAll = false) {
     li.className = "reminder-item";
     li.dataset.key = e.date;
 
-    // Recurring indicator
     const recurringText = e.recurring ? " 🔁" : "";
 
-    // Walk-in status display
     let walkInText = "";
     if (e.walkInStatus) {
       if (e.walkInStatus === "contact" && e.contactInfo) {
@@ -163,7 +178,6 @@ function renderEventList(dayFilter = null, openAll = false) {
     reminderList.appendChild(li);
   });
 }
-
 
 /* =========================
    MONTH NAVIGATION
