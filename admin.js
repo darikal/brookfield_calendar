@@ -91,7 +91,6 @@ function renderTable(data) {
 
     const tr = document.createElement("tr");
 
-    // Add class if event is bumped
     if (event.bumped) tr.classList.add("bumped-event");
 
     tr.innerHTML = `
@@ -174,12 +173,37 @@ function openModal(event, singleEdit = false) {
 }
 
 /* =========================
-   SAVE EVENT
+   SAVE EVENT WITH VALIDATION
 ========================= */
 modalSaveBtn.onclick = async () => {
   const id = modalEventId.value;
   const singleEdit = modal.dataset.singleEdit === "true";
 
+  // Required fields
+  const requiredFields = [
+    { value: modalTitleInput.value, name: "Title" },
+    { value: modalDate.value, name: "Date" },
+    { value: modalStartTime.value, name: "Start Time" },
+    { value: modalEndTime.value, name: "End Time" },
+    { value: modalType.value, name: "Type" }
+  ];
+
+  // Validate recurring fields if recurring is checked
+  if (modalRecurring.checked) {
+    requiredFields.push(
+      { value: modalRecurWhen.value, name: "Repeat Interval" },
+      { value: modalRecurLengthNum.value, name: "Number of occurrences" }
+    );
+  }
+
+  const missing = requiredFields.filter(f => !f.value.trim());
+  if (missing.length) {
+    const fieldNames = missing.map(f => f.name).join(", ");
+    showAdminMessage(`Please fill in: ${fieldNames}`, "error", true);
+    return; // Prevent modal from closing
+  }
+
+  // Prepare payload
   const payload = {
     id,
     singleEdit,
@@ -206,15 +230,17 @@ modalSaveBtn.onclick = async () => {
 
     const data = await res.json();
 
-    if (res.ok && data.success) showAdminMessage("Event saved successfully!", "success");
-    else showAdminMessage(data.error || "Failed to save event.", "error");
+    if (res.ok && data.success) {
+      showAdminMessage("Event saved successfully!", "success");
+      hideModal();
+      loadEvents();
+    } else {
+      showAdminMessage(data.error || "Failed to save event.", "error", true);
+    }
   } catch (err) {
     console.error("Failed to save event:", err);
-    showAdminMessage("Server error: Could not save event.", "error");
+    showAdminMessage("Server error: Could not save event.", "error", true);
   }
-
-  hideModal();
-  loadEvents();
 };
 
 /* =========================
