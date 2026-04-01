@@ -1,6 +1,7 @@
 import clientPromise from "../_db.js";
 import { getDB } from "../auth/_auth.js";
 import { ObjectId } from "mongodb";
+import { v4 as uuidv4 } from "uuid";
 
 /* ---------------- HELPERS ---------------- */
 
@@ -26,6 +27,22 @@ function canEditEvent(userRole, event) {
   return false;
 }
 
+function generateRecurringDates(startDate, type, lengthNum) {
+  const dates = [];
+  const count = parseInt(lengthNum, 10) || 0;
+  let current = new Date(startDate);
+
+  for (let i = 0; i < count; i++) {
+    dates.push(new Date(current));
+
+    if (type === "week") current.setDate(current.getDate() + 7);
+    else if (type === "biWeek") current.setDate(current.getDate() + 14);
+    else if (type === "month") current.setMonth(current.getMonth() + 1);
+  }
+
+  return dates;
+}
+
 /* ---------------- HANDLER ---------------- */
 
 export default async function handler(req, res) {
@@ -37,7 +54,7 @@ export default async function handler(req, res) {
     const body =
       typeof req.body === "string" ? JSON.parse(req.body) : req.body;
 
-    const { eventId, updates, editSeries } = body;
+    const { eventId, updates, editSeries, makeRecurring } = body;
 
     if (!eventId || !updates) {
       return res.status(400).json({ error: "Missing eventId or updates" });
@@ -64,23 +81,69 @@ export default async function handler(req, res) {
       return res.status(403).json({ error: "Forbidden" });
     }
 
-    /* ---------- Handle recurring series ---------- */
-    if (editSeries && event.recurrence) {
-      // update all events with same recurrence.startDate and type
-      await collection.updateMany(
-        {
-          "recurrence.startDate": event.recurrence.startDate,
-          "recurrence.type": event.recurrence.type
-        },
-        { $set: updates }
+    /* =====================================================
+       🔥 CONVERT TO RECURRING (THIS IS WHAT YOU NEEDED)
+    ===================================================== */
+    if (makeRecurring && updates.recurWhen && updates.recurLengthNum) {
+      const seriesId = uuidv4();
+
+      const dates = generateRecurringDates(
+        event.date,
+        updates.recurWhen,
+        updates.recurLengthNum
       );
-    } else {
-      // update only this event
+
+      // 1. Update original event to be parent
       await collection.updateOne(
         { _id: new ObjectId(eventId) },
+        {
+          $set: {
+            ...updates,
+            recurring: true,
+            isParent: true,
+            seriesId
+          }
+        }
+      );
+
+      // 2. Create future events (skip first date)
+      for (let i = 1; i < dates.length; i++) {
+        const dateStr = dates[i].toISOString().split("T")[0];
+
+        await collection.insertOne({
+          ...event,
+          ...updates,
+          _id: new ObjectId(),
+          date: dateStr,
+          recurring: true,
+          isParent: false,
+          seriesId,
+          createdAt: new Date()
+        });
+      }
+
+      return res.status(200).json({ success: true, seriesCreated: true });
+    }
+
+    /* =====================================================
+       🔁 EDIT ENTIRE SERIES
+    ===================================================== */
+    if (editSeries && event.seriesId) {
+      await collection.updateMany(
+        { seriesId: event.seriesId },
         { $set: updates }
       );
+
+      return res.status(200).json({ success: true, seriesUpdated: true });
     }
+
+    /* =====================================================
+       ✏️ SINGLE EVENT UPDATE
+    ===================================================== */
+    await collection.updateOne(
+      { _id: new ObjectId(eventId) },
+      { $set: updates }
+    );
 
     res.status(200).json({ success: true });
 
