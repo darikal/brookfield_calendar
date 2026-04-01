@@ -58,7 +58,7 @@ async function loadEvents() {
     const params = new URLSearchParams({ admin: "true" });
     if (!showOld) params.set("cutoff", new Date().toISOString());
 
-    const res = await fetch(`/api/event?${params.toString()}`);
+    const res = await fetch(`/api/getEventsFront?${params.toString()}`);
     events = await res.json();
 
     renderTable(events);
@@ -107,6 +107,7 @@ function renderTable(data) {
         <button class="deleteBtn">Delete</button>
         ${event.bumped && event.notificationRequired ? '<button class="notifyBtn">Mark Notified</button>' : ''}
         ${event.bumped ? '<button class="rescheduleBtn">Reschedule</button>' : ''}
+        ${event.recurring ? '<span class="recurringIcon">🔁</span>' : ''}
       </td>
     `;
 
@@ -174,22 +175,40 @@ function openModal(event, singleEdit = false) {
 }
 
 /* =========================
-   SAVE EVENT WITH RECURRING FIX
+   VALIDATE MODAL
+========================= */
+function validateModal() {
+  const requiredFields = [
+    { field: modalTitleInput, name: "Title" },
+    { field: modalDate, name: "Date" },
+    { field: modalStartTime, name: "Start Time" },
+    { field: modalEndTime, name: "End Time" },
+    { field: modalType, name: "Type" }
+  ];
+
+  for (const f of requiredFields) {
+    if (!f.field.value.trim()) {
+      alert(`Please fill in the required field: ${f.name}`);
+      f.field.focus();
+      return false;
+    }
+  }
+  return true;
+}
+
+/* =========================
+   SAVE EVENT
 ========================= */
 modalSaveBtn.onclick = async () => {
+  if (!validateModal()) return; // Warn user before closing
+
   const id = modalEventId.value;
   const singleEdit = modal.dataset.singleEdit === "true";
-
-  // Basic validation
-  if (!modalTitleInput.value.trim() || !modalDate.value || !modalStartTime.value || !modalEndTime.value || !modalType.value) {
-    alert("Please fill in all required fields: Title, Date, Start Time, End Time, Type.");
-    return; // stop saving
-  }
 
   const payload = {
     id,
     singleEdit,
-    title: modalTitleInput.value.trim(),
+    title: modalTitleInput.value,
     date: modalDate.value,
     startTime: modalStartTime.value,
     endTime: modalEndTime.value,
@@ -200,7 +219,7 @@ modalSaveBtn.onclick = async () => {
     description: modalDescription.value,
     recurring: modalRecurring.checked,
     recurWhen: modalRecurWhen.value,
-    recurLengthNum: parseInt(modalRecurLengthNum.value, 10) || 1
+    recurLengthNum: modalRecurLengthNum.value
   };
 
   try {
@@ -214,14 +233,14 @@ modalSaveBtn.onclick = async () => {
 
     if (res.ok && data.success) {
       showAdminMessage("Event saved successfully!", "success");
-      await loadEvents();
       hideModal();
+      loadEvents();
     } else {
-      showAdminMessage(data.error || "Failed to save event.", "error");
+      showAdminMessage(data.error || "Failed to save event.", "error", true);
     }
   } catch (err) {
     console.error("Failed to save event:", err);
-    showAdminMessage("Server error: Could not save event.", "error");
+    showAdminMessage("Server error: Could not save event.", "error", true);
   }
 };
 
