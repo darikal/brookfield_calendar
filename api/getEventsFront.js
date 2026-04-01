@@ -1,10 +1,22 @@
 import { getDB } from "./_db.js";
 
+/**
+ * Safely parse a date + time as LOCAL time (prevents UTC shift bugs)
+ */
+function parseLocalDate(dateStr, timeStr = "00:00") {
+  if (!dateStr) return null;
+
+  const [year, month, day] = dateStr.split("-").map(Number);
+  const [hour, minute] = timeStr.split(":").map(Number);
+
+  return new Date(year, month - 1, day, hour || 0, minute || 0, 0);
+}
+
 export default async function handler(req, res) {
   try {
     const db = await getDB();
 
-    // Get today at midnight
+    // Get today at midnight (LOCAL)
     const fromDate = new Date();
     fromDate.setHours(0, 0, 0, 0);
 
@@ -32,30 +44,32 @@ export default async function handler(req, res) {
       })
       .toArray();
 
-    // Filter out past events
+    // Filter out past events (using LOCAL parsing)
     const events = rawEvents
       .filter(ev => {
-        if (!ev.date) return false;
-        const eventDate = new Date(ev.date);
+        const eventDate = parseLocalDate(ev.date);
+        if (!eventDate) return false;
         return eventDate >= fromDate;
       })
       .sort((a, b) => {
-        const aDate = new Date(a.date + "T" + (a.startTime || "00:00"));
-        const bDate = new Date(b.date + "T" + (b.startTime || "00:00"));
+        const aDate = parseLocalDate(a.date, a.startTime);
+        const bDate = parseLocalDate(b.date, b.startTime);
         return aDate - bDate;
       });
 
-    // ✅ Ensure recurring icon shows for all series
+    // Ensure recurring icon shows for all events in a series
     const seriesMap = {};
     events.forEach(ev => {
-      if (ev.seriesId) seriesMap[ev.seriesId] = true;
+      if (ev.seriesId) {
+        seriesMap[ev.seriesId] = true;
+      }
     });
 
     const processedEvents = events.map(ev => {
-      if (ev.seriesId && seriesMap[ev.seriesId]) {
-        ev.recurring = true; // force recurring icon
-      }
-      return ev;
+      return {
+        ...ev,
+        recurring: ev.seriesId && seriesMap[ev.seriesId] ? true : ev.recurring
+      };
     });
 
     res.status(200).json(processedEvents);
