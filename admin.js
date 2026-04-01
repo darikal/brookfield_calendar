@@ -27,9 +27,9 @@ const recurringEditSection = document.getElementById("recurringEditSection");
 const modalSaveBtn = document.getElementById("modalSaveBtn");
 const modalCancelBtn = document.getElementById("modalCancelBtn");
 
-/* =========================
-   MODAL OPEN/CLOSE HELPERS
-========================= */
+// =========================
+// MODAL OPEN/CLOSE HELPERS
+// =========================
 function showModal() {
   modal.classList.remove("hidden");
   document.body.classList.add("modal-open");
@@ -50,9 +50,9 @@ document.addEventListener("keydown", (e) => {
   if (e.key === "Escape" && !modal.classList.contains("hidden")) hideModal();
 });
 
-/* =========================
-   LOAD EVENTS
-========================= */
+// =========================
+// LOAD EVENTS
+// =========================
 async function loadEvents() {
   try {
     const params = new URLSearchParams({ admin: "true" });
@@ -68,9 +68,9 @@ async function loadEvents() {
   }
 }
 
-/* =========================
-   RENDER TABLE
-========================= */
+// =========================
+// RENDER TABLE
+// =========================
 function renderTable(data) {
   tableBody.innerHTML = "";
 
@@ -133,18 +133,16 @@ function renderTable(data) {
     }
 
     if (event.bumped) {
-      tr.querySelector(".rescheduleBtn").onclick = () => {
-        openModal(event, true);
-      };
+      tr.querySelector(".rescheduleBtn").onclick = () => openModal(event, true);
     }
 
     tableBody.appendChild(tr);
   });
 }
 
-/* =========================
-   OPEN MODAL
-========================= */
+// =========================
+// OPEN MODAL
+// =========================
 function openModal(event, singleEdit = false) {
   modalEventId.value = event._id || "";
   modalTitleInput.value = event.title || "";
@@ -172,38 +170,42 @@ function openModal(event, singleEdit = false) {
   showModal();
 }
 
-/* =========================
-   SAVE EVENT WITH VALIDATION
-========================= */
+// =========================
+// SAVE EVENT WITH VALIDATION + HIGHLIGHT
+// =========================
 modalSaveBtn.onclick = async () => {
   const id = modalEventId.value;
   const singleEdit = modal.dataset.singleEdit === "true";
 
+  // Clear previous highlights
+  [modalTitleInput, modalDate, modalStartTime, modalEndTime, modalType, modalRecurWhen, modalRecurLengthNum].forEach(el => {
+    el.classList.remove("missing-field");
+  });
+
   // Required fields
   const requiredFields = [
-    { value: modalTitleInput.value, name: "Title" },
-    { value: modalDate.value, name: "Date" },
-    { value: modalStartTime.value, name: "Start Time" },
-    { value: modalEndTime.value, name: "End Time" },
-    { value: modalType.value, name: "Type" }
+    { el: modalTitleInput, name: "Title" },
+    { el: modalDate, name: "Date" },
+    { el: modalStartTime, name: "Start Time" },
+    { el: modalEndTime, name: "End Time" },
+    { el: modalType, name: "Type" }
   ];
 
-  // Validate recurring fields if recurring is checked
   if (modalRecurring.checked) {
     requiredFields.push(
-      { value: modalRecurWhen.value, name: "Repeat Interval" },
-      { value: modalRecurLengthNum.value, name: "Number of occurrences" }
+      { el: modalRecurWhen, name: "Repeat Interval" },
+      { el: modalRecurLengthNum, name: "Number of occurrences" }
     );
   }
 
-  const missing = requiredFields.filter(f => !f.value.trim());
+  const missing = requiredFields.filter(f => !f.el.value.trim());
   if (missing.length) {
+    missing.forEach(f => f.el.classList.add("missing-field"));
     const fieldNames = missing.map(f => f.name).join(", ");
     showAdminMessage(`Please fill in: ${fieldNames}`, "error", true);
-    return; // Prevent modal from closing
+    return; // Stop modal from closing
   }
 
-  // Prepare payload
   const payload = {
     id,
     singleEdit,
@@ -243,9 +245,29 @@ modalSaveBtn.onclick = async () => {
   }
 };
 
-/* =========================
-   PAYMENT TOGGLE
-========================= */
+// =========================
+// VISUAL STYLING FOR MISSING FIELDS
+// Add CSS class dynamically
+// =========================
+const style = document.createElement('style');
+style.innerHTML = `
+.missing-field {
+  border: 2px solid red !important;
+  animation: shake 0.25s;
+}
+@keyframes shake {
+  0% { transform: translateX(0px); }
+  25% { transform: translateX(-5px); }
+  50% { transform: translateX(5px); }
+  75% { transform: translateX(-5px); }
+  100% { transform: translateX(0px); }
+}
+`;
+document.head.appendChild(style);
+
+// =========================
+// PAYMENT TOGGLE
+// =========================
 window.togglePayment = async (id, field) => {
   try {
     const res = await fetch("/api/event", {
@@ -265,9 +287,9 @@ window.togglePayment = async (id, field) => {
   }
 };
 
-/* =========================
-   DELETE EVENT
-========================= */
+// =========================
+// DELETE EVENT
+// =========================
 window.deleteEvent = async id => {
   if (!confirm("Delete this event?")) return;
 
@@ -289,9 +311,9 @@ window.deleteEvent = async id => {
   }
 };
 
-/* =========================
-   SEARCH EVENTS
-========================= */
+// =========================
+// SEARCH EVENTS
+// =========================
 searchInput.addEventListener("input", () => {
   const q = searchInput.value.toLowerCase();
   const filtered = events.filter(e =>
@@ -304,23 +326,23 @@ searchInput.addEventListener("input", () => {
   renderTable(filtered);
 });
 
-/* =========================
-   SHOW/OMIT OLDER EVENTS
-========================= */
+// =========================
+// SHOW/OMIT OLDER EVENTS
+// =========================
 toggleOldBtn.onclick = () => {
   showOld = !showOld;
   toggleOldBtn.textContent = showOld ? "Hide Older Events" : "Show Older Events";
   loadEvents();
 };
 
-/* =========================
-   MODAL CANCEL
-========================= */
+// =========================
+// MODAL CANCEL
+// =========================
 modalCancelBtn.onclick = hideModal;
 
-/* =========================
-   ADD NEW EVENT
-========================= */
+// =========================
+// ADD NEW EVENT
+// =========================
 const addEventBtn = document.getElementById("addEventBtn");
 addEventBtn.onclick = () => {
   modalEventId.value = "";
@@ -341,9 +363,9 @@ addEventBtn.onclick = () => {
   showModal();
 };
 
-/* =========================
-   SHOW ADMIN MESSAGE
-========================= */
+// =========================
+// SHOW ADMIN MESSAGE
+// =========================
 function showAdminMessage(msg, type = "success", persistent = false) {
   adminMessage.textContent = msg;
   adminMessage.className = `admin-message ${type}`;
@@ -351,7 +373,7 @@ function showAdminMessage(msg, type = "success", persistent = false) {
   if (!persistent) setTimeout(() => adminMessage.classList.add("hidden"), 4000);
 }
 
-/* =========================
-   INITIAL LOAD
-========================= */
+// =========================
+// INITIAL LOAD
+// =========================
 loadEvents();
