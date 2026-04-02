@@ -29,19 +29,71 @@ function formatLocalDate(date) {
 }
 
 // ------------------------
-// RECURRING DATES GENERATOR
+// MONTHLY HELPER (NEW)
+// ------------------------
+function getNthWeekdayOfMonth(year, month, weekday, nth) {
+  const firstDay = new Date(year, month, 1);
+  const firstWeekday = firstDay.getDay();
+
+  let offset = weekday - firstWeekday;
+  if (offset < 0) offset += 7;
+
+  let day = 1 + offset + (nth - 1) * 7;
+
+  const lastDayOfMonth = new Date(year, month + 1, 0).getDate();
+
+  // If nth doesn't exist (like 5th Wednesday), fallback to last occurrence
+  if (day > lastDayOfMonth) {
+    day -= 7;
+  }
+
+  return new Date(year, month, day);
+}
+
+// ------------------------
+// RECURRING DATES GENERATOR (UPDATED)
 // ------------------------
 function generateRecurringDates(startDate, type, lengthNum) {
   const dates = [];
   const count = parseInt(lengthNum, 10) || 0;
-  let current = parseLocalDate(startDate);
+
+  const original = parseLocalDate(startDate);
+  if (isNaN(original.getTime())) return dates;
+
+  const weekday = original.getDay();
+  const nth = Math.ceil(original.getDate() / 7);
 
   for (let i = 0; i < count; i++) {
-    if (!isNaN(current.getTime())) dates.push(new Date(current));
-    if (type === "week") current.setDate(current.getDate() + 7);
-    else if (type === "biWeek") current.setDate(current.getDate() + 14);
-    else if (type === "month") current.setMonth(current.getMonth() + 1);
+    let current;
+
+    if (type === "week") {
+      current = new Date(original);
+      current.setDate(original.getDate() + i * 7);
+
+    } else if (type === "biWeek") {
+      current = new Date(original);
+      current.setDate(original.getDate() + i * 14);
+
+    } else if (type === "month") {
+      const temp = new Date(original);
+      temp.setMonth(original.getMonth() + i);
+
+      current = getNthWeekdayOfMonth(
+        temp.getFullYear(),
+        temp.getMonth(),
+        weekday,
+        nth
+      );
+
+    } else {
+      current = new Date(original);
+    }
+
+    if (!isNaN(current.getTime())) {
+      dates.push(current);
+    }
   }
+
   return dates;
 }
 
@@ -91,12 +143,16 @@ export default async function handler(req, res) {
         if (!PRIORITY[event.eType]) return res.status(400).json({ error: `Unknown event type: ${event.eType}` });
 
         const isRecurring = !!event.recurring;
-        const dates = isRecurring ? generateRecurringDates(event.date, event.recurWhen, event.recurLengthNum) : [parseLocalDate(event.date)];
+        const dates = isRecurring
+          ? generateRecurringDates(event.date, event.recurWhen, event.recurLengthNum)
+          : [parseLocalDate(event.date)];
+
         const seriesId = isRecurring ? uuidv4() : null;
         const insertedIds = [];
 
         for (let i = 0; i < dates.length; i++) {
           const dateStr = formatLocalDate(dates[i]);
+
           const doc = {
             eType: event.eType,
             date: dateStr,
@@ -120,6 +176,7 @@ export default async function handler(req, res) {
             walkInStatus: event.walkInStatus || "open",
             walkInContact: event.walkInContact || ""
           };
+
           const result = await eventsCollection.insertOne(doc);
           insertedIds.push(result.insertedId);
         }
@@ -134,7 +191,6 @@ export default async function handler(req, res) {
         const { id, singleEdit, ...fields } = req.body;
         if (!id || !ObjectId.isValid(id)) return res.status(400).json({ error: "Invalid ID" });
 
-        // Normalize booleans / strings
         if ("walkIns" in fields) fields.walkIns = !!fields.walkIns;
         if ("walkInStatus" in fields) fields.walkInStatus = fields.walkInStatus || "open";
         if ("walkInContact" in fields) fields.walkInContact = fields.walkInContact || "";
@@ -142,28 +198,36 @@ export default async function handler(req, res) {
         const parent = await eventsCollection.findOne({ _id: new ObjectId(id) });
         if (!parent) return res.status(404).json({ error: "Event not found" });
 
-        // Update single event
         await eventsCollection.updateOne({ _id: new ObjectId(id) }, { $set: fields });
 
-        // Update entire series if parent and not singleEdit
         if (!singleEdit && parent.recurring && parent.isParent) {
-          // Delete old children
-          await eventsCollection.deleteMany({ seriesId: parent.seriesId, _id: { $ne: parent._id } });
 
-          // Regenerate children
-          const dates = generateRecurringDates(fields.date || parent.date, fields.recurWhen || parent.recurWhen, fields.recurLengthNum || parent.recurLengthNum);
+          await eventsCollection.deleteMany({
+            seriesId: parent.seriesId,
+            _id: { $ne: parent._id }
+          });
+
+          const dates = generateRecurringDates(
+            fields.date || parent.date,
+            fields.recurWhen || parent.recurWhen,
+            fields.recurLengthNum || parent.recurLengthNum
+          );
+
           for (let i = 0; i < dates.length; i++) {
-            if (i === 0) continue; // skip parent
+            if (i === 0) continue;
+
             const dateStr = formatLocalDate(dates[i]);
+
             const child = {
               ...fields,
               date: dateStr,
               isParent: false,
               seriesId: parent.seriesId,
               createdAt: new Date(),
-              depositPaid: fields.eType.toLowerCase() === "reservedpaid" ? false : null,
-              feePaid: fields.eType.toLowerCase() === "reservedpaid" ? false : null
+              depositPaid: fields.eType?.toLowerCase() === "reservedpaid" ? false : null,
+              feePaid: fields.eType?.toLowerCase() === "reservedpaid" ? false : null
             };
+
             await eventsCollection.insertOne(child);
           }
         }
@@ -182,7 +246,6 @@ export default async function handler(req, res) {
         if (!event) return res.status(404).json({ error: "Event not found" });
 
         if (event.isParent && event.recurring) {
-          // Delete entire series
           await eventsCollection.deleteMany({ seriesId: event.seriesId });
         } else {
           await eventsCollection.deleteOne({ _id: new ObjectId(id) });
@@ -205,9 +268,6 @@ export default async function handler(req, res) {
         return res.status(200).json({ success: true });
       }
 
-      // ------------------------
-      // METHOD NOT ALLOWED
-      // ------------------------
       default:
         return res.status(405).json({ error: "Method not allowed" });
     }
